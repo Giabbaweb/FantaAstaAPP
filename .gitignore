@@ -1,49 +1,46 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# Dependencies
+node_modules/
+.pnpm-store/
 
-# compiled output
-dist
-tmp
-out-tsc
+# Build output
+dist/
+build/
+coverage/
 *.tsbuildinfo
-.expo
-.expo-shared
 
-# dependencies
-node_modules
+# Environment
+.env
+.env.local
+.env.*.local
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# SQLite
+data/database/*.sqlite
+data/database/*.sqlite-shm
+data/database/*.sqlite-wal
+data/database/*.db
+data/database/*.db-shm
+data/database/*.db-wal
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Runtime files
+logs/*
+!logs/.gitkeep
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+backups/*
+!backups/.gitkeep
 
-# System Files
+data/imports/*
+!data/imports/.gitkeep
+
+data/exports/*
+!data/exports/.gitkeep
+
+# Editors and operating systems
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
-
-# Replit
+# Replit temporary files
 .cache/
 .local/
+*.log
