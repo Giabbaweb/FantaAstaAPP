@@ -1,0 +1,254 @@
+<p align="center">
+  <img src="docs/images/logo.png" alt="FantaAstaAPP Logo" width="220">
+</p>
+
+<h1 align="center">FantaAstaAPP</h1>
+
+<p align="center">
+Offline-first Fantasy Football Auction Manager
+</p>
+
+<p align="center">
+
+  <img src="https://img.shields.io/badge/version-v0.2.0-blue" alt="Version v0.2.0">
+  <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
+  <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
+  <img src="https://img.shields.io/badge/Fastify-5-black" alt="Fastify 5">
+  <img src="https://img.shields.io/badge/SQLite-3-003B57" alt="SQLite 3">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
+</p>
+
+</p>
+
+---
+
+## Overview
+
+FantaAstaAPP is an **offline-first**, **server-authoritative** application designed to manage live Fantasy Football auctions over a local Wi-Fi network.
+
+Unlike traditional auction software, FantaAstaAPP synchronizes every connected device in real time while keeping the auction state entirely under the control of a single authoritative server.
+
+The application has been designed around the real operational workflow of live fantasy football leagues, providing reliability, consistency and complete traceability of every action.
+
+Typical setup:
+
+- 🖥️ Auctioneer (Administrator)
+- 📱 One smartphone per team
+- 👥 Optional spectators (read-only)
+- 📺 Public display
+- 📡 Local Wi-Fi network
+- 💾 Local SQLite database
+
+No Internet connection is required during the auction.
+
+---
+
+## Key Features
+
+- Offline-first architecture
+- Server-authoritative auction engine
+- Real-time synchronization via Socket.IO
+- Administrator Console
+- Team Remote Controllers
+- Public Display mode
+- SQLite persistence
+- Complete audit trail
+- Automatic validation rules
+- Backup & Recovery
+- FMS import/export
+- Manual correction tools
+
+---
+
+## Architecture
+
+```text
+                  Local Wi-Fi Network
+
+        ┌─────────────────────────────────┐
+        │        Administrator PC         │
+        │                                 │
+        │  Fastify + Auction Engine       │
+        │  SQLite + Drizzle ORM           │
+        └───────────────┬─────────────────┘
+                        │
+        ┌───────────────┼────────────────┐
+        │               │                │
+        ▼               ▼                ▼
+   Team Remote     Team Remote     Public Display
+    (Operator)      (Operator)        (Read Only)
+```
+
+The server is the single source of truth.
+
+Every command follows the same lifecycle:
+
+```text
+Command
+    ↓
+Validation
+    ↓
+Domain Event
+    ↓
+State Update
+    ↓
+Realtime Broadcast
+```
+
+---
+
+## Technology Stack
+
+| Layer | Technology |
+|--------|------------|
+| Runtime | Node.js 20 |
+| Language | TypeScript |
+| Backend | Fastify |
+| Frontend | React + Vite |
+| Database | SQLite |
+| ORM | Drizzle ORM |
+| Realtime | Socket.IO |
+| Validation | Zod |
+| Logging | Pino |
+| Testing | Vitest |
+
+---
+
+## Project Structure
+
+```text
+FantaAstaAPP/
+├── apps/
+│   ├── server/
+│   └── web/
+├── packages/
+│   ├── contracts/
+│   └── domain/
+├── docs/
+├── data/
+├── backups/
+├── logs/
+├── README.md
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+└── LICENSE
+```
+
+---
+
+## Current Status
+
+Current Release
+
+**v0.2.0**
+
+Completed milestones
+
+- ✅ Project foundations
+- ✅ Monorepo setup
+- ✅ Fastify backend
+- ✅ React frontend
+- ✅ SQLite persistence
+- ✅ Drizzle ORM
+- ✅ Health APIs
+- ✅ Project documentation
+
+Next milestone
+
+➡ **Auction Session Management**
+
+---
+
+## Quick Start
+
+Install dependencies
+
+```bash
+pnpm install
+```
+
+Run the development environment
+
+```bash
+pnpm dev
+```
+
+Build the project
+
+```bash
+pnpm build
+```
+
+Run tests
+
+```bash
+pnpm test
+```
+
+---
+
+## Applications
+
+| Interface | Path |
+|-----------|------|
+| Administrator Console | `/admin` |
+| Team Remote Controller | `/remote` |
+| Public Display | `/public` |
+
+---
+
+## Documentation
+
+The complete technical documentation is available inside the `docs/` directory.
+
+- Architecture
+- Specifications
+- Development Roadmap
+- Coding Standards
+- Architectural Decisions
+
+---
+
+## Roadmap
+
+| Version | Status |
+|----------|--------|
+| v0.1 | ✅ Foundations |
+| v0.2 | ✅ Persistence & Documentation |
+| v0.3 | 🚧 Auction Session Management |
+| v0.4 | ⏳ League Configuration |
+| v0.5 | ⏳ Auction Engine |
+| v0.6 | ⏳ Realtime Controllers |
+| v0.7 | ⏳ Public Display |
+| v0.8 | ⏳ Recovery & Manual Operations |
+| v0.9 | ⏳ FMS Integration |
+| v1.0 | 🎯 Stable Release |
+
+---
+
+## Versioning
+
+This project follows:
+
+- Semantic Versioning
+- Keep a Changelog
+- Conventional Commits
+
+---
+
+## License
+
+Distributed under the MIT License.
+
+See the `LICENSE` file for more information.
+
+---
+
+## Author
+
+**FantaAstaAPP**
+
+Designed and developed by **Arti John**
+
+2026
