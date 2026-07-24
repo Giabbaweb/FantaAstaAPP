@@ -44,3 +44,9 @@ Thumbs.db
 .cache/
 .local/
 *.log
+
+# Vite
+vite.config.ts.timestamp-*
+
+# Local package manager
+.npm/

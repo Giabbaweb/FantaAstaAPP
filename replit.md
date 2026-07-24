@@ -1,60 +1,69 @@
-# FantaAstaAPP
+# Replit Workspace
 
-Applicazione locale per la gestione di un'asta di fantacalcio dal vivo.
+## Project
 
-## Stato progetto
+FantaAstaAPP
 
-Versione corrente:
+## Current Version
 
-0.1 — Fondazioni
+v0.2.0
 
-## Obiettivi della 0.1
+## Package Manager
 
-- Monorepo pnpm
-- TypeScript
-- Fastify
-- SQLite
-- Drizzle ORM
-- React + Vite
-- Vitest
-- Pino
-- GET /api/health
-- pagina /admin minima
+pnpm
 
-## Stack approvato
+## Runtime
 
-- Node.js
-- TypeScript
-- Fastify
-- React
-- Vite
-- SQLite
-- Drizzle ORM
-- Socket.IO
-- Zod
-- Pino
-- Vitest
+Node.js 20
 
-## Architettura
+## Main Commands
 
-Server autoritativo.
+pnpm install
 
-Principio:
+pnpm dev
 
-Command → Validation → Event → State Update → Broadcast
+pnpm build
 
-## Repository
+pnpm test
 
-```text
-apps/
-  server/
-  web/
+pnpm typecheck
 
-packages/
-  contracts/
-  domain/
+pnpm db:generate
 
-data/
-backups/
-logs/
-docs/
+pnpm db:migrate
+
+## Workspace
+
+apps/server
+
+apps/web
+
+packages/contracts
+
+packages/domain
+
+## Database
+
+SQLite
+
+Drizzle ORM
+
+## Development Branch
+
+develop
+
+## Stable Branch
+
+main
+
+## Documentation
+
+README.md
+
+docs/ARCHITECTURE.md
+
+docs/DECISIONS.md
+
+docs/CODING_STANDARDS.md
+
+docs/ROADMAP.md
