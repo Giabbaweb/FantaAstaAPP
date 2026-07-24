@@ -200,13 +200,20 @@ pnpm test
 
 ## Documentation
 
-The complete technical documentation is available inside the `docs/` directory.
+The `docs/` directory contains the complete project documentation.
 
-- Architecture
-- Specifications
-- Development Roadmap
-- Coding Standards
-- Architectural Decisions
+### Functional Design
+
+- FANTA_ASTA_APP_SPEC.md
+- IMPLEMENTATION_ROADMAP.md
+- INITIAL_STRUCTURE.md
+
+### Technical Documentation
+
+- ARCHITECTURE.md
+- CODING_STANDARDS.md
+- DECISIONS.md
+- ROADMAP.md
 
 ---
 
