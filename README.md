@@ -198,22 +198,26 @@ pnpm test
 
 ---
 
-## Documentation
+## 📚 Documentation
 
 The `docs/` directory contains the complete project documentation.
 
 ### Functional Design
 
-- FANTA_ASTA_APP_SPEC.md
-- IMPLEMENTATION_ROADMAP.md
-- INITIAL_STRUCTURE.md
+| Document | Description |
+|----------|-------------|
+| [FANTA_ASTA_APP_SPEC.md](docs/FANTA_ASTA_APP_SPEC.md) | Complete functional specification |
+| [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) | Development phases and milestones |
+| [INITIAL_STRUCTURE.md](docs/INITIAL_STRUCTURE.md) | Initial repository organization |
 
 ### Technical Documentation
 
-- ARCHITECTURE.md
-- CODING_STANDARDS.md
-- DECISIONS.md
-- ROADMAP.md
+| Document | Description |
+|----------|-------------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
+| [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Coding conventions |
+| [DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records |
+| [ROADMAP.md](docs/ROADMAP.md) | Technical roadmap |
 
 ---
 
