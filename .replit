@@ -1,4 +1,4 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "python-3.11"]
 
 run = "pnpm dev"
 
@@ -29,3 +29,6 @@ externalPort = 5173
 [[ports]]
 localPort = 8080
 externalPort = 80
+
+[nix]
+packages = ["gcc", "gnumake", "sqlite"]

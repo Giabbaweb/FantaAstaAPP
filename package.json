@@ -2,6 +2,7 @@
   "name": "fantaastaapp",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.26.1",
   "description": "FantaAstaAPP - applicazione locale per la gestione di un'asta di fantacalcio dal vivo",
   "license": "UNLICENSED",
   "scripts": {
