@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type {
   AuctionSession,
+  AuctionSessionStatus,
   CreateAuctionSessionInput,
   UpdateAuctionSessionInput
 } from "@fantaastaapp/contracts";
@@ -30,6 +31,11 @@ export interface AuctionSessionRepository {
   update(
     id: string,
     input: UpdateAuctionSessionInput
+  ): Promise<AuctionSession | null>;
+
+  updateStatus(
+    id: string,
+    status: AuctionSessionStatus
   ): Promise<AuctionSession | null>;
 
   delete(id: string): Promise<boolean>;
@@ -99,6 +105,22 @@ export class SqliteAuctionSessionRepository
       .update(auctionSessions)
       .set({
         ...input,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(auctionSessions.id, id))
+      .returning();
+
+    return session ?? null;
+  }
+
+  async updateStatus(
+    id: string,
+    status: AuctionSessionStatus
+  ): Promise<AuctionSession | null> {
+    const [session] = await db
+      .update(auctionSessions)
+      .set({
+        status,
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
       .where(eq(auctionSessions.id, id))
