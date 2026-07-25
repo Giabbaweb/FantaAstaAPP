@@ -22,6 +22,13 @@
       "when": 1785010846245,
       "tag": "0002_lonely_carnage",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785012056485,
+      "tag": "0003_rapid_thunderbird",
+      "breakpoints": true
     }
   ]
 }

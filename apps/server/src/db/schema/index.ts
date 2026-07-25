@@ -69,6 +69,10 @@ export const auctionSessions = sqliteTable(
     uniqueIndex("auction_sessions_league_season_unique").on(
       table.leagueId,
       table.season
+    ),
+    uniqueIndex("auction_sessions_league_edition_unique").on(
+      table.leagueId,
+      table.editionNumber
     )
   ]
 );
