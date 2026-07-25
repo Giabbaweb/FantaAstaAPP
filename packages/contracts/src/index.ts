@@ -45,6 +45,7 @@ export type CreateAuctionSessionInput = z.infer<
 
 export const updateAuctionSessionSchema = z
   .object({
+    leagueId: z.string().min(1).optional(),
     season: z.string().trim().min(1).optional(),
     editionNumber: z.number().int().positive().optional(),
     initialCredits: z.number().int().nonnegative().optional()
