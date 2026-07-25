@@ -742,3 +742,493 @@ SUPERSEDED
 ```
 
 e deve indicare l’ADR che la sostituisce.
+
+---
+
+# ADR-018 — Perimetro della Milestone 3: gestione delle sessioni d’asta
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** Pianificazione della Milestone 3
+
+## Contesto
+
+La Milestone 3 introduce la gestione delle sessioni d’asta. Il progetto comprende anche squadre, presidenti, calciatori, rilanci, Socket.IO, recovery e backup, ma includere contemporaneamente tutte queste funzionalità renderebbe la milestone troppo ampia e difficile da verificare.
+
+È necessario definire un perimetro chiaro che consenta di costruire e testare il ciclo di vita delle sessioni prima di introdurre il motore operativo dell’asta.
+
+## Decisione
+
+La Milestone 3 riguarda esclusivamente:
+
+- gestione delle leghe;
+- creazione, lettura, modifica ed eliminazione controllata delle sessioni;
+- persistenza delle sessioni;
+- validazione dei dati;
+- gestione delle transizioni di stato;
+- contratti API condivisi;
+- test delle regole di dominio e dei casi d’uso.
+
+Sono escluse dalla Milestone 3:
+
+- gestione completa di squadre e presidenti;
+- importazione e gestione dei calciatori;
+- motore d’asta;
+- rilanci e PASS;
+- Socket.IO;
+- recovery operativo;
+- backup automatici.
+
+Le precondizioni delle transizioni saranno inizialmente limitate ai dati disponibili nella Milestone 3 e verranno rafforzate nelle milestone successive senza modificare il significato degli stati.
+
+## Conseguenze
+
+### Positive
+
+- Perimetro di sviluppo chiaro e verificabile.
+- Riduzione del rischio di introdurre funzionalità incomplete.
+- Possibilità di testare il ciclo di vita prima del motore d’asta.
+- Minore probabilità di refactoring estesi.
+
+### Negative
+
+- Alcune transizioni avranno inizialmente prerequisiti meno completi.
+- La sessione non sarà ancora utilizzabile per svolgere un’asta reale.
+- Alcune funzionalità previste dal dominio saranno rinviate.
+
+---
+
+# ADR-019 — Ciclo di vita rigido delle sessioni d’asta
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** Dominio delle sessioni
+
+## Contesto
+
+Una sessione d’asta attraversa fasi operative differenti. Consentire modifiche arbitrarie allo stato tramite un campo generico renderebbe possibili passaggi incoerenti, riaperture accidentali e alterazioni dei dati storici.
+
+## Decisione
+
+Adottare la seguente macchina a stati:
+
+```text
+SETUP
+  ↓ ready
+READY
+  ↓ start
+RUNNING
+  ├─ suspend → SUSPENDED
+  └─ complete → COMPLETED
+
+SUSPENDED
+  └─ resume → RUNNING
+
+COMPLETED
+  └─ close → CLOSED
+```
+
+Sono consentite esclusivamente queste transizioni:
+
+| Stato attuale | Comando | Nuovo stato |
+|---|---|---|
+| `SETUP` | `ready` | `READY` |
+| `READY` | `start` | `RUNNING` |
+| `RUNNING` | `suspend` | `SUSPENDED` |
+| `SUSPENDED` | `resume` | `RUNNING` |
+| `RUNNING` | `complete` | `COMPLETED` |
+| `COMPLETED` | `close` | `CLOSED` |
+
+Non sono previste transizioni inverse verso `SETUP`, riaperture da `COMPLETED` o `CLOSED`, né modifiche dirette del campo `status`.
+
+La ripresa da `SUSPENDED` richiede sempre un comando esplicito del banditore, in coerenza con ADR-014.
+
+La validazione delle transizioni appartiene al dominio e deve essere richiamata dal livello applicativo.
+
+## Conseguenze
+
+### Positive
+
+- Ciclo di vita prevedibile e testabile.
+- Impossibilità di impostare arbitrariamente lo stato.
+- Maggiore sicurezza operativa.
+- Coerenza con la sospensione e la ripresa manuale.
+- Separazione tra comandi di dominio e aggiornamenti generici.
+
+### Negative
+
+- Eventuali correzioni di stato richiederanno procedure amministrative dedicate.
+- Non è possibile riaprire una sessione completata o chiusa.
+- Il frontend deve gestire azioni distinte per ogni transizione.
+
+---
+
+# ADR-020 — Una sola sessione operativamente attiva per installazione
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** Gestione dello stato operativo
+
+## Contesto
+
+La stessa installazione di FantaAstaAPP può conservare sessioni di più leghe e più stagioni. Per esempio, possono coesistere nel database una sessione della SFL’92 e una della Lega Ambrosiana 1989 per la medesima stagione.
+
+Tuttavia, l’installazione locale utilizza un solo server autoritativo, un solo flusso operativo principale, un solo schermo pubblico e un solo banditore attivo alla volta.
+
+## Decisione
+
+Possono esistere contemporaneamente più sessioni nel database, anche per la stessa stagione e per leghe differenti.
+
+Una sola sessione per installazione può però trovarsi in uno degli stati operativamente attivi:
+
+```text
+READY
+RUNNING
+SUSPENDED
+```
+
+Le sessioni in `SETUP`, `COMPLETED` o `CLOSED` non sono considerate operative e possono coesistere senza limiti.
+
+La regola viene verificata dal service applicativo prima delle transizioni che rendono attiva una sessione.
+
+Viene prevista un’operazione per recuperare l’unica sessione attiva dell’installazione.
+
+## Conseguenze
+
+### Positive
+
+- Supporto a più leghe e stagioni nello stesso archivio.
+- Semplificazione futura di Socket.IO, recovery e schermo pubblico.
+- Nessuna ambiguità sulla sessione operativa corrente.
+- Possibilità di preparare una sessione mentre un’altra è archiviata.
+
+### Negative
+
+- Due aste non possono essere eseguite contemporaneamente dalla stessa installazione.
+- La concorrenza deve essere controllata dal service e, in futuro, eventualmente rafforzata nel database.
+- L’avvio di una sessione può essere rifiutato se un’altra è già attiva.
+
+---
+
+# ADR-021 — Entità League e identità della sessione
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** Modello di dominio e persistenza
+
+## Contesto
+
+FantaAstaAPP deve gestire nel tempo più leghe, ciascuna con una sola asta annuale. Il nome della lega non deve essere duplicato in ogni sessione come semplice testo, perché la lega rappresenta un’entità stabile con uno storico di stagioni.
+
+Ogni sessione deve essere riconoscibile mediante dati di business comprensibili e coerenti nel tempo.
+
+## Decisione
+
+Introdurre `League` come entità autonoma con il modello minimo:
+
+```text
+League
+- id
+- name
+- createdAt
+- updatedAt
+```
+
+La sessione d’asta utilizza il seguente modello minimo:
+
+```text
+AuctionSession
+- id
+- leagueId
+- season
+- editionNumber
+- status
+- initialCredits
+- createdAt
+- updatedAt
+```
+
+La sessione non possiede un campo `name`, perché per ogni lega esiste una sola asta annuale.
+
+La rappresentazione visibile della sessione viene costruita dai dati della lega e della sessione, per esempio:
+
+```text
+SFL’92 — 2026/2027 — 35ª edizione
+```
+
+Per ogni lega devono essere rispettate entrambe le seguenti unicità:
+
+```text
+UNIQUE (leagueId, season)
+UNIQUE (leagueId, editionNumber)
+```
+
+Il nome della lega deve essere univoco senza distinzione tra maiuscole e minuscole e ignorando gli spazi esterni usati accidentalmente durante l’inserimento.
+
+## Conseguenze
+
+### Positive
+
+- Storico ordinato per lega e stagione.
+- Prevenzione di stagioni o numeri di edizione duplicati.
+- Possibilità di aggiungere in futuro configurazioni e loghi alla lega.
+- Identità funzionale chiara per l’utente.
+- Nessuna dipendenza da un nome arbitrario della sessione.
+
+### Negative
+
+- È necessaria una relazione tra leghe e sessioni.
+- La rinomina di una lega si riflette sulla visualizzazione di tutte le sessioni storiche.
+- La normalizzazione del nome deve essere gestita in modo coerente.
+
+---
+
+# ADR-022 — Immutabilità storica e modificabilità dei dati della sessione
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** Integrità dei dati storici
+
+## Contesto
+
+Una sessione d’asta rappresenta un evento storico. Dopo il suo completamento, modifiche o cancellazioni potrebbero compromettere statistiche, export, audit e ricostruzione degli eventi.
+
+Alcuni dati devono tuttavia poter essere corretti durante la preparazione o l’esecuzione dell’asta.
+
+## Decisione
+
+Una sessione può essere eliminata soltanto quando si trova in stato `SETUP`.
+
+I campi strutturali:
+
+```text
+leagueId
+season
+editionNumber
+```
+
+sono modificabili esclusivamente in `SETUP`.
+
+Il campo:
+
+```text
+initialCredits
+```
+
+è modificabile negli stati:
+
+```text
+SETUP
+READY
+RUNNING
+SUSPENDED
+```
+
+ed è bloccato negli stati:
+
+```text
+COMPLETED
+CLOSED
+```
+
+La modifica di `initialCredits` rappresenta una correzione della configurazione di base e non deve ricalcolare retroattivamente crediti spesi, acquisti o saldi delle squadre.
+
+Le sessioni `COMPLETED` e `CLOSED` sono permanenti e in sola lettura. Una sessione chiusa non può essere riaperta.
+
+Una lega non viene eliminata nella Milestone 3 e, in ogni caso, non potrà essere eliminata quando possiede sessioni collegate.
+
+## Conseguenze
+
+### Positive
+
+- Protezione dello storico delle aste.
+- Riduzione delle cancellazioni accidentali.
+- Possibilità di correggere i crediti iniziali durante l’operatività.
+- Base affidabile per statistiche, audit, export e backup.
+- Distinzione futura tra configurazione iniziale e saldo operativo delle squadre.
+
+### Negative
+
+- Gli errori scoperti dopo `COMPLETED` richiederanno procedure correttive dedicate.
+- Una sessione non può essere riutilizzata per ricominciare l’asta.
+- La modifica dei campi deve dipendere dallo stato corrente.
+
+---
+
+# ADR-023 — API esplicite, contratti condivisi ed errori uniformi
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** API HTTP e contratti
+
+## Contesto
+
+Le API devono impedire aggiornamenti arbitrari dello stato, condividere tipi affidabili con il frontend e restituire errori prevedibili.
+
+Un singolo endpoint generico per modificare lo stato renderebbe più difficile rappresentare i comandi del dominio e controllare le transizioni.
+
+## Decisione
+
+Esporre le seguenti API per le leghe:
+
+```text
+GET    /api/leagues
+GET    /api/leagues/:id
+POST   /api/leagues
+PATCH  /api/leagues/:id
+```
+
+Nella Milestone 3 non viene esposto `DELETE /api/leagues/:id`.
+
+Esporre le seguenti API per le sessioni:
+
+```text
+GET    /api/auction-sessions
+GET    /api/auction-sessions/active
+GET    /api/auction-sessions/:id
+POST   /api/auction-sessions
+PATCH  /api/auction-sessions/:id
+DELETE /api/auction-sessions/:id
+```
+
+Le transizioni utilizzano comandi dedicati:
+
+```text
+POST /api/auction-sessions/:id/ready
+POST /api/auction-sessions/:id/start
+POST /api/auction-sessions/:id/suspend
+POST /api/auction-sessions/:id/resume
+POST /api/auction-sessions/:id/complete
+POST /api/auction-sessions/:id/close
+```
+
+Il campo `status` non viene accettato né durante la creazione né nel `PATCH`. Alla creazione, il server assegna sempre `SETUP`.
+
+I contratti e gli schemi Zod condivisi vengono definiti in:
+
+```text
+packages/contracts
+```
+
+Gli errori utilizzano una struttura uniforme:
+
+```json
+{
+  "error": {
+    "code": "AUCTION_SESSION_INVALID_TRANSITION",
+    "message": "Cannot start an auction session from SETUP status.",
+    "details": {}
+  }
+}
+```
+
+Codici HTTP principali:
+
+| Caso | HTTP |
+|---|---:|
+| Creazione riuscita | `201` |
+| Lettura o modifica riuscita | `200` |
+| Cancellazione riuscita | `204` |
+| Input non valido | `400` |
+| Risorsa inesistente | `404` |
+| Violazione di una regola di dominio | `409` |
+| Errore interno | `500` |
+
+## Conseguenze
+
+### Positive
+
+- Comandi di dominio espliciti.
+- Contratti condivisi tra server e frontend.
+- Errori stabili e gestibili dalla UI.
+- Impossibilità di modificare direttamente lo stato.
+- API più semplici da testare e documentare.
+
+### Negative
+
+- Numero maggiore di endpoint.
+- Gli schemi e i DTO devono essere mantenuti coerenti.
+- Il frontend deve gestire codici di errore applicativi specifici.
+
+---
+
+# ADR-024 — Architettura a livelli, vincoli database e commit atomici
+
+**Stato:** `ACCEPTED`  
+**Data:** 2026-07  
+**Ambito:** Organizzazione del codice, persistenza e processo di sviluppo
+
+## Contesto
+
+Le regole delle sessioni devono rimanere separate da Fastify e SQLite, ma il database deve comunque proteggere l’integrità dei dati.
+
+L’implementazione della Milestone 3 coinvolge dominio, schema, repository, service, route, contratti, test e documentazione. Modifiche troppo grandi in un singolo commit renderebbero difficile revisionare o annullare il lavoro.
+
+## Decisione
+
+Ogni richiesta segue il flusso:
+
+```text
+HTTP Request
+      ↓
+Route
+      ↓
+Service
+      ↓
+Domain
+      ↓
+Repository
+      ↓
+Database
+```
+
+Responsabilità:
+
+- le route gestiscono HTTP e validazione dei payload;
+- i service coordinano i casi d’uso e le transazioni;
+- il dominio contiene regole pure e transizioni;
+- i repository astraggono la persistenza;
+- `packages/contracts` contiene DTO e schemi condivisi;
+- `packages/domain` contiene logica indipendente dall’infrastruttura;
+- il frontend utilizza esclusivamente le API.
+
+Il database rafforza le regole con:
+
+- chiavi primarie;
+- chiavi esterne;
+- `NOT NULL`;
+- `CHECK` per stato e crediti iniziali positivi;
+- unicità del nome normalizzato della lega;
+- `UNIQUE (leagueId, season)`;
+- `UNIQUE (leagueId, editionNumber)`.
+
+La singola sessione attiva viene garantita dal service nella Milestone 3. Eventuali transazioni, lock o indici parziali specifici saranno valutati quando aumenteranno i requisiti di concorrenza.
+
+L’implementazione viene suddivisa in commit piccoli e coerenti, separando almeno:
+
+- dominio;
+- schema e migrazioni;
+- repository;
+- service;
+- API;
+- test;
+- documentazione;
+- aggiornamento della versione.
+
+## Conseguenze
+
+### Positive
+
+- Responsabilità chiare e codice testabile.
+- Regole di dominio indipendenti dall’infrastruttura.
+- Integrità rafforzata dal database.
+- Commit facilmente revisionabili e revertibili.
+- Cronologia Git comprensibile.
+
+### Negative
+
+- Maggiore numero di file e livelli applicativi.
+- Sono necessari mapping tra dominio, DTO e persistenza.
+- La garanzia della singola sessione attiva non è ancora duplicata a livello database.
+- La suddivisione in commit richiede disciplina durante lo sviluppo.
+

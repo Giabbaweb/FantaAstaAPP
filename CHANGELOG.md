@@ -6,6 +6,25 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Architecture Decision Records for Milestone 3 auction-session management
+- Defined `League` as an independent domain entity
+- Defined the auction-session lifecycle and allowed state transitions
+- Defined uniqueness rules for league seasons and edition numbers
+- Defined REST API contracts and dedicated lifecycle commands
+- Defined database integrity constraints and layered implementation boundaries
+
+### Changed
+
+- Clarified that one installation can store sessions for multiple leagues while allowing only one operationally active session
+- Clarified session immutability, deletion rules and field editability by status
+- Clarified the scope of Milestone 3 before implementation
+
+---
+
 ## [0.2.0] - 2026-07-23
 
 ### Added
