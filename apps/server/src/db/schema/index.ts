@@ -3,8 +3,27 @@ import {
   integer,
   primaryKey,
   sqliteTable,
-  text
+  text,
+  uniqueIndex
 } from "drizzle-orm/sqlite-core";
+
+export const leagues = sqliteTable(
+  "leagues",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex("leagues_normalized_name_unique").on(table.normalizedName)
+  ]
+);
 
 export const auctionSessions = sqliteTable("auction_sessions", {
   id: text("id").primaryKey(),
