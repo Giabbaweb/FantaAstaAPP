@@ -70,7 +70,7 @@ describe("application integration", () => {
       }>();
 
       expect(body.status).toBe("ok");
-      expect(body.database).toBe("fantaasta.sqlite");
+      expect(body.database).toBe("fantaasta.test.sqlite");
 
       expect(
         Number.isNaN(Date.parse(body.timestamp))
