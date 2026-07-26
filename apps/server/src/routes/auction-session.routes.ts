@@ -1,9 +1,11 @@
 import {
-  createAuctionSessionSchema
+  createAuctionSessionSchema,
+  updateAuctionSessionSchema
 } from "@fantaastaapp/contracts";
 import type {
   AuctionSession,
-  CreateAuctionSessionInput
+  CreateAuctionSessionInput,
+  UpdateAuctionSessionInput
 } from "@fantaastaapp/contracts";
 import type {
   FastifyPluginAsync
@@ -13,9 +15,10 @@ import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import {
-  mapAuctionSessionServiceError
+  mapAuctionSessionError
 } from "../http/auction-session-errors.js";
 import type {
+  AuctionSessionConflictResponse,
   AuctionSessionNotFoundResponse
 } from "../http/auction-session-errors.js";
 
@@ -38,6 +41,11 @@ type AuctionSessionParams = {
 };
 
 type CreateAuctionSessionResponse = {
+  data: AuctionSession;
+  error: null;
+};
+
+type UpdateAuctionSessionResponse = {
   data: AuctionSession;
   error: null;
 };
@@ -93,9 +101,9 @@ export const auctionSessionRoutes: FastifyPluginAsync =
           });
         } catch (error) {
           const mapped =
-            mapAuctionSessionServiceError(error);
+            mapAuctionSessionError(error);
 
-          if (mapped) {
+          if (mapped?.statusCode === 404) {
             return reply
               .code(mapped.statusCode)
               .send(mapped.body);
@@ -141,6 +149,61 @@ export const auctionSessionRoutes: FastifyPluginAsync =
           data: session,
           error: null
         });
+      }
+    );
+
+    fastify.patch<{
+      Params: AuctionSessionParams;
+      Body: UpdateAuctionSessionInput;
+      Reply:
+        | UpdateAuctionSessionResponse
+        | InvalidRequestResponse
+        | AuctionSessionNotFoundResponse
+        | AuctionSessionConflictResponse;
+    }>(
+      "/api/auction-sessions/:id",
+      async (request, reply) => {
+        const validation =
+          updateAuctionSessionSchema.safeParse(
+            request.body
+          );
+
+        if (!validation.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                validation.error.issues
+                  .map((issue) => issue.message)
+                  .join("; ")
+            }
+          });
+        }
+
+        try {
+          const session =
+            await service.updateSession(
+              request.params.id,
+              validation.data
+            );
+
+          return reply.code(200).send({
+            data: session,
+            error: null
+          });
+        } catch (error) {
+          const mapped =
+            mapAuctionSessionError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
       }
     );
   };

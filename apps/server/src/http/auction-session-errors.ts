@@ -1,4 +1,8 @@
 import {
+  AuctionSessionDomainError
+} from "@fantaastaapp/domain";
+
+import {
   AuctionSessionServiceError
 } from "../services/auction-session.service.js";
 
@@ -10,30 +14,69 @@ export type AuctionSessionNotFoundResponse = {
   };
 };
 
-export function mapAuctionSessionServiceError(
+export type AuctionSessionConflictResponse = {
+  data: null;
+  error: {
+    code:
+      | "SESSION_READ_ONLY"
+      | "STRUCTURAL_FIELDS_LOCKED"
+      | "INITIAL_CREDITS_LOCKED";
+    message: string;
+  };
+};
+
+export type AuctionSessionErrorMapping =
+  | {
+      statusCode: 404;
+      body: AuctionSessionNotFoundResponse;
+    }
+  | {
+      statusCode: 409;
+      body: AuctionSessionConflictResponse;
+    };
+
+export function mapAuctionSessionError(
   error: unknown
-): {
-  statusCode: 404;
-  body: AuctionSessionNotFoundResponse;
-} | null {
-  if (!(error instanceof AuctionSessionServiceError)) {
-    return null;
-  }
-
-  switch (error.code) {
-    case "SESSION_NOT_FOUND":
-      return {
-        statusCode: 404,
-        body: {
-          data: null,
-          error: {
-            code: "AUCTION_SESSION_NOT_FOUND",
-            message: error.message
+): AuctionSessionErrorMapping | null {
+  if (error instanceof AuctionSessionServiceError) {
+    switch (error.code) {
+      case "SESSION_NOT_FOUND":
+        return {
+          statusCode: 404,
+          body: {
+            data: null,
+            error: {
+              code: "AUCTION_SESSION_NOT_FOUND",
+              message: error.message
+            }
           }
-        }
-      };
+        };
 
-    default:
-      return null;
+      default:
+        return null;
+    }
   }
+
+  if (error instanceof AuctionSessionDomainError) {
+    switch (error.code) {
+      case "SESSION_READ_ONLY":
+      case "STRUCTURAL_FIELDS_LOCKED":
+      case "INITIAL_CREDITS_LOCKED":
+        return {
+          statusCode: 409,
+          body: {
+            data: null,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          }
+        };
+
+      default:
+        return null;
+    }
+  }
+
+  return null;
 }
