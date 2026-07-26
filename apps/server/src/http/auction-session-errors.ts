@@ -21,7 +21,9 @@ export type AuctionSessionConflictResponse = {
       | "SESSION_READ_ONLY"
       | "STRUCTURAL_FIELDS_LOCKED"
       | "INITIAL_CREDITS_LOCKED"
-      | "SESSION_DELETE_NOT_ALLOWED";
+      | "SESSION_DELETE_NOT_ALLOWED"
+      | "INVALID_STATUS_TRANSITION"
+      | "ACTIVE_SESSION_ALREADY_EXISTS";
     message: string;
   };
 };
@@ -53,6 +55,18 @@ export function mapAuctionSessionError(
           }
         };
 
+      case "ACTIVE_SESSION_ALREADY_EXISTS":
+        return {
+          statusCode: 409,
+          body: {
+            data: null,
+            error: {
+              code: "ACTIVE_SESSION_ALREADY_EXISTS",
+              message: error.message
+            }
+          }
+        };
+
       default:
         return null;
     }
@@ -64,6 +78,7 @@ export function mapAuctionSessionError(
       case "STRUCTURAL_FIELDS_LOCKED":
       case "INITIAL_CREDITS_LOCKED":
       case "SESSION_DELETE_NOT_ALLOWED":
+      case "INVALID_STATUS_TRANSITION":
         return {
           statusCode: 409,
           body: {

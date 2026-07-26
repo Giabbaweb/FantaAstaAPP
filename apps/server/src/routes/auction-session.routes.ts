@@ -7,13 +7,16 @@ import type {
   CreateAuctionSessionInput,
   UpdateAuctionSessionInput
 } from "@fantaastaapp/contracts";
+import {
+  auctionSessionCommands
+} from "@fantaastaapp/domain";
+import type {
+  AuctionSessionCommand
+} from "@fantaastaapp/domain";
 import type {
   FastifyPluginAsync
 } from "fastify";
 
-import {
-  SqliteAuctionSessionRepository
-} from "../repositories/auction-session.repository.js";
 import {
   mapAuctionSessionError
 } from "../http/auction-session-errors.js";
@@ -21,7 +24,9 @@ import type {
   AuctionSessionConflictResponse,
   AuctionSessionNotFoundResponse
 } from "../http/auction-session-errors.js";
-
+import {
+  SqliteAuctionSessionRepository
+} from "../repositories/auction-session.repository.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -40,12 +45,22 @@ type AuctionSessionParams = {
   id: string;
 };
 
+type AuctionSessionCommandParams = {
+  id: string;
+  command: string;
+};
+
 type CreateAuctionSessionResponse = {
   data: AuctionSession;
   error: null;
 };
 
 type UpdateAuctionSessionResponse = {
+  data: AuctionSession;
+  error: null;
+};
+
+type ExecuteAuctionSessionCommandResponse = {
   data: AuctionSession;
   error: null;
 };
@@ -57,6 +72,14 @@ type InvalidRequestResponse = {
     message: string;
   };
 };
+
+function isAuctionSessionCommand(
+  value: string
+): value is AuctionSessionCommand {
+  return (
+    auctionSessionCommands as readonly string[]
+  ).includes(value);
+}
 
 const repository =
   new SqliteAuctionSessionRepository();
@@ -222,6 +245,56 @@ export const auctionSessionRoutes: FastifyPluginAsync =
           );
 
           return reply.code(204).send();
+        } catch (error) {
+          const mapped =
+            mapAuctionSessionError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
+    fastify.post<{
+      Params: AuctionSessionCommandParams;
+      Reply:
+        | ExecuteAuctionSessionCommandResponse
+        | InvalidRequestResponse
+        | AuctionSessionNotFoundResponse
+        | AuctionSessionConflictResponse;
+    }>(
+      "/api/auction-sessions/:id/commands/:command",
+      async (request, reply) => {
+        const { id, command } =
+          request.params;
+
+        if (!isAuctionSessionCommand(command)) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                `Unknown auction session command "${command}"`
+            }
+          });
+        }
+
+        try {
+          const session =
+            await service.executeCommand(
+              id,
+              command
+            );
+
+          return reply.code(200).send({
+            data: session,
+            error: null
+          });
         } catch (error) {
           const mapped =
             mapAuctionSessionError(error);
