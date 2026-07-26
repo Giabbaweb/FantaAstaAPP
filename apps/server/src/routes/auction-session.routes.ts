@@ -1,5 +1,9 @@
+import {
+  createAuctionSessionSchema
+} from "@fantaastaapp/contracts";
 import type {
-  AuctionSession
+  AuctionSession,
+  CreateAuctionSessionInput
 } from "@fantaastaapp/contracts";
 import type {
   FastifyPluginAsync
@@ -33,6 +37,19 @@ type AuctionSessionNotFoundResponse = {
 
 type AuctionSessionParams = {
   id: string;
+};
+
+type CreateAuctionSessionResponse = {
+  data: AuctionSession;
+  error: null;
+};
+
+type InvalidRequestResponse = {
+  data: null;
+  error: {
+    code: "INVALID_REQUEST";
+    message: string;
+  };
 };
 
 const repository =
@@ -92,6 +109,44 @@ export const auctionSessionRoutes: FastifyPluginAsync =
 
           throw error;
         }
+      }
+    );
+
+    fastify.post<{
+      Body: CreateAuctionSessionInput;
+      Reply:
+        | CreateAuctionSessionResponse
+        | InvalidRequestResponse;
+    }>(
+      "/api/auction-sessions",
+      async (request, reply) => {
+        const validation =
+          createAuctionSessionSchema.safeParse(
+            request.body
+          );
+
+        if (!validation.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                validation.error.issues
+                  .map((issue) => issue.message)
+                  .join("; ")
+            }
+          });
+        }
+
+        const session =
+          await service.createSession(
+            validation.data
+          );
+
+        return reply.code(201).send({
+          data: session,
+          error: null
+        });
       }
     );
   };
