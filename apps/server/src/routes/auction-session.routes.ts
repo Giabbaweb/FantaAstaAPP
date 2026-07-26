@@ -13,8 +13,14 @@ import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import {
-  AuctionSessionService,
-  AuctionSessionServiceError
+  mapAuctionSessionServiceError
+} from "../http/auction-session-errors.js";
+import type {
+  AuctionSessionNotFoundResponse
+} from "../http/auction-session-errors.js";
+
+import {
+  AuctionSessionService
 } from "../services/auction-session.service.js";
 
 type AuctionSessionListResponse = {
@@ -25,14 +31,6 @@ type AuctionSessionListResponse = {
 type AuctionSessionDetailResponse = {
   data: AuctionSession;
   error: null;
-};
-
-type AuctionSessionNotFoundResponse = {
-  data: null;
-  error: {
-    code: "AUCTION_SESSION_NOT_FOUND";
-    message: string;
-  };
 };
 
 type AuctionSessionParams = {
@@ -94,17 +92,13 @@ export const auctionSessionRoutes: FastifyPluginAsync =
             error: null
           });
         } catch (error) {
-          if (
-            error instanceof AuctionSessionServiceError &&
-            error.code === "SESSION_NOT_FOUND"
-          ) {
-            return reply.code(404).send({
-              data: null,
-              error: {
-                code: "AUCTION_SESSION_NOT_FOUND",
-                message: error.message
-              }
-            });
+          const mapped =
+            mapAuctionSessionServiceError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
           }
 
           throw error;
