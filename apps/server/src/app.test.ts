@@ -14,7 +14,7 @@ import {
   buildApp
 } from "./app.js";
 
-describe("GET /api/health", () => {
+describe("application integration", () => {
   let app: Awaited<
     ReturnType<typeof buildApp>
   >;
@@ -27,28 +27,54 @@ describe("GET /api/health", () => {
     await app.close();
   });
 
-  it("returns the application health status", async () => {
-    const response = await app.inject({
-      method: "GET",
-      url: "/api/health"
+  describe("GET /api/health", () => {
+    it("returns the application health status", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/health"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        status: string;
+        application: string;
+        timestamp: string;
+      }>();
+
+      expect(body).toEqual({
+        status: "ok",
+        application: APPLICATION_NAME,
+        timestamp: expect.any(String)
+      });
+
+      expect(
+        Number.isNaN(Date.parse(body.timestamp))
+      ).toBe(false);
     });
+  });
 
-    expect(response.statusCode).toBe(200);
+  describe("GET /api/db-health", () => {
+    it("returns the database health status", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/db-health"
+      });
 
-    const body = response.json<{
-      status: string;
-      application: string;
-      timestamp: string;
-    }>();
+      expect(response.statusCode).toBe(200);
 
-    expect(body).toEqual({
-      status: "ok",
-      application: APPLICATION_NAME,
-      timestamp: expect.any(String)
+      const body = response.json<{
+        status: string;
+        database: string;
+        timestamp: string;
+      }>();
+
+      expect(body.status).toBe("ok");
+      expect(body.database).toBe("fantaasta.sqlite");
+
+      expect(
+        Number.isNaN(Date.parse(body.timestamp))
+      ).toBe(false);
     });
-
-    expect(
-      Number.isNaN(Date.parse(body.timestamp))
-    ).toBe(false);
   });
 });
