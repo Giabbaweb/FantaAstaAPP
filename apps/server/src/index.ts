@@ -1,17 +1,14 @@
 import "dotenv/config";
 
-import cors from "@fastify/cors";
-import Fastify from "fastify";
+import {
+  buildApp
+} from "./app.js";
 
-import type { HealthStatus } from "@fantaastaapp/contracts";
-import { APPLICATION_NAME } from "@fantaastaapp/domain";
+const host =
+  process.env.HOST ?? "0.0.0.0";
 
-import { sqlite } from "./db/client.js";
-import { dbHealthRoutes } from "./routes/db-health.js";
-import { auctionSessionRoutes } from "./routes/auction-session.routes.js";
-
-const host = process.env.HOST ?? "0.0.0.0";
-const port = Number(process.env.PORT ?? 3001);
+const port =
+  Number(process.env.PORT ?? 3001);
 
 if (!Number.isInteger(port) || port <= 0) {
   throw new Error(
@@ -19,29 +16,8 @@ if (!Number.isInteger(port) || port <= 0) {
   );
 }
 
-const app = Fastify({
-  logger: true
-});
-
-await app.register(cors, {
-  origin: true
-});
-
-app.get("/api/health", async (): Promise<HealthStatus> => {
-  return {
-    status: "ok",
-    application: APPLICATION_NAME,
-    timestamp: new Date().toISOString()
-  };
-});
-
-await app.register(dbHealthRoutes);
-
-await app.register(auctionSessionRoutes);
-
-app.addHook("onClose", async () => {
-  sqlite.close();
-});
+const app =
+  await buildApp();
 
 const start = async (): Promise<void> => {
   try {
