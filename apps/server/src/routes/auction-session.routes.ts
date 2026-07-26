@@ -206,4 +206,34 @@ export const auctionSessionRoutes: FastifyPluginAsync =
         }
       }
     );
+
+    fastify.delete<{
+      Params: AuctionSessionParams;
+      Reply:
+        | void
+        | AuctionSessionNotFoundResponse
+        | AuctionSessionConflictResponse;
+    }>(
+      "/api/auction-sessions/:id",
+      async (request, reply) => {
+        try {
+          await service.deleteSession(
+            request.params.id
+          );
+
+          return reply.code(204).send();
+        } catch (error) {
+          const mapped =
+            mapAuctionSessionError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
   };

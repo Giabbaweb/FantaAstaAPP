@@ -20,7 +20,8 @@ export type AuctionSessionConflictResponse = {
     code:
       | "SESSION_READ_ONLY"
       | "STRUCTURAL_FIELDS_LOCKED"
-      | "INITIAL_CREDITS_LOCKED";
+      | "INITIAL_CREDITS_LOCKED"
+      | "SESSION_DELETE_NOT_ALLOWED";
     message: string;
   };
 };
@@ -62,6 +63,7 @@ export function mapAuctionSessionError(
       case "SESSION_READ_ONLY":
       case "STRUCTURAL_FIELDS_LOCKED":
       case "INITIAL_CREDITS_LOCKED":
+      case "SESSION_DELETE_NOT_ALLOWED":
         return {
           statusCode: 409,
           body: {
