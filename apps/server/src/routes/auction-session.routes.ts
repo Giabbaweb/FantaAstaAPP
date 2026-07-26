@@ -9,12 +9,30 @@ import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import {
-  AuctionSessionService
+  AuctionSessionService,
+  AuctionSessionServiceError
 } from "../services/auction-session.service.js";
 
 type AuctionSessionListResponse = {
   data: AuctionSession[];
   error: null;
+};
+
+type AuctionSessionDetailResponse = {
+  data: AuctionSession;
+  error: null;
+};
+
+type AuctionSessionNotFoundResponse = {
+  data: null;
+  error: {
+    code: "AUCTION_SESSION_NOT_FOUND";
+    message: string;
+  };
+};
+
+type AuctionSessionParams = {
+  id: string;
 };
 
 const repository =
@@ -37,6 +55,43 @@ export const auctionSessionRoutes: FastifyPluginAsync =
           data: sessions,
           error: null
         });
+      }
+    );
+
+    fastify.get<{
+      Params: AuctionSessionParams;
+      Reply:
+        | AuctionSessionDetailResponse
+        | AuctionSessionNotFoundResponse;
+    }>(
+      "/api/auction-sessions/:id",
+      async (request, reply) => {
+        try {
+          const session =
+            await service.getSessionById(
+              request.params.id
+            );
+
+          return reply.code(200).send({
+            data: session,
+            error: null
+          });
+        } catch (error) {
+          if (
+            error instanceof AuctionSessionServiceError &&
+            error.code === "SESSION_NOT_FOUND"
+          ) {
+            return reply.code(404).send({
+              data: null,
+              error: {
+                code: "AUCTION_SESSION_NOT_FOUND",
+                message: error.message
+              }
+            });
+          }
+
+          throw error;
+        }
       }
     );
   };
