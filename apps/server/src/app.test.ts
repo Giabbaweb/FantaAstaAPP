@@ -280,13 +280,124 @@ describe("application integration", () => {
         updatedAt: expect.any(String)
       });
 
-      const stored = await db.query.auctionSessions.findFirst({
-        where: (table, { eq }) => eq(table.id, body.data.id)
-      });
+      const stored =
+        await db.query.auctionSessions.findFirst({
+          where: (table, { eq }) =>
+            eq(table.id, body.data.id)
+        });
 
       expect(stored).not.toBeNull();
       expect(stored?.leagueId).toBe("league-sfl92");
       expect(stored?.season).toBe("2026/2027");
     });
+
+    it("returns 400 for an empty payload", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/auction-sessions",
+        payload: {}
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      const body = response.json<{
+        data: null;
+        error: {
+          code: string;
+          message: string;
+        };
+      }>();
+
+      expect(body.data).toBeNull();
+      expect(body.error.code).toBe("INVALID_REQUEST");
+    });
+
+    it("returns 400 when season is empty", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/auction-sessions",
+        payload: {
+          leagueId: "league-sfl92",
+          season: "",
+          editionNumber: 35,
+          initialCredits: 330
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      const body = response.json<{
+        data: null;
+        error: {
+          code: string;
+          message: string;
+        };
+      }>();
+
+      expect(body.data).toBeNull();
+      expect(body.error.code).toBe("INVALID_REQUEST");
+    });
+
+    it(
+      "returns 400 when edition number is not positive",
+      async () => {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId: "league-sfl92",
+            season: "2026/2027",
+            editionNumber: 0,
+            initialCredits: 330
+          }
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        const body = response.json<{
+          data: null;
+          error: {
+            code: string;
+            message: string;
+          };
+        }>();
+
+        expect(body.data).toBeNull();
+        expect(body.error.code).toBe(
+          "INVALID_REQUEST"
+        );
+      }
+    );
+
+    it(
+      "returns 400 when initial credits are negative",
+      async () => {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId: "league-sfl92",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: -1
+          }
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        const body = response.json<{
+          data: null;
+          error: {
+            code: string;
+            message: string;
+          };
+        }>();
+
+        expect(body.data).toBeNull();
+        expect(body.error.code).toBe(
+          "INVALID_REQUEST"
+        );
+      }
+    );
   });
 });
