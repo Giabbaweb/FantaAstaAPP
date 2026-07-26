@@ -135,6 +135,31 @@ describe("application integration", () => {
         updatedAt: expect.any(String)
       });
     });
+    it("returns 404 when the auction session does not exist", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/auction-sessions/missing-session"
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      const body = response.json<{
+        data: null;
+        error: {
+          code: string;
+          message: string;
+        };
+      }>();
+
+      expect(body).toEqual({
+        data: null,
+        error: {
+          code: "AUCTION_SESSION_NOT_FOUND",
+          message:
+            'Auction session "missing-session" was not found'
+        }
+      });
+    });
   });
 
   describe("GET /api/auction-sessions", () => {
