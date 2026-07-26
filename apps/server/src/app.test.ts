@@ -232,5 +232,61 @@ describe("application integration", () => {
       });
     });
   });
+  describe("POST /api/auction-sessions", () => {
+    it("creates a new auction session", async () => {
+      await db.insert(leagues).values({
+        id: "league-sfl92",
+        name: "Scotch Football League 1992",
+        normalizedName: "scotch football league 1992"
+      });
 
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/auction-sessions",
+        payload: {
+          leagueId: "league-sfl92",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330
+        }
+      });
+
+      expect(response.statusCode).toBe(201);
+
+      const body = response.json<{
+        data: {
+          id: string;
+          leagueId: string;
+          season: string;
+          editionNumber: number;
+          status: string;
+          initialCredits: number;
+          createdAt: string;
+          updatedAt: string;
+        };
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+
+      expect(body.data).toEqual({
+        id: expect.any(String),
+        leagueId: "league-sfl92",
+        season: "2026/2027",
+        editionNumber: 35,
+        status: "SETUP",
+        initialCredits: 330,
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String)
+      });
+
+      const stored = await db.query.auctionSessions.findFirst({
+        where: (table, { eq }) => eq(table.id, body.data.id)
+      });
+
+      expect(stored).not.toBeNull();
+      expect(stored?.leagueId).toBe("league-sfl92");
+      expect(stored?.season).toBe("2026/2027");
+    });
+  });
 });
