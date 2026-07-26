@@ -85,6 +85,58 @@ describe("application integration", () => {
     });
   });
 
+  describe("GET /api/auction-sessions/:id", () => {
+    it("returns the requested auction session", async () => {
+      await db.insert(leagues).values({
+        id: "league-sfl92",
+        name: "Scotch Football League 1992",
+        normalizedName: "scotch football league 1992"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-2026-2027",
+        leagueId: "league-sfl92",
+        season: "2026/2027",
+        editionNumber: 35,
+        initialCredits: 330
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/auction-sessions/session-2026-2027"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        data: {
+          id: string;
+          leagueId: string;
+          season: string;
+          editionNumber: number;
+          status: string;
+          initialCredits: number;
+          createdAt: string;
+          updatedAt: string;
+        };
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+
+      expect(body.data).toEqual({
+        id: "session-2026-2027",
+        leagueId: "league-sfl92",
+        season: "2026/2027",
+        editionNumber: 35,
+        status: "SETUP",
+        initialCredits: 330,
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String)
+      });
+    });
+  });
+
   describe("GET /api/auction-sessions", () => {
     it("returns an empty auction session list", async () => {
       const response = await app.inject({
