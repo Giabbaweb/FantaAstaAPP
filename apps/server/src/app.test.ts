@@ -77,4 +77,25 @@ describe("application integration", () => {
       ).toBe(false);
     });
   });
+
+  describe("GET /api/auction-sessions", () => {
+    it("returns an empty auction session list", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/auction-sessions"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        data: unknown[];
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data).toHaveLength(0);
+    });
+  });
+
 });
