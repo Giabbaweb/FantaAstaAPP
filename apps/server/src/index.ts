@@ -8,6 +8,7 @@ import { APPLICATION_NAME } from "@fantaastaapp/domain";
 
 import { sqlite } from "./db/client.js";
 import { dbHealthRoutes } from "./routes/db-health.js";
+import { auctionSessionRoutes } from "./routes/auction-session.routes.js";
 
 const host = process.env.HOST ?? "0.0.0.0";
 const port = Number(process.env.PORT ?? 3001);
@@ -35,6 +36,8 @@ app.get("/api/health", async (): Promise<HealthStatus> => {
 });
 
 await app.register(dbHealthRoutes);
+
+await app.register(auctionSessionRoutes);
 
 app.addHook("onClose", async () => {
   sqlite.close();
