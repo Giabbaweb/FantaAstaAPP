@@ -399,5 +399,118 @@ describe("application integration", () => {
         );
       }
     );
+    it(
+      "returns 409 when the league does not exist",
+      async () => {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId: "missing-league",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code:
+              "AUCTION_SESSION_LEAGUE_NOT_FOUND",
+            message:
+              "The selected league does not exist"
+          }
+        });
+      }
+    );
+
+    it(
+      "returns 409 when the league and season already exist",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-sfl92",
+          name: "Scotch Football League 1992",
+          normalizedName:
+            "scotch football league 1992"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "existing-season-session",
+          leagueId: "league-sfl92",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330
+        });
+
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId: "league-sfl92",
+            season: "2026/2027",
+            editionNumber: 36,
+            initialCredits: 330
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code:
+              "AUCTION_SESSION_SEASON_ALREADY_EXISTS",
+            message:
+              "An auction session already exists for this league and season"
+          }
+        });
+      }
+    );
+
+    it(
+      "returns 409 when the league and edition number already exist",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-sfl92",
+          name: "Scotch Football League 1992",
+          normalizedName:
+            "scotch football league 1992"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "existing-edition-session",
+          leagueId: "league-sfl92",
+          season: "2025/2026",
+          editionNumber: 35,
+          initialCredits: 330
+        });
+
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId: "league-sfl92",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code:
+              "AUCTION_SESSION_EDITION_ALREADY_EXISTS",
+            message:
+              "An auction session already exists for this league and edition number"
+          }
+        });
+      }
+    );
   });
 });

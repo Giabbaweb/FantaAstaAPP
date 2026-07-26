@@ -18,10 +18,12 @@ import type {
 } from "fastify";
 
 import {
+  mapAuctionSessionCreationError,
   mapAuctionSessionError
 } from "../http/auction-session-errors.js";
 import type {
   AuctionSessionConflictResponse,
+  AuctionSessionCreationConflictResponse,
   AuctionSessionNotFoundResponse
 } from "../http/auction-session-errors.js";
 import {
@@ -141,7 +143,8 @@ export const auctionSessionRoutes: FastifyPluginAsync =
       Body: CreateAuctionSessionInput;
       Reply:
         | CreateAuctionSessionResponse
-        | InvalidRequestResponse;
+        | InvalidRequestResponse
+        | AuctionSessionCreationConflictResponse;
     }>(
       "/api/auction-sessions",
       async (request, reply) => {
@@ -163,15 +166,28 @@ export const auctionSessionRoutes: FastifyPluginAsync =
           });
         }
 
-        const session =
-          await service.createSession(
-            validation.data
-          );
+        try {
+          const session =
+            await service.createSession(
+              validation.data
+            );
 
-        return reply.code(201).send({
-          data: session,
-          error: null
-        });
+          return reply.code(201).send({
+            data: session,
+            error: null
+          });
+        } catch (error) {
+          const mapped =
+            mapAuctionSessionCreationError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
       }
     );
 

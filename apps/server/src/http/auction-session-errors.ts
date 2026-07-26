@@ -28,6 +28,27 @@ export type AuctionSessionConflictResponse = {
   };
 };
 
+export type AuctionSessionCreationConflictResponse = {
+  data: null;
+  error: {
+    code:
+      | "AUCTION_SESSION_LEAGUE_NOT_FOUND"
+      | "AUCTION_SESSION_SEASON_ALREADY_EXISTS"
+      | "AUCTION_SESSION_EDITION_ALREADY_EXISTS";
+    message: string;
+  };
+};
+
+type SqliteConstraintError = Error & {
+  code?: string;
+};
+
+function isSqliteConstraintError(
+  error: unknown
+): error is SqliteConstraintError {
+  return error instanceof Error;
+}
+
 export type AuctionSessionErrorMapping =
   | {
       statusCode: 404;
@@ -93,6 +114,77 @@ export function mapAuctionSessionError(
       default:
         return null;
     }
+  }
+
+  return null;
+}
+
+export function mapAuctionSessionCreationError(
+  error: unknown
+):
+  | {
+      statusCode: 409;
+      body: AuctionSessionCreationConflictResponse;
+    }
+  | null {
+  if (!isSqliteConstraintError(error)) {
+    return null;
+  }
+
+  if (
+    error.code === "SQLITE_CONSTRAINT_FOREIGNKEY"
+  ) {
+    return {
+      statusCode: 409,
+      body: {
+        data: null,
+        error: {
+          code: "AUCTION_SESSION_LEAGUE_NOT_FOUND",
+          message:
+            "The selected league does not exist"
+        }
+      }
+    };
+  }
+
+  if (
+    error.code === "SQLITE_CONSTRAINT_UNIQUE" &&
+    error.message.includes(
+      "auction_sessions.league_id, auction_sessions.season"
+    )
+  ) {
+    return {
+      statusCode: 409,
+      body: {
+        data: null,
+        error: {
+          code:
+            "AUCTION_SESSION_SEASON_ALREADY_EXISTS",
+          message:
+            "An auction session already exists for this league and season"
+        }
+      }
+    };
+  }
+
+  if (
+    error.code === "SQLITE_CONSTRAINT_UNIQUE" &&
+    error.message.includes(
+      "auction_sessions.league_id, auction_sessions.edition_number"
+    )
+  ) {
+    return {
+      statusCode: 409,
+      body: {
+        data: null,
+        error: {
+          code:
+            "AUCTION_SESSION_EDITION_ALREADY_EXISTS",
+          message:
+            "An auction session already exists for this league and edition number"
+        }
+      }
+    };
   }
 
   return null;
