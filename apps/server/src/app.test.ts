@@ -513,4 +513,255 @@ describe("application integration", () => {
       }
     );
   });
+  describe("PATCH /api/auction-sessions/:id", () => {
+    it(
+      "updates an auction session in SETUP",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-setup",
+          name: "Patch Setup League",
+          normalizedName: "patch setup league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-setup",
+          leagueId: "league-patch-setup",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "SETUP"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-setup",
+          payload: {
+            season: "2027/2028",
+            editionNumber: 36,
+            initialCredits: 350
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            id: "session-patch-setup",
+            leagueId: "league-patch-setup",
+            season: "2027/2028",
+            editionNumber: 36,
+            initialCredits: 350,
+            status: "SETUP"
+          }),
+          error: null
+        });
+      }
+    );
+
+    it(
+      "returns 400 when the update payload is empty",
+      async () => {
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-empty-update",
+          payload: {}
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "INVALID_REQUEST"
+          })
+        });
+      }
+    );
+
+    it(
+      "returns 404 when the auction session does not exist",
+      async () => {
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/missing-patch-session",
+          payload: {
+            initialCredits: 350
+          }
+        });
+
+        expect(response.statusCode).toBe(404);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "AUCTION_SESSION_NOT_FOUND"
+          })
+        });
+      }
+    );
+
+    it(
+      "returns 409 when structural fields are changed outside SETUP",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-structural",
+          name: "Patch Structural League",
+          normalizedName:
+            "patch structural league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-structural",
+          leagueId: "league-patch-structural",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "READY"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-structural",
+          payload: {
+            season: "2027/2028"
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "STRUCTURAL_FIELDS_LOCKED"
+          })
+        });
+      }
+    );
+
+    it(
+      "updates initial credits while the session is READY",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-ready-credits",
+          name: "Patch Ready Credits League",
+          normalizedName:
+            "patch ready credits league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-ready-credits",
+          leagueId:
+            "league-patch-ready-credits",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "READY"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-ready-credits",
+          payload: {
+            initialCredits: 360
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            id: "session-patch-ready-credits",
+            initialCredits: 360,
+            status: "READY"
+          }),
+          error: null
+        });
+      }
+    );
+
+    it(
+      "updates initial credits while the session is RUNNING",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-running",
+          name: "Patch Running League",
+          normalizedName:
+            "patch running league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-running",
+          leagueId: "league-patch-running",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "RUNNING"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-running",
+          payload: {
+            initialCredits: 360
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            id: "session-patch-running",
+            initialCredits: 360,
+            status: "RUNNING"
+          }),
+          error: null
+        });
+      }
+    );
+
+    it(
+      "returns 409 when the auction session is read-only",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-completed",
+          name: "Patch Completed League",
+          normalizedName:
+            "patch completed league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-completed",
+          leagueId: "league-patch-completed",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "COMPLETED"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-completed",
+          payload: {
+            initialCredits: 360
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "SESSION_READ_ONLY"
+          })
+        });
+      }
+    );
+  });
 });
