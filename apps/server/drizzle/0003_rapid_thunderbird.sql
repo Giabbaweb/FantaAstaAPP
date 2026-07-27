@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `auction_sessions_league_edition_unique` ON `auction_sessions` (`league_id`,`edition_number`);

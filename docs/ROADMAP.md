@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.2.0
+v0.3.0
 ```
 
 Milestone completate:
@@ -28,13 +28,20 @@ Milestone completate:
 - logging;
 - testing;
 - repository Git;
-- documentazione iniziale del progetto.
+- documentazione iniziale del progetto;
+- gestione delle leghe;
+- gestione delle sessioni d'asta;
+- API CRUD delle sessioni;
+- ciclo di vita delle sessioni;
+- contratti condivisi;
+- validazione di dominio;
+- test di integrazione.
 
+````
 Prossima milestone:
 
 ```text
-v0.3.0 — Gestione delle Sessioni d’Asta
-```
+v0.4.0 — Configurazione della Lega
 
 ---
 
@@ -122,17 +129,20 @@ Tabelle iniziali:
 
 # v0.3.0 — Gestione delle Sessioni d’Asta
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
 Questa milestone introduce la prima funzionalità applicativa completa.
 
 ## Obiettivi
 
-- gestire il ciclo di vita di una sessione d’asta;
-- introdurre API dedicate;
-- formalizzare gli stati della sessione;
-- implementare regole di transizione;
-- creare la prima UI amministrativa funzionale.
+- introdurre l'entità League;
+- implementare la persistenza delle sessioni d'asta;
+- definire il ciclo di vita delle sessioni;
+- implementare le regole di transizione;
+- creare repository e service dedicati;
+- esporre API REST complete;
+- condividere contratti e validazioni tramite Zod;
+- introdurre test di integrazione completi.
 
 ## Stati previsti
 
@@ -147,15 +157,15 @@ CLOSED
 
 ## Backend
 
+- entità `League`;
 - modulo `auction-sessions`;
-- repository;
-- service applicativo;
+- repository SQLite;
+- application service;
 - route Fastify;
-- schemi Zod;
-- mapping database;
-- errori applicativi;
-- logging dedicato;
-- test unitari;
+- contratti condivisi;
+- validazioni Zod;
+- regole di dominio;
+- mapping degli errori;
 - test di integrazione.
 
 ## API previste
@@ -165,25 +175,15 @@ GET    /api/auction-sessions
 GET    /api/auction-sessions/:id
 POST   /api/auction-sessions
 PATCH  /api/auction-sessions/:id
-POST   /api/auction-sessions/:id/ready
-POST   /api/auction-sessions/:id/start
-POST   /api/auction-sessions/:id/suspend
-POST   /api/auction-sessions/:id/resume
-POST   /api/auction-sessions/:id/complete
-POST   /api/auction-sessions/:id/close
+PATCH  /api/auction-sessions/:id/status
+DELETE /api/auction-sessions/:id
 ```
-
-L’elenco definitivo potrà essere adattato durante l’implementazione.
 
 ## Frontend
 
-- pagina elenco sessioni;
-- creazione sessione;
-- dettaglio sessione;
-- modifica dati consentiti;
-- visualizzazione dello stato;
-- azioni amministrative;
-- gestione loading ed errori.
+La gestione amministrativa delle sessioni verrà sviluppata nella milestone successiva.
+
+La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti condivisi e le API.
 
 ## Regole principali
 
@@ -195,20 +195,21 @@ L’elenco definitivo potrà essere adattato durante l’implementazione.
 
 ## Criteri di completamento
 
-- CRUD essenziale operativo;
-- transizioni testate;
-- errori coerenti;
-- API documentate;
-- UI amministrativa utilizzabile;
-- build, type checking e test superati;
-- database migrabile da v0.2.0;
-- changelog aggiornato.
+- CRUD delle sessioni operativo;
+- ciclo di vita completo implementato;
+- validazioni di dominio operative;
+- contratti condivisi pubblicati;
+- API REST funzionanti;
+- gestione coerente degli errori;
+- test di integrazione completi;
+- build, typecheck e test superati;
+- documentazione aggiornata.
 
 ---
 
 # v0.4.0 — Configurazione della lega
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 

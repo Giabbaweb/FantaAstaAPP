@@ -465,10 +465,11 @@ La scelta di SQLite è coerente con i requisiti:
 
 ---
 
-### 8.2 Stato della v0.2.0
+### 8.2 Stato della v0.3.0
 
 Le tabelle attualmente presenti comprendono:
 
+- `leagues`;
 - `auction_sessions`;
 - `owners`;
 - `teams`;
@@ -512,11 +513,17 @@ In caso di errore, l’intera operazione deve essere annullata.
 
 ## 9. API HTTP
 
-La v0.2.0 espone:
+La v0.3.0 espone:
 
 ```text
-GET /api/health
-GET /api/db-health
+GET    /api/health
+GET    /api/db-health
+GET    /api/auction-sessions
+GET    /api/auction-sessions/:id
+POST   /api/auction-sessions
+PATCH  /api/auction-sessions/:id
+PATCH  /api/auction-sessions/:id/status
+DELETE /api/auction-sessions/:id
 ```
 
 ### `/api/health`
@@ -530,7 +537,6 @@ Verifica che il database sia accessibile e operativo.
 Le API future verranno raggruppate per risorsa o modulo, ad esempio:
 
 ```text
-/api/auction-sessions
 /api/teams
 /api/owners
 /api/players
@@ -560,7 +566,7 @@ oppure, in caso di errore:
 }
 ```
 
-Il formato definitivo verrà formalizzato nei contratti condivisi.
+I contratti condivisi vengono definiti nel package `packages/contracts`.
 
 ---
 

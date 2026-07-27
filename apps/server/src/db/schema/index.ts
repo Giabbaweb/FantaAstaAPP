@@ -3,33 +3,79 @@ import {
   integer,
   primaryKey,
   sqliteTable,
-  text
+  text,
+  uniqueIndex
 } from "drizzle-orm/sqlite-core";
 
-export const auctionSessions = sqliteTable("auction_sessions", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  season: text("season").notNull(),
-  status: text("status", {
-    enum: [
-      "DRAFT",
-      "READY",
-      "RUNNING",
-      "SUSPENDED",
-      "COMPLETED",
-      "ARCHIVED"
-    ]
-  })
-    .notNull()
-    .default("DRAFT"),
-  initialCredits: integer("initial_credits").notNull().default(330),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`)
-});
+export const leagues = sqliteTable(
+  "leagues",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex("leagues_normalized_name_unique").on(table.normalizedName)
+  ]
+);
+
+export const auctionSessions = sqliteTable(
+  "auction_sessions",
+  {
+    id: text("id").primaryKey(),
+
+    leagueId: text("league_id")
+      .notNull()
+      .references(() => leagues.id, {
+        onDelete: "restrict"
+      }),
+
+    season: text("season").notNull(),
+
+    editionNumber: integer("edition_number").notNull(),
+
+    status: text("status", {
+      enum: [
+        "SETUP",
+        "READY",
+        "RUNNING",
+        "SUSPENDED",
+        "COMPLETED",
+        "CLOSED"
+      ]
+    })
+      .notNull()
+      .default("SETUP"),
+
+    initialCredits: integer("initial_credits")
+      .notNull()
+      .default(330),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex("auction_sessions_league_season_unique").on(
+      table.leagueId,
+      table.season
+    ),
+    uniqueIndex("auction_sessions_league_edition_unique").on(
+      table.leagueId,
+      table.editionNumber
+    )
+  ]
+);
 
 export const teams = sqliteTable("teams", {
   id: text("id").primaryKey(),
