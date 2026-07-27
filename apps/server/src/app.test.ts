@@ -764,4 +764,105 @@ describe("application integration", () => {
       }
     );
   });
+  describe("DELETE /api/auction-sessions/:id", () => {
+    it(
+      "deletes an auction session in SETUP",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-delete-setup",
+          name: "Delete Setup League",
+          normalizedName: "delete setup league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-delete-setup",
+          leagueId: "league-delete-setup",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "SETUP"
+        });
+
+        const response = await app.inject({
+          method: "DELETE",
+          url:
+            "/api/auction-sessions/session-delete-setup"
+        });
+
+        expect(response.statusCode).toBe(204);
+        expect(response.body).toBe("");
+
+        const getResponse = await app.inject({
+          method: "GET",
+          url:
+            "/api/auction-sessions/session-delete-setup"
+        });
+
+        expect(getResponse.statusCode).toBe(404);
+      }
+    );
+
+    it(
+      "returns 404 when the auction session does not exist",
+      async () => {
+        const response = await app.inject({
+          method: "DELETE",
+          url:
+            "/api/auction-sessions/missing-delete-session"
+        });
+
+        expect(response.statusCode).toBe(404);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "AUCTION_SESSION_NOT_FOUND"
+          })
+        });
+      }
+    );
+
+    it(
+      "returns 409 when deleting an auction session outside SETUP",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-delete-ready",
+          name: "Delete Ready League",
+          normalizedName: "delete ready league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-delete-ready",
+          leagueId: "league-delete-ready",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          status: "READY"
+        });
+
+        const response = await app.inject({
+          method: "DELETE",
+          url:
+            "/api/auction-sessions/session-delete-ready"
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "SESSION_DELETE_NOT_ALLOWED"
+          })
+        });
+
+        const getResponse = await app.inject({
+          method: "GET",
+          url:
+            "/api/auction-sessions/session-delete-ready"
+        });
+
+        expect(getResponse.statusCode).toBe(200);
+      }
+    );
+  });
 });
