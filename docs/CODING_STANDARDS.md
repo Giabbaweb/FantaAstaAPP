@@ -801,10 +801,9 @@ POST /api/create-auction-session
 Per azioni di dominio esplicite è ammesso un endpoint dedicato:
 
 ```text
-POST /api/auction-sessions/:id/suspend
-POST /api/auction-sessions/:id/resume
+PATCH /api/auction-sessions/:id/status
 ```
-
+Il comando di dominio (`ready`, `start`, `suspend`, `resume`, `complete`, `close`) viene trasmesso nel payload della richiesta.
 ---
 
 ### 19.2 Status code
