@@ -865,4 +865,249 @@ describe("application integration", () => {
       }
     );
   });
+  describe(
+    "POST /api/auction-sessions/:id/commands/:command",
+    () => {
+      it(
+        "executes the complete auction session lifecycle",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-command-lifecycle",
+            name: "Command Lifecycle League",
+            normalizedName:
+              "command lifecycle league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: "session-command-lifecycle",
+            leagueId: "league-command-lifecycle",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            status: "SETUP"
+          });
+
+          const executeCommand = async (
+            command: string
+          ) =>
+            app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-command-lifecycle/" +
+                `commands/${command}`
+            });
+
+          const readyResponse =
+            await executeCommand("ready");
+
+          expect(readyResponse.statusCode).toBe(200);
+          expect(readyResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "READY"
+            }),
+            error: null
+          });
+
+          const startResponse =
+            await executeCommand("start");
+
+          expect(startResponse.statusCode).toBe(200);
+          expect(startResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "RUNNING"
+            }),
+            error: null
+          });
+
+          const suspendResponse =
+            await executeCommand("suspend");
+
+          expect(suspendResponse.statusCode).toBe(200);
+          expect(suspendResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "SUSPENDED"
+            }),
+            error: null
+          });
+
+          const resumeResponse =
+            await executeCommand("resume");
+
+          expect(resumeResponse.statusCode).toBe(200);
+          expect(resumeResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "RUNNING"
+            }),
+            error: null
+          });
+
+          const completeResponse =
+            await executeCommand("complete");
+
+          expect(completeResponse.statusCode).toBe(200);
+          expect(completeResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "COMPLETED"
+            }),
+            error: null
+          });
+
+          const closeResponse =
+            await executeCommand("close");
+
+          expect(closeResponse.statusCode).toBe(200);
+          expect(closeResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "CLOSED"
+            }),
+            error: null
+          });
+        }
+      );
+
+      it(
+        "returns 400 for an unknown command",
+        async () => {
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-command-invalid/" +
+              "commands/reopen"
+          });
+
+          expect(response.statusCode).toBe(400);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                'Unknown auction session command "reopen"'
+            }
+          });
+        }
+      );
+
+      it(
+        "returns 404 when the auction session does not exist",
+        async () => {
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "missing-command-session/" +
+              "commands/ready"
+          });
+
+          expect(response.statusCode).toBe(404);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code: "AUCTION_SESSION_NOT_FOUND"
+            })
+          });
+        }
+      );
+
+      it(
+        "returns 409 for an invalid status transition",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-command-invalid-transition",
+            name: "Invalid Transition League",
+            normalizedName:
+              "invalid transition league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id:
+              "session-command-invalid-transition",
+            leagueId:
+              "league-command-invalid-transition",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            status: "SETUP"
+          });
+
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-command-invalid-transition/" +
+              "commands/start"
+          });
+
+          expect(response.statusCode).toBe(409);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code: "INVALID_STATUS_TRANSITION"
+            })
+          });
+        }
+      );
+
+      it(
+        "returns 409 when another session is already active for the league",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-command-active-conflict",
+            name: "Active Conflict League",
+            normalizedName:
+              "active conflict league"
+          });
+
+          await db.insert(auctionSessions).values([
+            {
+              id: "session-command-active",
+              leagueId:
+                "league-command-active-conflict",
+              season: "2025/2026",
+              editionNumber: 34,
+              initialCredits: 330,
+              status: "READY"
+            },
+            {
+              id: "session-command-conflicting",
+              leagueId:
+                "league-command-active-conflict",
+              season: "2026/2027",
+              editionNumber: 35,
+              initialCredits: 330,
+              status: "SETUP"
+            }
+          ]);
+
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-command-conflicting/" +
+              "commands/ready"
+          });
+
+          expect(response.statusCode).toBe(409);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code:
+                "ACTIVE_SESSION_ALREADY_EXISTS"
+            })
+          });
+        }
+      );
+    }
+  );
 });
