@@ -6,6 +6,164 @@ export type HealthStatus = {
   timestamp: string;
 };
 
+const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9A-Fa-f]{6}$/, {
+    message: "Color must use the #RRGGBB format"
+  });
+
+const nullableOptionalStringSchema = (
+  schema: z.ZodString
+) => schema.nullable().optional();
+
+export const teamSchema = z.object({
+  id: z.string().min(1),
+  leagueId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  shortName: z.string().trim().min(1).max(20).nullable(),
+  primaryColor: hexColorSchema.nullable(),
+  secondaryColor: hexColorSchema.nullable(),
+  logoPath: z.string().trim().min(1).max(500).nullable(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type Team = z.infer<typeof teamSchema>;
+
+export const createTeamSchema = z.object({
+  leagueId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  shortName: nullableOptionalStringSchema(
+    z.string().trim().min(1).max(20)
+  ),
+  primaryColor: hexColorSchema.nullable().optional(),
+  secondaryColor: hexColorSchema.nullable().optional(),
+  logoPath: nullableOptionalStringSchema(
+    z.string().trim().min(1).max(500)
+  )
+});
+
+export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+
+export const updateTeamSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    shortName: nullableOptionalStringSchema(
+      z.string().trim().min(1).max(20)
+    ),
+    primaryColor: hexColorSchema.nullable().optional(),
+    secondaryColor: hexColorSchema.nullable().optional(),
+    logoPath: nullableOptionalStringSchema(
+      z.string().trim().min(1).max(500)
+    )
+  })
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
+
+export const ownerSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type Owner = z.infer<typeof ownerSchema>;
+
+export const createOwnerSchema = z.object({
+  name: z.string().trim().min(1).max(100)
+});
+
+export type CreateOwnerInput = z.infer<
+  typeof createOwnerSchema
+>;
+
+export const updateOwnerSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional()
+  })
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateOwnerInput = z.infer<
+  typeof updateOwnerSchema
+>;
+
+export const teamOwnerSchema = z.object({
+  teamId: z.string().min(1),
+  ownerId: z.string().min(1),
+  isPrimary: z.boolean()
+});
+
+export type TeamOwner = z.infer<typeof teamOwnerSchema>;
+
+export const createTeamOwnerSchema = z.object({
+  ownerId: z.string().min(1),
+  isPrimary: z.boolean().default(false)
+});
+
+export type CreateTeamOwnerInput = z.infer<
+  typeof createTeamOwnerSchema
+>;
+
+export const updateTeamOwnerSchema = z.object({
+  isPrimary: z.boolean()
+});
+
+export type UpdateTeamOwnerInput = z.infer<
+  typeof updateTeamOwnerSchema
+>;
+
+export const auctionSessionTeamSchema = z.object({
+  auctionSessionId: z.string().min(1),
+  teamId: z.string().min(1),
+  tableOrder: z.number().int().positive(),
+  renewalCredits: z.number().int().nonnegative(),
+  remainingCredits: z.number().int().nonnegative()
+});
+
+export type AuctionSessionTeam = z.infer<
+  typeof auctionSessionTeamSchema
+>;
+
+export const createAuctionSessionTeamSchema = z.object({
+  teamId: z.string().min(1),
+  tableOrder: z.number().int().positive(),
+  renewalCredits: z.number().int().nonnegative().default(0),
+  remainingCredits: z.number().int().nonnegative()
+});
+
+export type CreateAuctionSessionTeamInput = z.infer<
+  typeof createAuctionSessionTeamSchema
+>;
+
+export const updateAuctionSessionTeamSchema = z
+  .object({
+    tableOrder: z.number().int().positive().optional(),
+    renewalCredits: z.number().int().nonnegative().optional(),
+    remainingCredits: z.number().int().nonnegative().optional()
+  })
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateAuctionSessionTeamInput = z.infer<
+  typeof updateAuctionSessionTeamSchema
+>;
+
 export const auctionSessionStatusSchema = z.enum([
   "SETUP",
   "READY",
