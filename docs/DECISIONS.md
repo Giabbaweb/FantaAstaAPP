@@ -1263,4 +1263,154 @@ Per ciascuna lega può esistere al massimo una sessione in uno dei seguenti stat
 READY
 RUNNING
 SUSPENDED
+```
 
+---
+
+# ADR-026 — Partecipazione delle squadre alla sessione e crediti iniziali per squadra
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Configurazione della sessione d’asta
+
+## Contesto
+
+Le squadre sono entità permanenti appartenenti a una lega e possono partecipare a più sessioni d’asta nel corso delle stagioni.
+
+La partecipazione di una squadra a una specifica sessione contiene però informazioni che non appartengono né alla squadra permanente né alla lega, come:
+
+- l’effettiva partecipazione alla sessione;
+- i crediti iniziali assegnati per quella sessione;
+- la configurazione operativa specifica della sessione.
+
+Memorizzare queste informazioni direttamente nella tabella `teams` impedirebbe di mantenere configurazioni differenti tra stagioni e comprometterebbe la conservazione dello storico.
+
+## Decisione
+
+Introdurre l’entità:
+
+```text
+auction_session_teams
+```
+
+come relazione esplicita tra:
+
+```text
+auction_sessions
+teams
+```
+
+Ogni record rappresenta la partecipazione di una squadra a una specifica sessione d’asta.
+
+La partecipazione deve essere univoca per la coppia:
+
+```text
+auctionSessionId
+teamId
+```
+
+I crediti iniziali della squadra vengono memorizzati nella partecipazione alla sessione e non nella squadra permanente.
+
+Il valore iniziale può essere copiato dal valore predefinito della sessione al momento della creazione della partecipazione, ma rimane configurabile in modo indipendente per ciascuna squadra.
+
+Questo consente di gestire casi come:
+
+- crediti differenti dovuti a rinnovi o conferme;
+- bonus o penalizzazioni amministrative;
+- regole specifiche della lega;
+- correzioni manuali eccezionali.
+
+La rimozione di una squadra da una sessione elimina soltanto la partecipazione e non la squadra permanente.
+
+## Conseguenze
+
+### Positive
+
+- Separazione chiara tra identità permanente della squadra e configurazione della singola sessione.
+- Conservazione coerente dello storico tra stagioni differenti.
+- Supporto a crediti iniziali diversi per ciascuna squadra.
+- Riutilizzo della stessa squadra in più sessioni d’asta.
+- Base solida per roster, saldi, acquisti e statistiche future.
+
+### Negative
+
+- È necessaria un’entità relazionale aggiuntiva.
+- Le operazioni sulla sessione devono verificare l’esistenza della partecipazione.
+- I dati della squadra e quelli della partecipazione devono essere caricati e combinati.
+- La rimozione della partecipazione deve rispettare lo stato della sessione e gli eventuali dati operativi collegati.
+
+---
+
+# ADR-027 — Proprietà della squadra e presidente principale
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Squadre, proprietari e responsabilità operative
+
+## Contesto
+
+Una fantasquadra può essere gestita da una sola persona oppure da più presidenti.
+
+Nella stessa lega possono quindi esistere:
+
+- squadre con un unico presidente;
+- squadre con un presidente principale e uno o più co-presidenti;
+- persone che devono essere conservate come entità permanenti, indipendentemente dalla singola sessione d’asta.
+
+Collegare un solo proprietario direttamente alla squadra non permetterebbe di rappresentare correttamente le comproprietà e renderebbe più difficile associare in futuro telecomandi, autorizzazioni e responsabilità operative.
+
+## Decisione
+
+Modellare separatamente le entità:
+
+```text
+owners
+teams
+```
+
+Un `owner` rappresenta una persona permanente registrata nella lega.
+
+Una squadra può essere associata a uno o più proprietari.
+
+Tra i proprietari associati a una squadra deve essere identificato un solo:
+
+```text
+primary owner
+```
+
+Il proprietario principale rappresenta il presidente ufficiale di riferimento della squadra.
+
+Gli altri proprietari associati rappresentano eventuali co-presidenti.
+
+Si applicano le seguenti regole:
+
+- ogni squadra configurata deve avere almeno un proprietario;
+- una squadra non può avere più di un proprietario principale;
+- il proprietario principale deve appartenere ai proprietari associati alla squadra;
+- la rimozione del proprietario principale richiede l’assegnazione di un nuovo principale oppure lascia temporaneamente la squadra in configurazione incompleta;
+- l’identità dell’owner rimane indipendente dalle credenziali o dai PIN che verranno introdotti nelle milestone future.
+
+La proprietà rappresenta il rapporto organizzativo permanente tra una persona e una squadra.
+
+La partecipazione a una specifica sessione d’asta rimane invece rappresentata da:
+
+```text
+auction_session_teams
+```
+
+## Conseguenze
+
+### Positive
+
+- Supporto nativo a presidente e co-presidenti.
+- Identità permanenti riutilizzabili tra stagioni differenti.
+- Separazione chiara tra proprietà della squadra e partecipazione alla sessione.
+- Base solida per autorizzazioni, telecomandi e funzionalità di audit.
+- Identificazione esplicita del referente principale della squadra.
+
+### Negative
+
+- Sono necessari controlli di coerenza aggiuntivi.
+- Le operazioni di assegnazione e rimozione devono preservare l’unicità del proprietario principale.
+- Una squadra può trovarsi temporaneamente in configurazione incompleta.
+- Le future regole di accesso dovranno distinguere tra owner, primary owner e dispositivo collegato.
