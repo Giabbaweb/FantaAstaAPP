@@ -16,3 +16,11 @@ export type {
   AuctionSessionCommand,
   AuctionSessionDomainErrorCode
 } from "./auction-sessions/index.js";
+export type {
+  Owner,
+  TeamOwner
+} from "./owners/index.js";
+
+export type {
+  AuctionSessionTeam
+} from "./auction-session-teams/index.js";
