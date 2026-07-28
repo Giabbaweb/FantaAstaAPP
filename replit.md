@@ -6,7 +6,7 @@ FantaAstaAPP
 
 ## Current Version
 
-v0.2.0
+v0.4.0
 
 ## Package Manager
 
@@ -59,6 +59,8 @@ main
 ## Documentation
 
 README.md
+
+PROJECT_CONTEXT.md
 
 docs/ARCHITECTURE.md
 

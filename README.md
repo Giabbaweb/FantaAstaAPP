@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.3.0-blue" alt="Version v0.3.0">
+  <img src="https://img.shields.io/badge/version-v0.4.0-blue" alt="Version v0.4.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -141,7 +141,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.3.0**
+**v0.4.0**
 
 Completed milestones
 
@@ -158,6 +158,15 @@ Completed milestones
 - ✅ Auction Session lifecycle commands
 - ✅ Domain validation and conflict handling
 - ✅ Backend integration test suite
+- ✅ Team management backend
+- ✅ Owner management backend
+- ✅ Auction Session Team management
+- ✅ Shared contracts for Teams, Owners and Auction Session Teams
+- ✅ Repository layer for league configuration
+- ✅ Service layer for league configuration
+- ✅ REST APIs for Teams
+- ✅ REST APIs for Owners
+- ✅ REST APIs for Auction Session Teams
 
 Auction Session lifecycle
 
@@ -178,7 +187,7 @@ RUNNING
 
 Next milestone
 
-➡ **League Configuration: Teams, Owners and Team Ownership**
+➡ **Player Import & Initial Rosters**
 
 ---
 
@@ -250,12 +259,12 @@ The `docs/` directory contains the complete project documentation.
 | v0.1 | ✅ Foundations |
 | v0.2 | ✅ Persistence & Documentation |
 | v0.3 | ✅ Auction Session Management |
-| v0.4 | 🚧 League Configuration |
-| v0.5 | ⏳ Auction Engine |
-| v0.6 | ⏳ Realtime Controllers |
-| v0.7 | ⏳ Public Display |
-| v0.8 | ⏳ Recovery & Manual Operations |
-| v0.9 | ⏳ FMS Integration |
+| v0.4 | ✅ League Configuration |
+| v0.5 | 🚧 Player Import & Initial Rosters |
+| v0.6 | ⏳ Auction Engine |
+| v0.7 | ⏳ Realtime Controllers |
+| v0.8 | ⏳ Public Display |
+| v0.9 | ⏳ Recovery, Manual Operations & FMS Integration |
 | v1.0 | 🎯 Stable Release |
 
 ---

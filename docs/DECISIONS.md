@@ -865,7 +865,8 @@ La validazione delle transizioni appartiene al dominio e deve essere richiamata 
 
 # ADR-020 — Una sola sessione operativamente attiva per installazione
 
-**Stato:** `ACCEPTED`  
+**Stato:** `SUPERSEDED`  
+**Sostituita da:** ADR-025 
 **Data:** 2026-07  
 **Ambito:** Gestione dello stato operativo
 
@@ -1231,4 +1232,35 @@ L’implementazione viene suddivisa in commit piccoli e coerenti, separando alme
 - Sono necessari mapping tra dominio, DTO e persistenza.
 - La garanzia della singola sessione attiva non è ancora duplicata a livello database.
 - La suddivisione in commit richiede disciplina durante lo sviluppo.
+
+---
+
+# ADR-025 — Una sola sessione operativamente attiva per lega
+
+**Stato:** `ACCEPTED` 
+**Data:** 2026-07  
+**Ambito:** Gestione dello stato operativo
+
+## Contesto
+
+ADR-020 stabiliva che una sola sessione per installazione potesse trovarsi in uno stato operativamente attivo.
+
+Durante l’implementazione delle sessioni d’asta è emersa la necessità di supportare più leghe indipendenti nella stessa installazione, senza imporre un vincolo globale non richiesto dal dominio.
+
+Una sessione della SFL’92 e una sessione della Lega Ambrosiana 1989, per esempio, devono poter essere entrambe operative senza entrare in conflitto, perché appartengono a leghe differenti.
+
+Il vincolo deve invece impedire che la stessa lega possieda contemporaneamente più sessioni operative.
+
+## Decisione
+
+ADR-020 viene sostituita.
+
+Possono esistere contemporaneamente più sessioni operativamente attive nella stessa installazione, purché appartengano a leghe differenti.
+
+Per ciascuna lega può esistere al massimo una sessione in uno dei seguenti stati:
+
+```text
+READY
+RUNNING
+SUSPENDED
 

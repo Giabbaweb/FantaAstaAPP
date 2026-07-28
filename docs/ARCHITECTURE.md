@@ -356,6 +356,7 @@ apps/server/src/
 ├── shared/
 └── types/
 ```
+> **Nota:** la struttura mostrata rappresenta l'architettura di riferimento verso cui evolverà il progetto. Nella versione **v0.4.0** alcuni moduli sono ancora organizzati secondo una struttura semplificata (route, repository, service e database), mantenendo comunque la separazione delle responsabilità descritta in questo documento.
 
 Ogni modulo potrà includere, quando necessario:
 
@@ -465,17 +466,25 @@ La scelta di SQLite è coerente con i requisiti:
 
 ---
 
-### 8.2 Stato della v0.3.0
+### 8.2 Stato della v0.4.0
 
 Le tabelle attualmente presenti comprendono:
 
 - `leagues`;
 - `auction_sessions`;
-- `owners`;
 - `teams`;
-- `team_owners`.
+- `owners`;
+- `auction_session_teams`;
 
-La struttura verrà estesa progressivamente nelle milestone successive.
+La configurazione completa della lega è ora persistita nel database.
+
+La struttura verrà estesa nelle milestone successive con:
+
+- giocatori;
+- rose;
+- chiamate;
+- offerte;
+- eventi di asta.
 
 ---
 
@@ -513,17 +522,36 @@ In caso di errore, l’intera operazione deve essere annullata.
 
 ## 9. API HTTP
 
-La v0.3.0 espone:
+La v0.4.0 espone:
 
 ```text
 GET    /api/health
 GET    /api/db-health
+
 GET    /api/auction-sessions
 GET    /api/auction-sessions/:id
 POST   /api/auction-sessions
 PATCH  /api/auction-sessions/:id
 PATCH  /api/auction-sessions/:id/status
 DELETE /api/auction-sessions/:id
+
+GET    /api/teams
+GET    /api/teams/:id
+POST   /api/teams
+PATCH  /api/teams/:id
+DELETE /api/teams/:id
+
+GET    /api/owners
+GET    /api/owners/:id
+POST   /api/owners
+PATCH  /api/owners/:id
+DELETE /api/owners/:id
+
+GET    /api/auction-session-teams
+GET    /api/auction-session-teams/:id
+POST   /api/auction-session-teams
+PATCH  /api/auction-session-teams/:id
+DELETE /api/auction-session-teams/:id
 ```
 
 ### `/api/health`
@@ -879,10 +907,10 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 La versione corrente è:
 
 ```text
-v0.2.0
+v0.4.0
 ```
 
-Sono operative le fondamenta tecniche:
+Sono operative:
 
 - monorepo pnpm;
 - backend Fastify;
@@ -894,30 +922,37 @@ Sono operative le fondamenta tecniche:
 - logging;
 - test;
 - health check applicativo;
-- health check del database.
+- health check del database;
+- gestione delle sessioni d'asta;
+- gestione delle squadre;
+- gestione dei presidenti;
+- associazione squadre-sessioni d'asta;
+- repository applicativi;
+- service applicativi;
+- API REST complete per la configurazione della lega.
 
-Il motore d’asta, il realtime, i telecomandi e lo schermo pubblico non sono ancora implementati.
+Il motore d'asta, il realtime, i telecomandi e lo schermo pubblico non sono ancora implementati.
 
 ---
 
 ## 20. Prossima evoluzione
 
-La prossima milestone funzionale è dedicata alla:
+La prossima milestone funzionale è dedicata a:
 
 ```text
-Gestione delle Sessioni d’Asta
+Giocatori, import e rose iniziali
 ```
 
-L’obiettivo sarà introdurre:
+L'obiettivo sarà introdurre:
 
-- modello completo della sessione;
-- API di gestione;
-- validazione degli stati;
-- transizioni iniziali;
-- repository;
-- service applicativo;
-- test;
-- interfaccia amministrativa iniziale.
+- modello completo del giocatore;
+- import delle liste calciatori;
+- validazione dei dati importati;
+- gestione delle rose iniziali;
+- repository dedicati;
+- service applicativi;
+- API REST;
+- interfaccia amministrativa per import e gestione.
 
 Le decisioni architetturali significative verranno registrate in:
 

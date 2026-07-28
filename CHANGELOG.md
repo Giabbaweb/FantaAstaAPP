@@ -14,6 +14,40 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.4.0] - 2026-07-28
+
+### Added
+
+* Team domain entity
+* Owner domain entity
+* Auction Session Team domain entity
+* Shared Zod schemas and TypeScript contracts for Teams
+* Shared Zod schemas and TypeScript contracts for Owners
+* Shared Zod schemas and TypeScript contracts for Auction Session Teams
+* SQLite repositories for Teams, Owners and Auction Session Teams
+* Application services for Teams, Owners and Auction Session Teams
+* Fastify CRUD APIs for Teams
+* Fastify CRUD APIs for Owners
+* Fastify CRUD APIs for Auction Session Teams
+* Consistent HTTP error mapping across all league configuration modules
+
+### Changed
+
+* League configuration is now fully persisted
+* Backend architecture extended with dedicated Team and Owner modules
+* Repository and service layers aligned across all configuration entities
+
+### Tested
+
+* Backend type checking
+* Backend production build
+* Team CRUD validation
+* Owner CRUD validation
+* Auction Session Team CRUD validation
+* Repository layer integration
+* Service layer integration
+* HTTP route validation
+
 ## [0.3.0] - 2026-07-27
 
 ### Added
