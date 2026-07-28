@@ -1,6 +1,7 @@
 export const APPLICATION_NAME = "FantaAstaAPP";
 
 export type { League } from "./leagues/index.js";
+export type { Team } from "./teams/index.js";
 
 export {
   AuctionSessionDomainError,
