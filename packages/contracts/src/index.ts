@@ -6,6 +6,67 @@ export type HealthStatus = {
   timestamp: string;
 };
 
+const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9A-Fa-f]{6}$/, {
+    message: "Color must use the #RRGGBB format"
+  });
+
+const nullableOptionalStringSchema = (
+  schema: z.ZodString
+) => schema.nullable().optional();
+
+export const teamSchema = z.object({
+  id: z.string().min(1),
+  leagueId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  shortName: z.string().trim().min(1).max(20).nullable(),
+  primaryColor: hexColorSchema.nullable(),
+  secondaryColor: hexColorSchema.nullable(),
+  logoPath: z.string().trim().min(1).max(500).nullable(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type Team = z.infer<typeof teamSchema>;
+
+export const createTeamSchema = z.object({
+  leagueId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  shortName: nullableOptionalStringSchema(
+    z.string().trim().min(1).max(20)
+  ),
+  primaryColor: hexColorSchema.nullable().optional(),
+  secondaryColor: hexColorSchema.nullable().optional(),
+  logoPath: nullableOptionalStringSchema(
+    z.string().trim().min(1).max(500)
+  )
+});
+
+export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+
+export const updateTeamSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    shortName: nullableOptionalStringSchema(
+      z.string().trim().min(1).max(20)
+    ),
+    primaryColor: hexColorSchema.nullable().optional(),
+    secondaryColor: hexColorSchema.nullable().optional(),
+    logoPath: nullableOptionalStringSchema(
+      z.string().trim().min(1).max(500)
+    )
+  })
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
+
 export const auctionSessionStatusSchema = z.enum([
   "SETUP",
   "READY",
