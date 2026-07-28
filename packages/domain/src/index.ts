@@ -37,3 +37,23 @@ export type {
   PlayerAvailabilityStatus,
   PlayerRole
 } from "./players/index.js";
+
+export {
+  RosterEntryDomainError,
+  assertAcquisitionCostAllowed,
+  assertContractYearAllowed,
+  assertRosterRoleLimitAllowed,
+  assertRosterSizeLimitAllowed,
+  assertSufficientCredits,
+  contractYears,
+  rosterEntrySources,
+  rosterRoleLimits,
+  rosterSizeLimit
+} from "./roster-entries/index.js";
+
+export type {
+  ContractYear,
+  RosterEntry,
+  RosterEntryDomainErrorCode,
+  RosterEntrySource
+} from "./roster-entries/index.js";
