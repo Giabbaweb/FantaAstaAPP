@@ -67,6 +67,63 @@ export const updateTeamSchema = z
 
 export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
 
+export const ownerSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type Owner = z.infer<typeof ownerSchema>;
+
+export const createOwnerSchema = z.object({
+  name: z.string().trim().min(1).max(100)
+});
+
+export type CreateOwnerInput = z.infer<
+  typeof createOwnerSchema
+>;
+
+export const updateOwnerSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional()
+  })
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateOwnerInput = z.infer<
+  typeof updateOwnerSchema
+>;
+
+export const teamOwnerSchema = z.object({
+  teamId: z.string().min(1),
+  ownerId: z.string().min(1),
+  isPrimary: z.boolean()
+});
+
+export type TeamOwner = z.infer<typeof teamOwnerSchema>;
+
+export const createTeamOwnerSchema = z.object({
+  ownerId: z.string().min(1),
+  isPrimary: z.boolean().default(false)
+});
+
+export type CreateTeamOwnerInput = z.infer<
+  typeof createTeamOwnerSchema
+>;
+
+export const updateTeamOwnerSchema = z.object({
+  isPrimary: z.boolean()
+});
+
+export type UpdateTeamOwnerInput = z.infer<
+  typeof updateTeamOwnerSchema
+>;
+
 export const auctionSessionStatusSchema = z.enum([
   "SETUP",
   "READY",
