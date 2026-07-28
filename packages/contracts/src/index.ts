@@ -124,6 +124,46 @@ export type UpdateTeamOwnerInput = z.infer<
   typeof updateTeamOwnerSchema
 >;
 
+export const auctionSessionTeamSchema = z.object({
+  auctionSessionId: z.string().min(1),
+  teamId: z.string().min(1),
+  tableOrder: z.number().int().positive(),
+  renewalCredits: z.number().int().nonnegative(),
+  remainingCredits: z.number().int().nonnegative()
+});
+
+export type AuctionSessionTeam = z.infer<
+  typeof auctionSessionTeamSchema
+>;
+
+export const createAuctionSessionTeamSchema = z.object({
+  teamId: z.string().min(1),
+  tableOrder: z.number().int().positive(),
+  renewalCredits: z.number().int().nonnegative().default(0),
+  remainingCredits: z.number().int().nonnegative()
+});
+
+export type CreateAuctionSessionTeamInput = z.infer<
+  typeof createAuctionSessionTeamSchema
+>;
+
+export const updateAuctionSessionTeamSchema = z
+  .object({
+    tableOrder: z.number().int().positive().optional(),
+    renewalCredits: z.number().int().nonnegative().optional(),
+    remainingCredits: z.number().int().nonnegative().optional()
+  })
+  .refine(
+    (value) => Object.values(value).some((field) => field !== undefined),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateAuctionSessionTeamInput = z.infer<
+  typeof updateAuctionSessionTeamSchema
+>;
+
 export const auctionSessionStatusSchema = z.enum([
   "SETUP",
   "READY",
