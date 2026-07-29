@@ -15,8 +15,20 @@ import {
   auctionSessionRoutes
 } from "./routes/auction-session.routes.js";
 import {
+  auctionSessionTeamRoutes
+} from "./routes/auction-session-team.routes.js";
+import {
   dbHealthRoutes
 } from "./routes/db-health.js";
+import {
+  ownerRoutes
+} from "./routes/owner.routes.js";
+import {
+  playerRoutes
+} from "./routes/player.routes.js";
+import {
+  teamRoutes
+} from "./routes/team.routes.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -39,8 +51,11 @@ export async function buildApp() {
   );
 
   await app.register(dbHealthRoutes);
-
   await app.register(auctionSessionRoutes);
+  await app.register(teamRoutes);
+  await app.register(ownerRoutes);
+  await app.register(auctionSessionTeamRoutes);
+  await app.register(playerRoutes);
 
   app.addHook("onClose", async () => {
     sqlite.close();
