@@ -5,8 +5,8 @@ import type {
 } from "@fantaastaapp/contracts";
 
 export type PlayerImportFormat =
-  | "CSV"
-  | "TXT";
+  | "FMS_REVO_ARCHIVE_TAB"
+  | "FMS_REVO_ROSTERS_TAB";
 
 export type PlayerImportSource = {
   format: PlayerImportFormat;
@@ -23,12 +23,13 @@ export type PlayerImportRow = {
 };
 
 export type PlayerImportIssueCode =
-  | "EMPTY_ROW"
+  | "HEADER_NOT_FOUND"
   | "INVALID_COLUMNS"
   | "INVALID_FMS_CODE"
   | "INVALID_NAME"
   | "INVALID_ROLE"
-  | "INVALID_AVAILABILITY_STATUS";
+  | "INVALID_AVAILABILITY_STATUS"
+  | "UNSUPPORTED_FORMAT";
 
 export type PlayerImportIssue = {
   rowNumber: number;
