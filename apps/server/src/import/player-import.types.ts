@@ -87,3 +87,49 @@ export type InitialRosterImportParseResult = {
   rows: InitialRosterImportRow[];
   issues: InitialRosterImportIssue[];
 };
+
+export type InitialRosterPlayerLookup = {
+  id: string;
+  name: string;
+  role: PlayerRole;
+};
+
+export type InitialRosterTeamLookup = {
+  auctionSessionTeamId: string;
+  teamName: string;
+};
+
+export type InitialRosterImportPlanEntry = {
+  rowNumber: number;
+  auctionSessionTeamId: string;
+  playerId: string;
+  acquisitionCost: number;
+  contractYear: 1 | 2 | 3;
+  source: "INITIAL_ROSTER";
+};
+
+export type InitialRosterImportPlanIssueCode =
+  | "TEAM_NOT_FOUND"
+  | "PLAYER_NOT_FOUND"
+  | "PLAYER_ROLE_MISMATCH"
+  | "DUPLICATE_PLAYER_IN_IMPORT";
+
+export type InitialRosterImportPlanIssue = {
+  rowNumber: number;
+  code: InitialRosterImportPlanIssueCode;
+  message: string;
+  teamName: string;
+  playerName: string;
+};
+
+export type InitialRosterImportPlan = {
+  entries: InitialRosterImportPlanEntry[];
+  parserIssues: InitialRosterImportIssue[];
+  planningIssues: InitialRosterImportPlanIssue[];
+  summary: {
+    parsedRows: number;
+    validEntries: number;
+    parserIssueCount: number;
+    planningIssueCount: number;
+  };
+};
