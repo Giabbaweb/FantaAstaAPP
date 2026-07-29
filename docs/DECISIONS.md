@@ -865,7 +865,8 @@ La validazione delle transizioni appartiene al dominio e deve essere richiamata 
 
 # ADR-020 — Una sola sessione operativamente attiva per installazione
 
-**Stato:** `ACCEPTED`  
+**Stato:** `SUPERSEDED`  
+**Sostituita da:** ADR-025 
 **Data:** 2026-07  
 **Ambito:** Gestione dello stato operativo
 
@@ -1232,3 +1233,582 @@ L’implementazione viene suddivisa in commit piccoli e coerenti, separando alme
 - La garanzia della singola sessione attiva non è ancora duplicata a livello database.
 - La suddivisione in commit richiede disciplina durante lo sviluppo.
 
+---
+
+# ADR-025 — Una sola sessione operativamente attiva per lega
+
+**Stato:** `ACCEPTED` 
+**Data:** 2026-07  
+**Ambito:** Gestione dello stato operativo
+
+## Contesto
+
+ADR-020 stabiliva che una sola sessione per installazione potesse trovarsi in uno stato operativamente attivo.
+
+Durante l’implementazione delle sessioni d’asta è emersa la necessità di supportare più leghe indipendenti nella stessa installazione, senza imporre un vincolo globale non richiesto dal dominio.
+
+Una sessione della SFL’92 e una sessione della Lega Ambrosiana 1989, per esempio, devono poter essere entrambe operative senza entrare in conflitto, perché appartengono a leghe differenti.
+
+Il vincolo deve invece impedire che la stessa lega possieda contemporaneamente più sessioni operative.
+
+## Decisione
+
+ADR-020 viene sostituita.
+
+Possono esistere contemporaneamente più sessioni operativamente attive nella stessa installazione, purché appartengano a leghe differenti.
+
+Per ciascuna lega può esistere al massimo una sessione in uno dei seguenti stati:
+
+```text
+READY
+RUNNING
+SUSPENDED
+```
+
+---
+
+# ADR-026 — Partecipazione delle squadre alla sessione e crediti iniziali per squadra
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Configurazione della sessione d’asta
+
+## Contesto
+
+Le squadre sono entità permanenti appartenenti a una lega e possono partecipare a più sessioni d’asta nel corso delle stagioni.
+
+La partecipazione di una squadra a una specifica sessione contiene però informazioni che non appartengono né alla squadra permanente né alla lega, come:
+
+- l’effettiva partecipazione alla sessione;
+- i crediti iniziali assegnati per quella sessione;
+- la configurazione operativa specifica della sessione.
+
+Memorizzare queste informazioni direttamente nella tabella `teams` impedirebbe di mantenere configurazioni differenti tra stagioni e comprometterebbe la conservazione dello storico.
+
+## Decisione
+
+Introdurre l’entità:
+
+```text
+auction_session_teams
+```
+
+come relazione esplicita tra:
+
+```text
+auction_sessions
+teams
+```
+
+Ogni record rappresenta la partecipazione di una squadra a una specifica sessione d’asta.
+
+La partecipazione deve essere univoca per la coppia:
+
+```text
+auctionSessionId
+teamId
+```
+
+I crediti iniziali della squadra vengono memorizzati nella partecipazione alla sessione e non nella squadra permanente.
+
+Il valore iniziale può essere copiato dal valore predefinito della sessione al momento della creazione della partecipazione, ma rimane configurabile in modo indipendente per ciascuna squadra.
+
+Questo consente di gestire casi come:
+
+- crediti differenti dovuti a rinnovi o conferme;
+- bonus o penalizzazioni amministrative;
+- regole specifiche della lega;
+- correzioni manuali eccezionali.
+
+La rimozione di una squadra da una sessione elimina soltanto la partecipazione e non la squadra permanente.
+
+## Conseguenze
+
+### Positive
+
+- Separazione chiara tra identità permanente della squadra e configurazione della singola sessione.
+- Conservazione coerente dello storico tra stagioni differenti.
+- Supporto a crediti iniziali diversi per ciascuna squadra.
+- Riutilizzo della stessa squadra in più sessioni d’asta.
+- Base solida per roster, saldi, acquisti e statistiche future.
+
+### Negative
+
+- È necessaria un’entità relazionale aggiuntiva.
+- Le operazioni sulla sessione devono verificare l’esistenza della partecipazione.
+- I dati della squadra e quelli della partecipazione devono essere caricati e combinati.
+- La rimozione della partecipazione deve rispettare lo stato della sessione e gli eventuali dati operativi collegati.
+
+---
+
+# ADR-027 — Proprietà della squadra e presidente principale
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Squadre, proprietari e responsabilità operative
+
+## Contesto
+
+Una fantasquadra può essere gestita da una sola persona oppure da più presidenti.
+
+Nella stessa lega possono quindi esistere:
+
+- squadre con un unico presidente;
+- squadre con un presidente principale e uno o più co-presidenti;
+- persone che devono essere conservate come entità permanenti, indipendentemente dalla singola sessione d’asta.
+
+Collegare un solo proprietario direttamente alla squadra non permetterebbe di rappresentare correttamente le comproprietà e renderebbe più difficile associare in futuro telecomandi, autorizzazioni e responsabilità operative.
+
+## Decisione
+
+Modellare separatamente le entità:
+
+```text
+owners
+teams
+```
+
+Un `owner` rappresenta una persona permanente registrata nella lega.
+
+Una squadra può essere associata a uno o più proprietari.
+
+Tra i proprietari associati a una squadra deve essere identificato un solo:
+
+```text
+primary owner
+```
+
+Il proprietario principale rappresenta il presidente ufficiale di riferimento della squadra.
+
+Gli altri proprietari associati rappresentano eventuali co-presidenti.
+
+Si applicano le seguenti regole:
+
+- ogni squadra configurata deve avere almeno un proprietario;
+- una squadra non può avere più di un proprietario principale;
+- il proprietario principale deve appartenere ai proprietari associati alla squadra;
+- la rimozione del proprietario principale richiede l’assegnazione di un nuovo principale oppure lascia temporaneamente la squadra in configurazione incompleta;
+- l’identità dell’owner rimane indipendente dalle credenziali o dai PIN che verranno introdotti nelle milestone future.
+
+La proprietà rappresenta il rapporto organizzativo permanente tra una persona e una squadra.
+
+La partecipazione a una specifica sessione d’asta rimane invece rappresentata da:
+
+```text
+auction_session_teams
+```
+
+## Conseguenze
+
+### Positive
+
+- Supporto nativo a presidente e co-presidenti.
+- Identità permanenti riutilizzabili tra stagioni differenti.
+- Separazione chiara tra proprietà della squadra e partecipazione alla sessione.
+- Base solida per autorizzazioni, telecomandi e funzionalità di audit.
+- Identificazione esplicita del referente principale della squadra.
+
+### Negative
+
+- Sono necessari controlli di coerenza aggiuntivi.
+- Le operazioni di assegnazione e rimozione devono preservare l’unicità del proprietario principale.
+- Una squadra può trovarsi temporaneamente in configurazione incompleta.
+- Le future regole di accesso dovranno distinguere tra owner, primary owner e dispositivo collegato.
+
+---
+
+# ADR-028 — I calciatori appartengono alla sessione d’asta
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Calciatori e liste stagionali
+
+## Contesto
+
+Le liste dei calciatori disponibili cambiano tra una stagione e l’altra.
+
+Nel tempo possono cambiare:
+
+* i calciatori presenti nella lista;
+* il ruolo assegnato;
+* il codice FMS;
+* lo stato di disponibilità;
+* le regole e le classificazioni adottate dalla lega.
+
+Modellare i calciatori come entità globali permanenti richiederebbe la gestione di versioni storiche, trasferimenti tra stagioni e modifiche retroattive dei dati.
+
+Una modifica alla lista corrente non deve alterare le sessioni concluse né compromettere la conservazione dello storico.
+
+## Decisione
+
+Ogni calciatore importato appartiene a una specifica sessione d’asta.
+
+L’entità viene modellata come:
+
+```text
+players
+```
+
+con almeno i seguenti attributi:
+
+```text
+id
+auctionSessionId
+fmsCode
+name
+normalizedName
+role
+availabilityStatus
+createdAt
+updatedAt
+```
+
+Il codice FMS viene memorizzato come stringa e non come valore numerico.
+
+Questo consente di:
+
+* preservare eventuali zeri iniziali;
+* trattarlo correttamente come identificatore;
+* evitare conversioni numeriche non necessarie.
+
+I ruoli persistiti sono:
+
+```text
+P
+D
+C
+A
+```
+
+Il processo di importazione può accettare e normalizzare rappresentazioni equivalenti, come:
+
+```text
+POR
+DIF
+CEN
+ATT
+```
+
+Gli stati di disponibilità inizialmente supportati sono:
+
+```text
+AVAILABLE
+ROSTERED
+UNAVAILABLE
+```
+
+Per ogni sessione devono essere univoci:
+
+```text
+fmsCode
+normalizedName
+```
+
+Si applicano quindi i vincoli logici:
+
+```text
+UNIQUE(auctionSessionId, fmsCode)
+UNIQUE(auctionSessionId, normalizedName)
+```
+
+I calciatori appartenenti a sessioni differenti sono entità distinte, anche quando rappresentano lo stesso calciatore reale.
+
+## Conseguenze
+
+### Positive
+
+* Conservazione completa dello storico delle liste stagionali.
+* Nessuna modifica retroattiva delle sessioni concluse.
+* Importazioni indipendenti per ciascuna sessione.
+* Vincoli di unicità semplici e delimitati alla sessione.
+* Gestione diretta di ruoli e disponibilità specifici della stagione.
+
+### Negative
+
+* Lo stesso calciatore reale può essere duplicato tra sessioni differenti.
+* Non è disponibile inizialmente un’anagrafica globale dei calciatori.
+* Eventuali statistiche trasversali tra stagioni richiederanno una futura strategia di riconciliazione.
+* Ogni nuova sessione richiede l’importazione della propria lista calciatori.
+
+---
+
+# ADR-029 — Le rose iniziali appartengono alla partecipazione della squadra alla sessione
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Rose iniziali, contratti e partecipazione delle squadre
+
+## Contesto
+
+Una squadra è un’entità permanente della lega, mentre la sua rosa cambia tra una sessione d’asta e l’altra.
+
+I calciatori confermati o già presenti all’inizio della sessione devono essere associati contemporaneamente:
+
+* alla sessione d’asta;
+* alla squadra partecipante;
+* al calciatore della lista stagionale;
+* al costo di acquisizione;
+* all’anno di contratto;
+* all’origine dell’assegnazione.
+
+Collegare una rosa direttamente alla squadra permanente comprometterebbe lo storico e non permetterebbe di distinguere correttamente le diverse stagioni.
+
+ADR-026 ha già introdotto:
+
+```text
+auction_session_teams
+```
+
+come entità che rappresenta la partecipazione di una squadra a una specifica sessione.
+
+## Decisione
+
+Introdurre l’entità:
+
+```text
+roster_entries
+```
+
+Ogni record rappresenta la presenza di un calciatore nella rosa di una squadra partecipante a una specifica sessione d’asta.
+
+L’entità contiene almeno:
+
+```text
+id
+auctionSessionTeamId
+playerId
+acquisitionCost
+contractYear
+source
+createdAt
+updatedAt
+```
+
+La relazione con la squadra deve avvenire attraverso:
+
+```text
+auction_session_teams
+```
+
+e non direttamente attraverso la squadra permanente.
+
+Il calciatore associato deve appartenere alla stessa sessione d’asta della partecipazione della squadra.
+
+Un calciatore può appartenere a una sola rosa all’interno della propria sessione.
+
+Si applica quindi il vincolo:
+
+```text
+UNIQUE(playerId)
+```
+
+Gli anni di contratto inizialmente supportati sono:
+
+```text
+1
+2
+3
+```
+
+L’origine dell’assegnazione viene memorizzata nel campo:
+
+```text
+source
+```
+
+Il valore usato per le rose importate all’inizio della sessione è:
+
+```text
+INITIAL_ROSTER
+```
+
+Il modello deve poter supportare in futuro anche origini come:
+
+```text
+AUCTION
+OPTION
+MANUAL_ASSIGNMENT
+TECHNICAL_CORRECTION
+```
+
+Il costo di acquisizione deve essere un intero maggiore o uguale a uno per i normali calciatori della rosa iniziale.
+
+La gestione del terzo portiere in prestito a costo zero rimane esclusa da questa milestone e sarà disciplinata separatamente.
+
+I crediti residui non vengono memorizzati direttamente.
+
+Sono calcolati come:
+
+```text
+crediti iniziali della partecipazione
+-
+somma dei costi delle roster entries
+```
+
+I limiti iniziali della rosa sono:
+
+```text
+P 2
+D 8
+C 8
+A 6
+Totale 24
+```
+
+La loro parametrizzazione viene rinviata a una decisione futura.
+
+## Conseguenze
+
+### Positive
+
+* Separazione chiara tra squadra permanente e rosa stagionale.
+* Conservazione completa dello storico delle rose.
+* Collegamento coerente con la partecipazione alla sessione.
+* Supporto a costo, contratto e origine dell’assegnazione.
+* Calcolo deterministico dei crediti residui.
+* Base comune per rose iniziali e futuri acquisti d’asta.
+
+### Negative
+
+* Sono necessari controlli tra sessione del calciatore e sessione della squadra.
+* Il saldo crediti deve essere calcolato interrogando le assegnazioni.
+* I limiti della rosa sono inizialmente definiti nel dominio e non configurabili.
+* La gestione del terzo portiere richiederà una decisione separata.
+* Le modifiche a costi e contratti devono rispettare lo stato operativo della sessione.
+
+---
+
+# ADR-030 — Le importazioni utilizzano anteprima e applicazione atomica
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-07
+**Ambito:** Importazione di calciatori e rose iniziali
+
+## Contesto
+
+Le liste dei calciatori e le rose iniziali vengono fornite tramite file di testo con campi separati da tabulazioni.
+
+I file possono contenere:
+
+* righe incomplete;
+* valori non validi;
+* codici duplicati;
+* ruoli non riconosciuti;
+* squadre inesistenti;
+* calciatori non presenti nella lista;
+* costi o anni di contratto non validi;
+* violazioni dei limiti di rosa o dei crediti disponibili.
+
+Scrivere direttamente nel database durante la lettura del file potrebbe produrre importazioni parziali e lasciare la sessione in uno stato incoerente.
+
+L’amministratore deve poter esaminare il risultato dell’analisi prima di confermare l’importazione.
+
+## Decisione
+
+Le importazioni vengono eseguite in due fasi distinte:
+
+```text
+File
+↓
+Parsing
+↓
+Validazione
+↓
+Anteprima
+↓
+Conferma esplicita
+↓
+Applicazione atomica
+```
+
+La fase di anteprima:
+
+* legge il contenuto;
+* normalizza i valori;
+* valida ogni riga;
+* rileva duplicati e conflitti;
+* produce un rapporto;
+* non modifica il database.
+
+Ogni errore di riga deve contenere almeno:
+
+```text
+lineNumber
+field
+code
+message
+rawValue
+```
+
+Il rapporto deve distinguere almeno:
+
+```text
+totalRows
+validRows
+invalidRows
+errors
+```
+
+L’applicazione richiede una conferma esplicita e deve rieseguire le validazioni necessarie.
+
+Tutte le modifiche dell’importazione vengono eseguite all’interno di una singola transazione database.
+
+Se una qualsiasi operazione fallisce:
+
+```text
+ROLLBACK
+```
+
+deve annullare l’intera importazione.
+
+Non sono ammesse importazioni parziali.
+
+Il formato canonico della lista calciatori è:
+
+```text
+FmsCode<TAB>Role<TAB>Name
+```
+
+Il formato canonico della rosa iniziale è:
+
+```text
+TeamIdentifier<TAB>FmsCode<TAB>Cost<TAB>ContractYear
+```
+
+I file canonici non richiedono una riga di intestazione.
+
+Il parser può supportare normalizzazioni esplicitamente definite, ma non deve correggere silenziosamente valori ambigui.
+
+Un eventuale registro persistente delle importazioni può memorizzare informazioni riepilogative come:
+
+```text
+id
+auctionSessionId
+type
+filename
+totalRows
+importedRows
+rejectedRows
+createdAt
+```
+
+La memorizzazione integrale delle righe originali non è richiesta in questa milestone.
+
+## Conseguenze
+
+### Positive
+
+* Nessuna modifica al database durante l’anteprima.
+* Possibilità di correggere il file prima della conferma.
+* Errori localizzati per riga e campo.
+* Importazioni completamente atomiche.
+* Protezione contro dati parziali o incoerenti.
+* Flusso riutilizzabile per lista calciatori e rose iniziali.
+
+### Negative
+
+* Parsing e validazione devono essere eseguiti almeno due volte oppure protetti da un meccanismo equivalente.
+* Il file può cambiare tra anteprima e applicazione.
+* È necessaria una struttura condivisa per i rapporti di importazione.
+* Le importazioni di grandi dimensioni richiedono attenzione alle prestazioni.
+* Il supporto a formati aggiuntivi dovrà essere introdotto esplicitamente.

@@ -24,3 +24,36 @@ export type {
 export type {
   AuctionSessionTeam
 } from "./auction-session-teams/index.js";
+
+export {
+  normalizePlayerName,
+  normalizePlayerRole,
+  playerAvailabilityStatuses,
+  playerRoles
+} from "./players/index.js";
+
+export type {
+  Player,
+  PlayerAvailabilityStatus,
+  PlayerRole
+} from "./players/index.js";
+
+export {
+  RosterEntryDomainError,
+  assertAcquisitionCostAllowed,
+  assertContractYearAllowed,
+  assertRosterRoleLimitAllowed,
+  assertRosterSizeLimitAllowed,
+  assertSufficientCredits,
+  contractYears,
+  rosterEntrySources,
+  rosterRoleLimits,
+  rosterSizeLimit
+} from "./roster-entries/index.js";
+
+export type {
+  ContractYear,
+  RosterEntry,
+  RosterEntryDomainErrorCode,
+  RosterEntrySource
+} from "./roster-entries/index.js";

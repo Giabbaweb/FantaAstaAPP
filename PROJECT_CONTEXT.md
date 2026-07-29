@@ -4,8 +4,8 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 3 completata
-- **Prossimo obiettivo:** Versione 0.4 – League Configuration
+- **Stato:** Milestone 5 completata
+- **Prossimo obiettivo:** Versione 0.6 – Motore d'asta
 
 ## Regole immutabili
 
@@ -126,8 +126,8 @@ stateVersion
 
 ## Opzioni
 
-- Versione 1.0: gestione manuale con `MANUAL_ASSIGNMENT`.
-- Versione 1.1: automazione completa del flusso d'asta.
+- 1.0: gestione manuale con `MANUAL_ASSIGNMENT`.
+- 1.1: automazione completa.
 
 ## Export FMS
 
@@ -137,30 +137,20 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 Nessuna intestazione. Terzo portiere escluso.
 
-## Stato attuale
+## Primo obiettivo
 
-Completato fino alla Versione 0.3:
+Versione 0.1:
 
-1. struttura del repository;
-2. backend Fastify;
-3. frontend React + Vite;
-4. SQLite + Drizzle ORM;
-5. schema iniziale del database;
-6. endpoint `/api/health`;
-7. endpoint `/api/db-health`;
-8. gestione delle leghe;
-9. gestione delle sessioni d'asta;
-10. ciclo di vita delle sessioni;
-11. contratti condivisi;
-12. validazioni di dominio;
-13. API REST complete;
-14. test di integrazione.
-
-Prossimo obiettivo:
-
-```text
-Versione 0.4 — League Configuration
-```
+1. struttura repository;
+2. TypeScript;
+3. Fastify;
+4. SQLite + Drizzle;
+5. schema iniziale;
+6. `/api/health`;
+7. React + Vite;
+8. `/admin` minima;
+9. logging;
+10. test.
 
 Fonte autoritativa completa:
 

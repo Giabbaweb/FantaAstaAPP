@@ -226,3 +226,126 @@ export const updateAuctionSessionStatusSchema = z.object({
 export type UpdateAuctionSessionStatusInput = z.infer<
   typeof updateAuctionSessionStatusSchema
 >;
+
+export const playerRoleSchema = z.enum([
+  "P",
+  "D",
+  "C",
+  "A"
+]);
+
+export type PlayerRole = z.infer<
+  typeof playerRoleSchema
+>;
+
+export const playerAvailabilityStatusSchema = z.enum([
+  "AVAILABLE",
+  "ROSTERED",
+  "UNAVAILABLE"
+]);
+
+export type PlayerAvailabilityStatus = z.infer<
+  typeof playerAvailabilityStatusSchema
+>;
+
+export const playerSchema = z.object({
+  id: z.string().min(1),
+  auctionSessionId: z.string().min(1),
+  fmsCode: z.string().trim().min(1).max(50),
+  name: z.string().trim().min(1).max(150),
+  normalizedName: z.string().min(1),
+  role: playerRoleSchema,
+  availabilityStatus: playerAvailabilityStatusSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type Player = z.infer<
+  typeof playerSchema
+>;
+
+export const createPlayerSchema = z.object({
+  auctionSessionId: z.string().min(1),
+  fmsCode: z.string().trim().min(1).max(50),
+  name: z.string().trim().min(1).max(150),
+  role: playerRoleSchema,
+  availabilityStatus: playerAvailabilityStatusSchema
+    .default("AVAILABLE")
+});
+
+export type CreatePlayerInput = z.infer<
+  typeof createPlayerSchema
+>;
+
+export const updatePlayerSchema = z
+  .object({
+    fmsCode: z.string().trim().min(1).max(50).optional(),
+    name: z.string().trim().min(1).max(150).optional(),
+    role: playerRoleSchema.optional(),
+    availabilityStatus:
+      playerAvailabilityStatusSchema.optional()
+  })
+  .refine(
+    (value) =>
+      Object.values(value).some(
+        (field) => field !== undefined
+      ),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdatePlayerInput = z.infer<
+  typeof updatePlayerSchema
+>;
+
+export const rosterEntrySourceSchema = z.enum([
+  "INITIAL_ROSTER",
+  "AUCTION",
+  "OPTION",
+  "MANUAL_ASSIGNMENT",
+  "TECHNICAL_CORRECTION"
+]);
+
+export type RosterEntrySource = z.infer<
+  typeof rosterEntrySourceSchema
+>;
+
+export const contractYearSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3)
+]);
+
+export type ContractYear = z.infer<
+  typeof contractYearSchema
+>;
+
+export const rosterEntrySchema = z.object({
+  id: z.string().min(1),
+  auctionSessionTeamId: z.string().min(1),
+  playerId: z.string().min(1),
+  acquisitionCost: z.number().int().positive(),
+  contractYear: contractYearSchema,
+  source: rosterEntrySourceSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type RosterEntry = z.infer<
+  typeof rosterEntrySchema
+>;
+
+export const createInitialRosterEntrySchema = z.object({
+  auctionSessionTeamId: z.string().min(1),
+  playerId: z.string().min(1),
+  acquisitionCost: z.number().int().positive(),
+  contractYear: contractYearSchema.default(1),
+  source: z.literal("INITIAL_ROSTER").default(
+    "INITIAL_ROSTER"
+  )
+});
+
+export type CreateInitialRosterEntryInput = z.infer<
+  typeof createInitialRosterEntrySchema
+>;

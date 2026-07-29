@@ -18,7 +18,8 @@ import {
 } from "./db/client.js";
 import {
   auctionSessions,
-  leagues
+  leagues,
+  players
 } from "./db/schema/index.js";
 
 describe("application integration", () => {
@@ -1110,4 +1111,270 @@ describe("application integration", () => {
       );
     }
   );
+
+  describe("POST /api/player-import/archive", () => {
+    const validArchiveContent = [
+      "Archivio giocatori FMS ReVo",
+      "",
+      "\tCod\tFMld\tRuolo\tSquadra\tNome",
+      "\t1001\t10\tPortiere\tInter\tSOMMER Yann",
+      "\t1002\t20\tDifensore\tMilan\tGABBIA Matteo",
+      "\t1003\t30\tCentrocampista\t{SERIE ESTERA}\tTONALI Sandro",
+      "\t1004\t40\tAttaccante\tRoma\tDYBALA Paulo",
+      ""
+    ].join("\n");
+
+    async function createImportSession() {
+      await db.insert(leagues).values({
+        id: "league-player-import",
+        name: "Player Import League",
+        normalizedName: "player import league"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-player-import",
+        leagueId: "league-player-import",
+        season: "2026/2027",
+        editionNumber: 1,
+        initialCredits: 330
+      });
+    }
+
+    it(
+      "returns 400 when auction session id is missing",
+      async () => {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/player-import/archive",
+          payload: {
+            content: validArchiveContent
+          }
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code: "INVALID_REQUEST",
+            message:
+              'Body field "auctionSessionId" is required'
+          }
+        });
+      }
+    );
+
+    it(
+      "returns 400 when the archive is invalid",
+      async () => {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/player-import/archive",
+          payload: {
+            auctionSessionId: "session-player-import",
+            content: [
+              "Codice\tRuolo\tNome",
+              "1001\tPortiere\tSOMMER Yann"
+            ].join("\n")
+          }
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        const body = response.json<{
+          data: null;
+          error: {
+            code: string;
+            message: string;
+            issues: Array<{
+              rowNumber: number;
+              code: string;
+              message: string;
+            }>;
+          };
+        }>();
+
+        expect(body.data).toBeNull();
+        expect(body.error.code).toBe(
+          "INVALID_IMPORT_SOURCE"
+        );
+        expect(body.error.issues).toEqual([
+          {
+            rowNumber: 0,
+            code: "HEADER_NOT_FOUND",
+            message:
+              "FMS ReVo archive header was not found"
+          }
+        ]);
+      }
+    );
+
+    it(
+      "imports all valid archive players",
+      async () => {
+        await createImportSession();
+
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/player-import/archive",
+          payload: {
+            auctionSessionId:
+              "session-player-import",
+            content: validArchiveContent
+          }
+        });
+
+        expect(response.statusCode).toBe(201);
+
+        const body = response.json<{
+          data: {
+            importedPlayers: Array<{
+              id: string;
+              auctionSessionId: string;
+              fmsCode: string;
+              name: string;
+              normalizedName: string;
+              role: string;
+              availabilityStatus: string;
+              createdAt: string;
+              updatedAt: string;
+            }>;
+            summary: {
+              parsedPlayers: number;
+              importedPlayers: number;
+              issueCount: number;
+            };
+          };
+          error: null;
+        }>();
+
+        expect(body.error).toBeNull();
+
+        expect(body.data.summary).toEqual({
+          parsedPlayers: 4,
+          importedPlayers: 4,
+          issueCount: 0
+        });
+
+        expect(body.data.importedPlayers).toHaveLength(4);
+
+        expect(body.data.importedPlayers[0]).toEqual({
+          id: expect.any(String),
+          auctionSessionId:
+            "session-player-import",
+          fmsCode: "1001",
+          name: "SOMMER Yann",
+          normalizedName: "sommer yann",
+          role: "P",
+          availabilityStatus: "AVAILABLE",
+          createdAt: expect.any(String),
+          updatedAt: expect.any(String)
+        });
+
+        expect(
+          body.data.importedPlayers[2]
+            ?.availabilityStatus
+        ).toBe("UNAVAILABLE");
+
+        const storedPlayers = await db
+          .select()
+          .from(players);
+
+        expect(storedPlayers).toHaveLength(4);
+        expect(
+          storedPlayers.map((player) => player.fmsCode)
+        ).toEqual([
+          "1001",
+          "1002",
+          "1003",
+          "1004"
+        ]);
+      }
+    );
+
+    it(
+      "returns 409 for a duplicated FMS code in the archive",
+      async () => {
+        const content = [
+          "Archivio giocatori FMS ReVo",
+          "",
+          "\tCod\tFMld\tRuolo\tSquadra\tNome",
+          "\t1001\t10\tPortiere\tInter\tSOMMER Yann",
+          "\t1001\t20\tDifensore\tMilan\tGABBIA Matteo"
+        ].join("\n");
+
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/player-import/archive",
+          payload: {
+            auctionSessionId:
+              "session-player-import",
+            content
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code:
+              "PLAYER_FMS_CODE_ALREADY_EXISTS",
+            message:
+              'Player FMS code "1001" appears more than once in the import'
+          }
+        });
+      }
+    );
+
+    it(
+      "returns 409 when a player already exists",
+      async () => {
+        await createImportSession();
+
+        await db.insert(players).values({
+          id: "existing-player",
+          auctionSessionId:
+            "session-player-import",
+          fmsCode: "1001",
+          name: "SOMMER Yann",
+          normalizedName: "sommer yann",
+          role: "P",
+          availabilityStatus: "AVAILABLE"
+        });
+
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/player-import/archive",
+          payload: {
+            auctionSessionId:
+              "session-player-import",
+            content: validArchiveContent
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code:
+              "PLAYER_FMS_CODE_ALREADY_EXISTS",
+            message:
+              'Player FMS code "1001" already exists in auction session "session-player-import"'
+          }
+        });
+
+        const storedPlayers = await db
+          .select()
+          .from(players);
+
+        expect(storedPlayers).toHaveLength(1);
+        expect(storedPlayers[0]?.id).toBe(
+          "existing-player"
+        );
+      }
+    );
+  });
+
 });

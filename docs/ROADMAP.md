@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.3.0
+v0.5.0
 ```
 
 Milestone completate:
@@ -35,13 +35,25 @@ Milestone completate:
 - ciclo di vita delle sessioni;
 - contratti condivisi;
 - validazione di dominio;
-- test di integrazione.
+- test di integrazione;
+- gestione delle squadre;
+- gestione dei presidenti;
+- associazione squadre-sessioni d'asta;
+- repository per la configurazione della lega;
+- service per la configurazione della lega;
+- API CRUD per squadre, presidenti e associazioni.
+- gestione dei giocatori;
+- gestione delle rose iniziali;
+- parser FMS ReVo per archivio giocatori;
+- parser FMS ReVo per rose iniziali;
+- importazione archivio giocatori;
+- pianificazione dell'importazione delle rose;
+- importazione transazionale delle rose iniziali.
 
-````
 Prossima milestone:
 
 ```text
-v0.4.0 — Configurazione della Lega
+v0.6.0 — Motore d'asta
 
 ---
 
@@ -209,7 +221,7 @@ La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti con
 
 # v0.4.0 — Configurazione della lega
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -236,7 +248,7 @@ La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti con
 
 # v0.5.0 — Giocatori, import e rose iniziali
 
-**Stato:** `PLANNED`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -262,7 +274,7 @@ La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti con
 
 # v0.6.0 — Motore d’asta
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 Questa milestone introduce il cuore logico dell’applicazione.
 
@@ -632,19 +644,18 @@ Questa funzionalità non fa parte della versione 1.0.
 
 Le priorità attuali sono:
 
-1. gestione delle sessioni;
-2. configurazione della lega;
-3. giocatori e import;
-4. motore d’asta;
-5. realtime;
-6. assegnazioni;
-7. schermo pubblico;
-8. sospensione e resilienza;
-9. operazioni manuali;
-10. FMS;
-11. recovery;
-12. collaudo;
-13. release stabile.
+1. configurazione della lega
+2. giocatori e import
+3. motore d’asta
+4. realtime
+5. assegnazioni
+6. schermo pubblico
+7. sospensione e resilienza
+8. operazioni manuali
+9. FMS
+10. recovery
+11. collaudo
+12. release stabile.
 
 ---
 

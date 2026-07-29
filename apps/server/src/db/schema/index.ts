@@ -157,6 +157,8 @@ export const teamOwners = sqliteTable(
 export const auctionSessionTeams = sqliteTable(
   "auction_session_teams",
   {
+    id: text("id").primaryKey(),
+
     auctionSessionId: text("auction_session_id")
       .notNull()
       .references(() => auctionSessions.id, {
@@ -178,9 +180,10 @@ export const auctionSessionTeams = sqliteTable(
     remainingCredits: integer("remaining_credits").notNull()
   },
   (table) => [
-    primaryKey({
-      columns: [table.auctionSessionId, table.teamId]
-    }),
+    uniqueIndex("auction_session_teams_session_team_unique").on(
+      table.auctionSessionId,
+      table.teamId
+    ),
 
     uniqueIndex("auction_session_teams_table_order_unique").on(
       table.auctionSessionId,
@@ -200,6 +203,108 @@ export const auctionSessionTeams = sqliteTable(
     check(
       "auction_session_teams_remaining_credits_nonnegative",
       sql`${table.remainingCredits} >= 0`
+    )
+  ]
+);
+
+export const players = sqliteTable(
+  "players",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionId: text("auction_session_id")
+      .notNull()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    fmsCode: text("fms_code").notNull(),
+
+    name: text("name").notNull(),
+
+    normalizedName: text("normalized_name").notNull(),
+
+    role: text("role", {
+      enum: ["P", "D", "C", "A"]
+    }).notNull(),
+
+    availabilityStatus: text("availability_status", {
+      enum: ["AVAILABLE", "ROSTERED", "UNAVAILABLE"]
+    })
+      .notNull()
+      .default("AVAILABLE"),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex("players_session_fms_code_unique").on(
+      table.auctionSessionId,
+      table.fmsCode
+    ),
+
+    uniqueIndex("players_session_normalized_name_unique").on(
+      table.auctionSessionId,
+      table.normalizedName
+    )
+  ]
+);
+
+export const rosterEntries = sqliteTable(
+  "roster_entries",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionTeamId: text("auction_session_team_id")
+      .notNull()
+      .references(() => auctionSessionTeams.id, {
+        onDelete: "cascade"
+      }),
+
+    playerId: text("player_id")
+      .notNull()
+      .references(() => players.id, {
+        onDelete: "restrict"
+      }),
+
+    acquisitionCost: integer("acquisition_cost").notNull(),
+
+    contractYear: integer("contract_year").notNull(),
+
+    source: text("source", {
+      enum: [
+        "INITIAL_ROSTER",
+        "AUCTION",
+        "OPTION",
+        "MANUAL_ASSIGNMENT",
+        "TECHNICAL_CORRECTION"
+      ]
+    }).notNull(),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex("roster_entries_player_unique").on(table.playerId),
+
+    check(
+      "roster_entries_acquisition_cost_positive",
+      sql`${table.acquisitionCost} >= 1`
+    ),
+
+    check(
+      "roster_entries_contract_year_range",
+      sql`${table.contractYear} BETWEEN 1 AND 3`
     )
   ]
 );
