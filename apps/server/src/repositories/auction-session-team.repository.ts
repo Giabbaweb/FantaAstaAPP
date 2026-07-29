@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type {
   AuctionSessionTeam,
   CreateAuctionSessionTeamInput,
@@ -86,6 +88,7 @@ export class SqliteAuctionSessionTeamRepository
     const [auctionSessionTeam] = await db
       .insert(auctionSessionTeams)
       .values({
+        id: randomUUID(),
         auctionSessionId,
         teamId: input.teamId,
         tableOrder: input.tableOrder,
