@@ -48,3 +48,42 @@ export interface PlayerImportParser {
     source: PlayerImportSource
   ): PlayerImportParseResult;
 }
+
+export type InitialRosterImportRow = {
+  rowNumber: number;
+  teamName: string;
+  playerName: string;
+  role: PlayerRole | null;
+  realTeamName: string;
+  contractYear: number | null;
+  acquisitionCost: number | null;
+};
+
+export type InitialRosterImportIssueCode =
+  | "ROSTER_HEADER_NOT_FOUND"
+  | "TEAM_NAME_NOT_FOUND"
+  | "INVALID_ROSTER_COLUMNS"
+  | "INVALID_PLAYER_NAME"
+  | "INVALID_ROLE"
+  | "INVALID_CONTRACT_YEAR"
+  | "INVALID_ACQUISITION_COST";
+
+export type InitialRosterImportIssueField =
+  | "teamName"
+  | "playerName"
+  | "role"
+  | "contractYear"
+  | "acquisitionCost";
+
+export type InitialRosterImportIssue = {
+  rowNumber: number;
+  code: InitialRosterImportIssueCode;
+  message: string;
+  field?: InitialRosterImportIssueField;
+  rawValue?: string;
+};
+
+export type InitialRosterImportParseResult = {
+  rows: InitialRosterImportRow[];
+  issues: InitialRosterImportIssue[];
+};
