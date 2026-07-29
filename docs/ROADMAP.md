@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.4.0
+v0.5.0
 ```
 
 Milestone completate:
@@ -42,12 +42,18 @@ Milestone completate:
 - repository per la configurazione della lega;
 - service per la configurazione della lega;
 - API CRUD per squadre, presidenti e associazioni.
-
+- gestione dei giocatori;
+- gestione delle rose iniziali;
+- parser FMS ReVo per archivio giocatori;
+- parser FMS ReVo per rose iniziali;
+- importazione archivio giocatori;
+- pianificazione dell'importazione delle rose;
+- importazione transazionale delle rose iniziali.
 
 Prossima milestone:
 
 ```text
-v0.5.0 — Giocatori, import e rose iniziali
+v0.6.0 — Motore d'asta
 
 ---
 
@@ -242,7 +248,7 @@ La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti con
 
 # v0.5.0 — Giocatori, import e rose iniziali
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -268,7 +274,7 @@ La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti con
 
 # v0.6.0 — Motore d’asta
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 Questa milestone introduce il cuore logico dell’applicazione.
 

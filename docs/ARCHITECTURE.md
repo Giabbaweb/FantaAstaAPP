@@ -356,7 +356,7 @@ apps/server/src/
 ├── shared/
 └── types/
 ```
-> **Nota:** la struttura mostrata rappresenta l'architettura di riferimento verso cui evolverà il progetto. Nella versione **v0.4.0** alcuni moduli sono ancora organizzati secondo una struttura semplificata (route, repository, service e database), mantenendo comunque la separazione delle responsabilità descritta in questo documento.
+> **Nota:** la struttura mostrata rappresenta l'architettura di riferimento verso cui evolverà il progetto. Nella versione **v0.5.0** alcuni moduli sono ancora organizzati secondo una struttura semplificata (route, repository, service e database), mantenendo comunque la separazione delle responsabilità descritta in questo documento.
 
 Ogni modulo potrà includere, quando necessario:
 
@@ -466,7 +466,7 @@ La scelta di SQLite è coerente con i requisiti:
 
 ---
 
-### 8.2 Stato della v0.4.0
+### 8.2 Stato della v0.5.0
 
 Le tabelle attualmente presenti comprendono:
 
@@ -475,13 +475,13 @@ Le tabelle attualmente presenti comprendono:
 - `teams`;
 - `owners`;
 - `auction_session_teams`;
+- `players`;
+- `roster_entries`;
 
 La configurazione completa della lega è ora persistita nel database.
 
 La struttura verrà estesa nelle milestone successive con:
 
-- giocatori;
-- rose;
 - chiamate;
 - offerte;
 - eventi di asta.
@@ -522,7 +522,7 @@ In caso di errore, l’intera operazione deve essere annullata.
 
 ## 9. API HTTP
 
-La v0.4.0 espone:
+La v0.5.0 espone:
 
 ```text
 GET    /api/health
@@ -907,7 +907,7 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 La versione corrente è:
 
 ```text
-v0.4.0
+v0.5.0
 ```
 
 Sono operative:
@@ -929,7 +929,13 @@ Sono operative:
 - associazione squadre-sessioni d'asta;
 - repository applicativi;
 - service applicativi;
-- API REST complete per la configurazione della lega.
+- API REST complete per la configurazione della lega;
+- gestione dei giocatori;
+- gestione delle rose iniziali;
+- import archivio giocatori FMS ReVo;
+- import transazionale delle rose iniziali;
+- repository e service dedicati ai giocatori;
+- API REST per l'importazione.
 
 Il motore d'asta, il realtime, i telecomandi e lo schermo pubblico non sono ancora implementati.
 
@@ -940,19 +946,19 @@ Il motore d'asta, il realtime, i telecomandi e lo schermo pubblico non sono anco
 La prossima milestone funzionale è dedicata a:
 
 ```text
-Giocatori, import e rose iniziali
+Motore d'asta
 ```
 
 L'obiettivo sarà introdurre:
 
-- modello completo del giocatore;
-- import delle liste calciatori;
-- validazione dei dati importati;
-- gestione delle rose iniziali;
-- repository dedicati;
-- service applicativi;
-- API REST;
-- interfaccia amministrativa per import e gestione.
+- apertura delle chiamate;
+- gestione dei rilanci;
+- PASS;
+- undo PASS;
+- assegnazione provvisoria;
+- conferma del banditore;
+- aggiornamento dei crediti;
+- eventi di dominio dell'asta.
 
 Le decisioni architetturali significative verranno registrate in:
 
