@@ -24,6 +24,9 @@ import {
   ownerRoutes
 } from "./routes/owner.routes.js";
 import {
+  initialRosterImportRoutes
+} from "./routes/initial-roster-import.routes.js";
+import {
   playerImportRoutes
 } from "./routes/player-import.routes.js";
 import {
@@ -60,6 +63,7 @@ export async function buildApp() {
   await app.register(auctionSessionTeamRoutes);
   await app.register(playerRoutes);
   await app.register(playerImportRoutes);
+  await app.register(initialRosterImportRoutes);
 
   app.addHook("onClose", async () => {
     sqlite.close();
