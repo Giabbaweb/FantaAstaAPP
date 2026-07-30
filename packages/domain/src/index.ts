@@ -3,11 +3,13 @@ export const APPLICATION_NAME = "FantaAstaAPP";
 export {
   AuctionCallDomainError,
   MaximumBidDomainError,
+  OpenAuctionCallDomainError,
   auctionCallCommands,
   auctionCallStatuses,
   auctionCallTeamExclusionReasons,
   auctionCallTeamStatuses,
   calculateMaximumBid,
+  openAuctionCall,
   transitionAuctionCallStatus
 } from "./auction-calls/index.js";
 
@@ -20,7 +22,10 @@ export type {
   AuctionCallTeamExclusionReason,
   AuctionCallTeamStatus,
   MaximumBidDomainErrorCode,
-  MaximumBidInput
+  MaximumBidInput,
+  OpenAuctionCallDomainErrorCode,
+  OpenAuctionCallInput,
+  OpenAuctionCallResult
 } from "./auction-calls/index.js";
 
 export type { League } from "./leagues/index.js";

@@ -32,3 +32,14 @@ export type {
   MaximumBidDomainErrorCode,
   MaximumBidInput
 } from "./maximum-bid.js";
+
+export {
+  OpenAuctionCallDomainError,
+  openAuctionCall
+} from "./open-auction-call.js";
+
+export type {
+  OpenAuctionCallDomainErrorCode,
+  OpenAuctionCallInput,
+  OpenAuctionCallResult
+} from "./open-auction-call.js";
