@@ -1,11 +1,16 @@
 export const APPLICATION_NAME = "FantaAstaAPP";
 
 export {
-  auctionCallStatuses
+  AuctionCallDomainError,
+  auctionCallCommands,
+  auctionCallStatuses,
+  transitionAuctionCallStatus
 } from "./auction-calls/index.js";
 
 export type {
   AuctionCall,
+  AuctionCallCommand,
+  AuctionCallDomainErrorCode,
   AuctionCallStatus
 } from "./auction-calls/index.js";
 
