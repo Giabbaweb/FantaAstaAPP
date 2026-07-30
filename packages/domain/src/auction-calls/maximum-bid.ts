@@ -5,7 +5,8 @@ export type MaximumBidInput = {
 
 export type MaximumBidDomainErrorCode =
   | "INVALID_REMAINING_CREDITS"
-  | "INVALID_REMAINING_ROSTER_SLOTS";
+  | "INVALID_REMAINING_ROSTER_SLOTS"
+  | "INSUFFICIENT_CREDITS_TO_COMPLETE_ROSTER";
 
 export class MaximumBidDomainError extends Error {
   readonly code: MaximumBidDomainErrorCode;
@@ -49,8 +50,12 @@ export function calculateMaximumBid(
     );
   }
 
-  return Math.max(
-    0,
-    remainingCredits - remainingRosterSlots + 1
-  );
+  if (remainingCredits < remainingRosterSlots) {
+    throw new MaximumBidDomainError(
+      "INSUFFICIENT_CREDITS_TO_COMPLETE_ROSTER",
+      "Remaining credits must be sufficient to complete the roster"
+    );
+  }
+
+  return remainingCredits - remainingRosterSlots + 1;
 }
