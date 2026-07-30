@@ -43,3 +43,14 @@ export type {
   OpenAuctionCallInput,
   OpenAuctionCallResult
 } from "./open-auction-call.js";
+
+export {
+  PlaceBidDomainError,
+  placeBid
+} from "./place-bid.js";
+
+export type {
+  PlaceBidDomainErrorCode,
+  PlaceBidInput,
+  PlaceBidResult
+} from "./place-bid.js";

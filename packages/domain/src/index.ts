@@ -4,12 +4,14 @@ export {
   AuctionCallDomainError,
   MaximumBidDomainError,
   OpenAuctionCallDomainError,
+  PlaceBidDomainError,
   auctionCallCommands,
   auctionCallStatuses,
   auctionCallTeamExclusionReasons,
   auctionCallTeamStatuses,
   calculateMaximumBid,
   openAuctionCall,
+  placeBid,
   transitionAuctionCallStatus
 } from "./auction-calls/index.js";
 
@@ -25,7 +27,10 @@ export type {
   MaximumBidInput,
   OpenAuctionCallDomainErrorCode,
   OpenAuctionCallInput,
-  OpenAuctionCallResult
+  OpenAuctionCallResult,
+  PlaceBidDomainErrorCode,
+  PlaceBidInput,
+  PlaceBidResult
 } from "./auction-calls/index.js";
 
 export type { League } from "./leagues/index.js";
