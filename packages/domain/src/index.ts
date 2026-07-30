@@ -4,6 +4,7 @@ export {
   AuctionCallDomainError,
   MaximumBidDomainError,
   OpenAuctionCallDomainError,
+  PassTurnDomainError,
   PlaceBidDomainError,
   auctionCallCommands,
   auctionCallStatuses,
@@ -11,6 +12,7 @@ export {
   auctionCallTeamStatuses,
   calculateMaximumBid,
   openAuctionCall,
+  passTurn,
   placeBid,
   transitionAuctionCallStatus
 } from "./auction-calls/index.js";
@@ -28,6 +30,9 @@ export type {
   OpenAuctionCallDomainErrorCode,
   OpenAuctionCallInput,
   OpenAuctionCallResult,
+  PassTurnDomainErrorCode,
+  PassTurnInput,
+  PassTurnResult,
   PlaceBidDomainErrorCode,
   PlaceBidInput,
   PlaceBidResult

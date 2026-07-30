@@ -54,3 +54,14 @@ export type {
   PlaceBidInput,
   PlaceBidResult
 } from "./place-bid.js";
+
+export {
+  PassTurnDomainError,
+  passTurn
+} from "./pass-turn.js";
+
+export type {
+  PassTurnDomainErrorCode,
+  PassTurnInput,
+  PassTurnResult
+} from "./pass-turn.js";
