@@ -16,6 +16,7 @@ export const auctionCallCommands = [
   "suspend",
   "resume",
   "provisionalAward",
+  "reopen",
   "confirm",
   "cancel",
   "rollback"
@@ -72,6 +73,7 @@ const statusTransitions: Record<
     rollback: "ROLLED_BACK"
   },
   PROVISIONAL_AWARD: {
+    reopen: "OPEN",
     confirm: "CONFIRMED",
     rollback: "ROLLED_BACK"
   },
