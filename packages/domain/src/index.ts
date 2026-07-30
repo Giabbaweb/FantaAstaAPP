@@ -5,6 +5,8 @@ export {
   MaximumBidDomainError,
   auctionCallCommands,
   auctionCallStatuses,
+  auctionCallTeamExclusionReasons,
+  auctionCallTeamStatuses,
   calculateMaximumBid,
   transitionAuctionCallStatus
 } from "./auction-calls/index.js";
@@ -14,6 +16,9 @@ export type {
   AuctionCallCommand,
   AuctionCallDomainErrorCode,
   AuctionCallStatus,
+  AuctionCallTeam,
+  AuctionCallTeamExclusionReason,
+  AuctionCallTeamStatus,
   MaximumBidDomainErrorCode,
   MaximumBidInput
 } from "./auction-calls/index.js";

@@ -13,6 +13,17 @@ export type {
 } from "./auction-call.js";
 
 export {
+  auctionCallTeamExclusionReasons,
+  auctionCallTeamStatuses
+} from "./auction-call-team.js";
+
+export type {
+  AuctionCallTeam,
+  AuctionCallTeamExclusionReason,
+  AuctionCallTeamStatus
+} from "./auction-call-team.js";
+
+export {
   MaximumBidDomainError,
   calculateMaximumBid
 } from "./maximum-bid.js";
