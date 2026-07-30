@@ -14,6 +14,8 @@ export {
   openAuctionCall,
   passTurn,
   placeBid,
+  UndoPassDomainError,
+  undoPass,
   transitionAuctionCallStatus
 } from "./auction-calls/index.js";
 
@@ -33,6 +35,9 @@ export type {
   PassTurnDomainErrorCode,
   PassTurnInput,
   PassTurnResult,
+  UndoPassDomainErrorCode,
+  UndoPassInput,
+  UndoPassResult,
   PlaceBidDomainErrorCode,
   PlaceBidInput,
   PlaceBidResult

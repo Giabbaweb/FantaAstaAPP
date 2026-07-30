@@ -65,3 +65,14 @@ export type {
   PassTurnInput,
   PassTurnResult
 } from "./pass-turn.js";
+
+export {
+  UndoPassDomainError,
+  undoPass
+} from "./undo-pass.js";
+
+export type {
+  UndoPassDomainErrorCode,
+  UndoPassInput,
+  UndoPassResult
+} from "./undo-pass.js";
