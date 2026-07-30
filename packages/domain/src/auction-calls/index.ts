@@ -76,3 +76,25 @@ export type {
   UndoPassInput,
   UndoPassResult
 } from "./undo-pass.js";
+
+export {
+  ConfirmAuctionCallDomainError,
+  confirmAuctionCall
+} from "./confirm-auction-call.js";
+
+export type {
+  ConfirmAuctionCallDomainErrorCode,
+  ConfirmAuctionCallInput,
+  ConfirmAuctionCallResult
+} from "./confirm-auction-call.js";
+
+export {
+  CancelAuctionCallDomainError,
+  cancelAuctionCall
+} from "./cancel-auction-call.js";
+
+export type {
+  CancelAuctionCallDomainErrorCode,
+  CancelAuctionCallInput,
+  CancelAuctionCallResult
+} from "./cancel-auction-call.js";
