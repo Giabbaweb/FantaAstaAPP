@@ -1,10 +1,15 @@
+import {
+  openAuctionCall
+} from "@fantaastaapp/domain";
+
 import type {
-  AuctionCallRepository,
-  AuctionCallAggregate
+  AuctionCallAggregate,
+  AuctionCallRepository
 } from "../repositories/auction-call.repository.js";
 
 export type AuctionCallServiceErrorCode =
-  | "AUCTION_CALL_NOT_FOUND";
+  | "AUCTION_CALL_NOT_FOUND"
+  | "AUCTION_CALL_SAVE_FAILED";
 
 export class AuctionCallServiceError extends Error {
   readonly code: AuctionCallServiceErrorCode;
@@ -37,6 +42,33 @@ export class AuctionCallService {
     return this.repository.findOperationalByAuctionSessionId(
       auctionSessionId
     );
+  }
+
+  async open(
+    id: string,
+    openingBid: number
+  ): Promise<AuctionCallAggregate> {
+    const aggregate = await this.requireAuctionCall(id);
+
+    const opened = openAuctionCall({
+      auctionCall: aggregate.call,
+      teams: aggregate.teams,
+      openingBid
+    });
+
+    try {
+      return await this.repository.save({
+        call: opened.auctionCall,
+        teams: opened.teams
+      });
+    } catch (error) {
+      throw new AuctionCallServiceError(
+        "AUCTION_CALL_SAVE_FAILED",
+        error instanceof Error
+          ? `Failed to save auction call "${id}": ${error.message}`
+          : `Failed to save auction call "${id}"`
+      );
+    }
   }
 
   private async requireAuctionCall(
