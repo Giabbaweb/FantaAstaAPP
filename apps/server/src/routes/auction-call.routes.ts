@@ -242,6 +242,20 @@ export const auctionCallRoutes: FastifyPluginAsync =
               break;
             }
 
+            case "confirm": {
+              aggregate =
+                await service.confirmAuctionCall(id);
+
+              break;
+            }
+
+            case "cancel": {
+              aggregate =
+                await service.cancelAuctionCall(id);
+
+              break;
+            }
+
             default:
               return reply.code(400).send({
                 data: null,
