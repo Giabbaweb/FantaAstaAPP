@@ -387,4 +387,199 @@ describe("auction call read routes", () => {
     );
   });
 
+
+  describe("POST auction call bidding commands", () => {
+    async function openCall(
+      auctionCallId: string
+    ): Promise<void> {
+      const response = await app.inject({
+        method: "POST",
+        url:
+          `/api/auction-calls/${auctionCallId}/commands/open`,
+        payload: {
+          openingBid: 1
+        }
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    it(
+      "places a bid and advances the turn",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        await openCall(fixture.auctionCallId);
+
+        const response = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/bid`,
+          payload: {
+            auctionSessionTeamId:
+              fixture.auctionSessionTeam2Id,
+            bid: 5
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        const body = response.json<{
+          data: {
+            call: {
+              status: string;
+              currentBid: number | null;
+              currentLeaderAuctionSessionTeamId:
+                | string
+                | null;
+              currentTurnAuctionSessionTeamId:
+                | string
+                | null;
+            };
+          };
+          error: null;
+        }>();
+
+        expect(body.error).toBeNull();
+
+        expect(body.data.call).toMatchObject({
+          status: "OPEN",
+          currentBid: 5,
+          currentLeaderAuctionSessionTeamId:
+            fixture.auctionSessionTeam2Id,
+          currentTurnAuctionSessionTeamId:
+            fixture.auctionSessionTeam3Id
+        });
+      }
+    );
+
+    it(
+      "returns 409 for a bid outside the current turn",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        await openCall(fixture.auctionCallId);
+
+        const response = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/bid`,
+          payload: {
+            auctionSessionTeamId:
+              fixture.auctionSessionTeam3Id,
+            bid: 5
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toMatchObject({
+          data: null,
+          error: {
+            code: "NOT_TEAM_TURN"
+          }
+        });
+      }
+    );
+
+    it(
+      "passes and restores a team",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        await openCall(fixture.auctionCallId);
+
+        const passResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
+          payload: {
+            auctionSessionTeamId:
+              fixture.auctionSessionTeam2Id
+          }
+        });
+
+        expect(passResponse.statusCode).toBe(200);
+
+        const passedBody = passResponse.json<{
+          data: {
+            call: {
+              status: string;
+              currentTurnAuctionSessionTeamId:
+                | string
+                | null;
+            };
+            teams: Array<{
+              auctionSessionTeamId: string;
+              status: string;
+            }>;
+          };
+          error: null;
+        }>();
+
+        expect(
+          passedBody.data.call
+            .currentTurnAuctionSessionTeamId
+        ).toBe(fixture.auctionSessionTeam3Id);
+
+        expect(
+          passedBody.data.teams.find(
+            (team) =>
+              team.auctionSessionTeamId ===
+              fixture.auctionSessionTeam2Id
+          )
+        ).toMatchObject({
+          status: "PASSED"
+        });
+
+        const undoResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/undo-pass`,
+          payload: {
+            auctionSessionTeamId:
+              fixture.auctionSessionTeam2Id
+          }
+        });
+
+        expect(undoResponse.statusCode).toBe(200);
+
+        const restoredBody = undoResponse.json<{
+          data: {
+            call: {
+              status: string;
+              currentTurnAuctionSessionTeamId:
+                | string
+                | null;
+            };
+            teams: Array<{
+              auctionSessionTeamId: string;
+              status: string;
+            }>;
+          };
+          error: null;
+        }>();
+
+        expect(restoredBody.data.call).toMatchObject({
+          status: "OPEN",
+          currentTurnAuctionSessionTeamId:
+            fixture.auctionSessionTeam2Id
+        });
+
+        expect(
+          restoredBody.data.teams.find(
+            (team) =>
+              team.auctionSessionTeamId ===
+              fixture.auctionSessionTeam2Id
+          )
+        ).toMatchObject({
+          status: "ACTIVE"
+        });
+      }
+    );
+  });
+
 });
