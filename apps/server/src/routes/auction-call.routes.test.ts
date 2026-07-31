@@ -582,4 +582,155 @@ describe("auction call read routes", () => {
     );
   });
 
+
+  describe("POST auction call finalization commands", () => {
+    it(
+      "confirms a provisional auction award",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        const openResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
+          payload: {
+            openingBid: 1
+          }
+        });
+
+        expect(openResponse.statusCode).toBe(200);
+
+        const team2PassResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
+          payload: {
+            auctionSessionTeamId:
+              fixture.auctionSessionTeam2Id
+          }
+        });
+
+        expect(team2PassResponse.statusCode).toBe(200);
+
+        const team3PassResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
+          payload: {
+            auctionSessionTeamId:
+              fixture.auctionSessionTeam3Id
+          }
+        });
+
+        expect(team3PassResponse.statusCode).toBe(200);
+
+        expect(
+          team3PassResponse.json<{
+            data: {
+              call: {
+                status: string;
+                provisionalWinnerAuctionSessionTeamId:
+                  | string
+                  | null;
+              };
+            };
+          }>().data.call
+        ).toMatchObject({
+          status: "PROVISIONAL_AWARD",
+          provisionalWinnerAuctionSessionTeamId:
+            fixture.auctionSessionTeam1Id
+        });
+
+        const confirmResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/confirm`,
+          payload: {}
+        });
+
+        expect(confirmResponse.statusCode).toBe(200);
+
+        const confirmedCall =
+          confirmResponse.json<{
+            data: {
+              call: {
+                status: string;
+                currentBid: number | null;
+                provisionalWinnerAuctionSessionTeamId:
+                  | string
+                  | null;
+              };
+            };
+            error: null;
+          }>();
+
+        expect(confirmedCall.error).toBeNull();
+
+        expect(confirmedCall.data.call).toMatchObject({
+          status: "CONFIRMED",
+          currentBid: 1,
+          provisionalWinnerAuctionSessionTeamId:
+            fixture.auctionSessionTeam1Id
+        });
+      }
+    );
+
+    it(
+      "cancels a draft auction call",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        const response = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/cancel`,
+          payload: {}
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        const body = response.json<{
+          data: {
+            call: {
+              id: string;
+              status: string;
+              openingBid: number | null;
+              currentBid: number | null;
+            };
+          };
+          error: null;
+        }>();
+
+        expect(body.error).toBeNull();
+
+        expect(body.data.call).toMatchObject({
+          id: fixture.auctionCallId,
+          status: "CANCELLED",
+          openingBid: null,
+          currentBid: null
+        });
+
+        const storedResponse = await app.inject({
+          method: "GET",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}`
+        });
+
+        expect(storedResponse.statusCode).toBe(200);
+
+        expect(
+          storedResponse.json<{
+            data: {
+              call: {
+                status: string;
+              };
+            };
+          }>().data.call.status
+        ).toBe("CANCELLED");
+      }
+    );
+  });
+
 });
