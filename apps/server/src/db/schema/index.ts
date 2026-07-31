@@ -308,3 +308,147 @@ export const rosterEntries = sqliteTable(
     )
   ]
 );
+
+export const auctionCalls = sqliteTable(
+  "auction_calls",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionId: text("auction_session_id")
+      .notNull()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    playerId: text("player_id")
+      .notNull()
+      .references(() => players.id, {
+        onDelete: "restrict"
+      }),
+
+    callerAuctionSessionTeamId: text(
+      "caller_auction_session_team_id"
+    )
+      .notNull()
+      .references(() => auctionSessionTeams.id, {
+        onDelete: "restrict"
+      }),
+
+    status: text("status", {
+      enum: [
+        "DRAFT",
+        "OPEN",
+        "PROVISIONAL_AWARD",
+        "SUSPENDED",
+        "CONFIRMED",
+        "CANCELLED",
+        "ROLLED_BACK"
+      ]
+    })
+      .notNull()
+      .default("DRAFT"),
+
+    openingBid: integer("opening_bid"),
+
+    currentBid: integer("current_bid"),
+
+    currentLeaderAuctionSessionTeamId: text(
+      "current_leader_auction_session_team_id"
+    ).references(() => auctionSessionTeams.id, {
+      onDelete: "restrict"
+    }),
+
+    currentTurnAuctionSessionTeamId: text(
+      "current_turn_auction_session_team_id"
+    ).references(() => auctionSessionTeams.id, {
+      onDelete: "restrict"
+    }),
+
+    provisionalWinnerAuctionSessionTeamId: text(
+      "provisional_winner_auction_session_team_id"
+    ).references(() => auctionSessionTeams.id, {
+      onDelete: "restrict"
+    }),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    check(
+      "auction_calls_opening_bid_positive",
+      sql`${table.openingBid} IS NULL OR ${table.openingBid} >= 1`
+    ),
+
+    check(
+      "auction_calls_current_bid_positive",
+      sql`${table.currentBid} IS NULL OR ${table.currentBid} >= 1`
+    )
+  ]
+);
+
+export const auctionCallTeams = sqliteTable(
+  "auction_call_teams",
+  {
+    id: text("id").primaryKey(),
+
+    auctionCallId: text("auction_call_id")
+      .notNull()
+      .references(() => auctionCalls.id, {
+        onDelete: "cascade"
+      }),
+
+    auctionSessionTeamId: text(
+      "auction_session_team_id"
+    )
+      .notNull()
+      .references(() => auctionSessionTeams.id, {
+        onDelete: "restrict"
+      }),
+
+    status: text("status", {
+      enum: [
+        "ACTIVE",
+        "PASSED",
+        "EXCLUDED"
+      ]
+    })
+      .notNull()
+      .default("ACTIVE"),
+
+    maximumBid: integer("maximum_bid").notNull(),
+
+    exclusionReason: text("exclusion_reason", {
+      enum: [
+        "MAXIMUM_BID_TOO_LOW",
+        "ROSTER_FULL",
+        "ROLE_LIMIT_REACHED"
+      ]
+    }),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex(
+      "auction_call_teams_call_team_unique"
+    ).on(
+      table.auctionCallId,
+      table.auctionSessionTeamId
+    ),
+
+    check(
+      "auction_call_teams_maximum_bid_nonnegative",
+      sql`${table.maximumBid} >= 0`
+    )
+  ]
+);
