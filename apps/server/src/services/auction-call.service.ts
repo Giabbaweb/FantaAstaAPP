@@ -1,5 +1,6 @@
 import {
-  openAuctionCall
+  openAuctionCall,
+  placeBid
 } from "@fantaastaapp/domain";
 
 import type {
@@ -59,6 +60,26 @@ export class AuctionCallService {
     return this.saveAuctionCall(id, {
       call: opened.auctionCall,
       teams: opened.teams
+    });
+  }
+
+  async placeBid(
+    id: string,
+    auctionSessionTeamId: string,
+    bid: number
+  ): Promise<AuctionCallAggregate> {
+    const aggregate = await this.requireAuctionCall(id);
+
+    const updated = placeBid({
+      auctionCall: aggregate.call,
+      teams: aggregate.teams,
+      auctionSessionTeamId,
+      bid
+    });
+
+    return this.saveAuctionCall(id, {
+      call: updated.auctionCall,
+      teams: updated.teams
     });
   }
 
