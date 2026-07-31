@@ -27,8 +27,10 @@ type AuctionCallCommandParams = {
   command: string;
 };
 
-type OpenAuctionCallBody = {
+type AuctionCallCommandBody = {
   openingBid?: unknown;
+  auctionSessionTeamId?: unknown;
+  bid?: unknown;
 };
 
 type InvalidRequestResponse = {
@@ -101,7 +103,7 @@ export const auctionCallRoutes: FastifyPluginAsync =
 
     fastify.post<{
       Params: AuctionCallCommandParams;
-      Body: OpenAuctionCallBody;
+      Body: AuctionCallCommandBody;
       Reply:
         | AuctionCallCommandResponse
         | InvalidRequestResponse
@@ -110,40 +112,146 @@ export const auctionCallRoutes: FastifyPluginAsync =
       "/api/auction-calls/:id/commands/:command",
       async (request, reply) => {
         const { id, command } = request.params;
-
-        if (command !== "open") {
-          return reply.code(400).send({
-            data: null,
-            error: {
-              code: "INVALID_REQUEST",
-              message:
-                `Unknown auction call command "${command}"`
-            }
-          });
-        }
-
-        const openingBid = request.body?.openingBid;
-
-        if (
-          !Number.isInteger(openingBid) ||
-          typeof openingBid !== "number" ||
-          openingBid < 1
-        ) {
-          return reply.code(400).send({
-            data: null,
-            error: {
-              code: "INVALID_REQUEST",
-              message:
-                '"openingBid" must be an integer greater than or equal to 1'
-            }
-          });
-        }
+        const body = request.body ?? {};
 
         try {
-          const aggregate = await service.open(
-            id,
-            openingBid
-          );
+          let aggregate: AuctionCallAggregate;
+
+          switch (command) {
+            case "open": {
+              const openingBid = body.openingBid;
+
+              if (
+                typeof openingBid !== "number" ||
+                !Number.isInteger(openingBid) ||
+                openingBid < 1
+              ) {
+                return reply.code(400).send({
+                  data: null,
+                  error: {
+                    code: "INVALID_REQUEST",
+                    message:
+                      '"openingBid" must be an integer greater than or equal to 1'
+                  }
+                });
+              }
+
+              aggregate = await service.open(
+                id,
+                openingBid
+              );
+
+              break;
+            }
+
+            case "bid": {
+              const auctionSessionTeamId =
+                body.auctionSessionTeamId;
+              const bid = body.bid;
+
+              if (
+                typeof auctionSessionTeamId !==
+                  "string" ||
+                auctionSessionTeamId.trim().length === 0
+              ) {
+                return reply.code(400).send({
+                  data: null,
+                  error: {
+                    code: "INVALID_REQUEST",
+                    message:
+                      '"auctionSessionTeamId" must be a non-empty string'
+                  }
+                });
+              }
+
+              if (
+                typeof bid !== "number" ||
+                !Number.isInteger(bid) ||
+                bid < 1
+              ) {
+                return reply.code(400).send({
+                  data: null,
+                  error: {
+                    code: "INVALID_REQUEST",
+                    message:
+                      '"bid" must be an integer greater than or equal to 1'
+                  }
+                });
+              }
+
+              aggregate = await service.placeBid(
+                id,
+                auctionSessionTeamId,
+                bid
+              );
+
+              break;
+            }
+
+            case "pass": {
+              const auctionSessionTeamId =
+                body.auctionSessionTeamId;
+
+              if (
+                typeof auctionSessionTeamId !==
+                  "string" ||
+                auctionSessionTeamId.trim().length === 0
+              ) {
+                return reply.code(400).send({
+                  data: null,
+                  error: {
+                    code: "INVALID_REQUEST",
+                    message:
+                      '"auctionSessionTeamId" must be a non-empty string'
+                  }
+                });
+              }
+
+              aggregate = await service.passTurn(
+                id,
+                auctionSessionTeamId
+              );
+
+              break;
+            }
+
+            case "undo-pass": {
+              const auctionSessionTeamId =
+                body.auctionSessionTeamId;
+
+              if (
+                typeof auctionSessionTeamId !==
+                  "string" ||
+                auctionSessionTeamId.trim().length === 0
+              ) {
+                return reply.code(400).send({
+                  data: null,
+                  error: {
+                    code: "INVALID_REQUEST",
+                    message:
+                      '"auctionSessionTeamId" must be a non-empty string'
+                  }
+                });
+              }
+
+              aggregate = await service.undoPass(
+                id,
+                auctionSessionTeamId
+              );
+
+              break;
+            }
+
+            default:
+              return reply.code(400).send({
+                data: null,
+                error: {
+                  code: "INVALID_REQUEST",
+                  message:
+                    `Unknown auction call command "${command}"`
+                }
+              });
+          }
 
           return reply.code(200).send({
             data: aggregate,

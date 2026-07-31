@@ -1,6 +1,9 @@
 import {
   AuctionCallDomainError,
-  OpenAuctionCallDomainError
+  OpenAuctionCallDomainError,
+  PassTurnDomainError,
+  PlaceBidDomainError,
+  UndoPassDomainError
 } from "@fantaastaapp/domain";
 
 import {
@@ -84,6 +87,40 @@ export function mapAuctionCallError(
 
     return {
       statusCode,
+      body: {
+        data: null,
+        error: {
+          code: error.code,
+          message: error.message
+        }
+      }
+    };
+  }
+
+  if (error instanceof PlaceBidDomainError) {
+    const statusCode =
+      error.code === "INVALID_BID"
+        ? 400
+        : 409;
+
+    return {
+      statusCode,
+      body: {
+        data: null,
+        error: {
+          code: error.code,
+          message: error.message
+        }
+      }
+    };
+  }
+
+  if (
+    error instanceof PassTurnDomainError ||
+    error instanceof UndoPassDomainError
+  ) {
+    return {
+      statusCode: 409,
       body: {
         data: null,
         error: {
