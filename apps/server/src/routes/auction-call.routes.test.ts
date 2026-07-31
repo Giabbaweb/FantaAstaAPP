@@ -208,4 +208,183 @@ describe("auction call read routes", () => {
       });
     }
   );
+
+  describe("POST auction call open command", () => {
+    it(
+      "opens a draft auction call",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        const response = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
+          payload: {
+            openingBid: 1
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        const body = response.json<{
+          data: {
+            call: {
+              id: string;
+              status: string;
+              openingBid: number | null;
+              currentBid: number | null;
+              currentLeaderAuctionSessionTeamId:
+                | string
+                | null;
+              currentTurnAuctionSessionTeamId:
+                | string
+                | null;
+              provisionalWinnerAuctionSessionTeamId:
+                | string
+                | null;
+            };
+            teams: unknown[];
+          };
+          error: null;
+        }>();
+
+        expect(body.error).toBeNull();
+
+        expect(body.data.call).toMatchObject({
+          id: fixture.auctionCallId,
+          status: "OPEN",
+          openingBid: 1,
+          currentBid: 1,
+          currentLeaderAuctionSessionTeamId:
+            fixture.auctionSessionTeam1Id,
+          currentTurnAuctionSessionTeamId:
+            fixture.auctionSessionTeam2Id,
+          provisionalWinnerAuctionSessionTeamId: null
+        });
+
+        expect(body.data.teams).toHaveLength(3);
+
+        const storedResponse = await app.inject({
+          method: "GET",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}`
+        });
+
+        expect(storedResponse.statusCode).toBe(200);
+
+        expect(
+          storedResponse.json<{
+            data: {
+              call: {
+                status: string;
+                currentBid: number | null;
+              };
+            };
+          }>().data.call
+        ).toMatchObject({
+          status: "OPEN",
+          currentBid: 1
+        });
+      }
+    );
+
+    it(
+      "returns 400 for an invalid opening bid",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        const response = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
+          payload: {
+            openingBid: 0
+          }
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code: "INVALID_REQUEST",
+            message:
+              '"openingBid" must be an integer greater than or equal to 1'
+          }
+        });
+      }
+    );
+
+    it(
+      "returns 400 for an unknown auction call command",
+      async () => {
+        const response = await app.inject({
+          method: "POST",
+          url:
+            "/api/auction-calls/auction-call-1/commands/unknown",
+          payload: {}
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: {
+            code: "INVALID_REQUEST",
+            message:
+              'Unknown auction call command "unknown"'
+          }
+        });
+      }
+    );
+
+    it(
+      "returns 409 when opening an already open auction call",
+      async () => {
+        const fixture =
+          await createAuctionCallAggregate();
+
+        const firstResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
+          payload: {
+            openingBid: 1
+          }
+        });
+
+        expect(firstResponse.statusCode).toBe(200);
+
+        const secondResponse = await app.inject({
+          method: "POST",
+          url:
+            `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
+          payload: {
+            openingBid: 1
+          }
+        });
+
+        expect(secondResponse.statusCode).toBe(409);
+
+        const body = secondResponse.json<{
+          data: null;
+          error: {
+            code: string;
+            message: string;
+          };
+        }>();
+
+        expect(body.data).toBeNull();
+        expect(body.error.code).toBe(
+          "INVALID_STATUS_TRANSITION"
+        );
+        expect(body.error.message).toEqual(
+          expect.any(String)
+        );
+      }
+    );
+  });
+
 });
