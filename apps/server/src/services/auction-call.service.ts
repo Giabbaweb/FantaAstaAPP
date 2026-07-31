@@ -1,4 +1,6 @@
 import {
+  cancelAuctionCall as cancelAuctionCallDomain,
+  confirmAuctionCall as confirmAuctionCallDomain,
   openAuctionCall,
   passTurn,
   placeBid,
@@ -85,7 +87,6 @@ export class AuctionCallService {
     });
   }
 
-
   async passTurn(
     id: string,
     auctionSessionTeamId: string
@@ -119,6 +120,36 @@ export class AuctionCallService {
     return this.saveAuctionCall(id, {
       call: updated.auctionCall,
       teams: updated.teams
+    });
+  }
+
+  async confirmAuctionCall(
+    id: string
+  ): Promise<AuctionCallAggregate> {
+    const aggregate = await this.requireAuctionCall(id);
+
+    const confirmed = confirmAuctionCallDomain({
+      auctionCall: aggregate.call
+    });
+
+    return this.saveAuctionCall(id, {
+      call: confirmed.auctionCall,
+      teams: aggregate.teams
+    });
+  }
+
+  async cancelAuctionCall(
+    id: string
+  ): Promise<AuctionCallAggregate> {
+    const aggregate = await this.requireAuctionCall(id);
+
+    const cancelled = cancelAuctionCallDomain({
+      auctionCall: aggregate.call
+    });
+
+    return this.saveAuctionCall(id, {
+      call: cancelled.auctionCall,
+      teams: aggregate.teams
     });
   }
 
