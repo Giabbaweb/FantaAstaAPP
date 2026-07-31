@@ -56,11 +56,18 @@ export class AuctionCallService {
       openingBid
     });
 
+    return this.saveAuctionCall(id, {
+      call: opened.auctionCall,
+      teams: opened.teams
+    });
+  }
+
+  private async saveAuctionCall(
+    id: string,
+    aggregate: AuctionCallAggregate
+  ): Promise<AuctionCallAggregate> {
     try {
-      return await this.repository.save({
-        call: opened.auctionCall,
-        teams: opened.teams
-      });
+      return await this.repository.save(aggregate);
     } catch (error) {
       throw new AuctionCallServiceError(
         "AUCTION_CALL_SAVE_FAILED",
