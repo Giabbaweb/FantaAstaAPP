@@ -1,6 +1,8 @@
 import {
   openAuctionCall,
-  placeBid
+  passTurn,
+  placeBid,
+  undoPass
 } from "@fantaastaapp/domain";
 
 import type {
@@ -75,6 +77,43 @@ export class AuctionCallService {
       teams: aggregate.teams,
       auctionSessionTeamId,
       bid
+    });
+
+    return this.saveAuctionCall(id, {
+      call: updated.auctionCall,
+      teams: updated.teams
+    });
+  }
+
+
+  async passTurn(
+    id: string,
+    auctionSessionTeamId: string
+  ): Promise<AuctionCallAggregate> {
+    const aggregate = await this.requireAuctionCall(id);
+
+    const updated = passTurn({
+      auctionCall: aggregate.call,
+      teams: aggregate.teams,
+      auctionSessionTeamId
+    });
+
+    return this.saveAuctionCall(id, {
+      call: updated.auctionCall,
+      teams: updated.teams
+    });
+  }
+
+  async undoPass(
+    id: string,
+    auctionSessionTeamId: string
+  ): Promise<AuctionCallAggregate> {
+    const aggregate = await this.requireAuctionCall(id);
+
+    const updated = undoPass({
+      auctionCall: aggregate.call,
+      teams: aggregate.teams,
+      auctionSessionTeamId
     });
 
     return this.saveAuctionCall(id, {
