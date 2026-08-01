@@ -349,3 +349,66 @@ export const createInitialRosterEntrySchema = z.object({
 export type CreateInitialRosterEntryInput = z.infer<
   typeof createInitialRosterEntrySchema
 >;
+
+export const realtimeRoleSchema = z.enum([
+  "OPERATOR",
+  "OBSERVER"
+]);
+
+export type RealtimeRole = z.infer<
+  typeof realtimeRoleSchema
+>;
+
+export const realtimeConnectionStatusSchema = z.enum([
+  "CONNECTING",
+  "CONNECTED",
+  "REGISTERED",
+  "DISCONNECTED"
+]);
+
+export type RealtimeConnectionStatus = z.infer<
+  typeof realtimeConnectionStatusSchema
+>;
+
+export const realtimeCommandMetadataSchema = z.object({
+  commandId: z.string().trim().min(1).max(100),
+  stateVersion: z.number().int().nonnegative()
+});
+
+export type RealtimeCommandMetadata = z.infer<
+  typeof realtimeCommandMetadataSchema
+>;
+
+export const realtimeErrorCodeSchema = z.enum([
+  "VALIDATION_ERROR",
+  "UNAUTHORIZED",
+  "INTERNAL_ERROR"
+]);
+
+export type RealtimeErrorCode = z.infer<
+  typeof realtimeErrorCodeSchema
+>;
+
+export const realtimeErrorSchema = z.object({
+  code: realtimeErrorCodeSchema,
+  message: z.string().trim().min(1),
+  details: z.record(
+    z.string(),
+    z.unknown()
+  ).optional()
+});
+
+export type RealtimeError = z.infer<
+  typeof realtimeErrorSchema
+>;
+
+export const realtimeEventNameSchema = z.enum([
+  "realtime:connected",
+  "realtime:register",
+  "realtime:registered",
+  "realtime:error"
+]);
+
+export type RealtimeEventName = z.infer<
+  typeof realtimeEventNameSchema
+>;
