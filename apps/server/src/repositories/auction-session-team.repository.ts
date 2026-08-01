@@ -12,6 +12,17 @@ import {
   auctionSessionTeams
 } from "../db/schema/index.js";
 
+const auctionSessionTeamPublicSelection = {
+  auctionSessionId:
+    auctionSessionTeams.auctionSessionId,
+  teamId: auctionSessionTeams.teamId,
+  tableOrder: auctionSessionTeams.tableOrder,
+  renewalCredits:
+    auctionSessionTeams.renewalCredits,
+  remainingCredits:
+    auctionSessionTeams.remainingCredits
+};
+
 export interface AuctionSessionTeamRepository {
   findByAuctionSessionId(
     auctionSessionId: string
@@ -46,7 +57,7 @@ export class SqliteAuctionSessionTeamRepository
     auctionSessionId: string
   ): Promise<AuctionSessionTeam[]> {
     return db
-      .select()
+      .select(auctionSessionTeamPublicSelection)
       .from(auctionSessionTeams)
       .where(
         eq(
@@ -65,7 +76,7 @@ export class SqliteAuctionSessionTeamRepository
     teamId: string
   ): Promise<AuctionSessionTeam | null> {
     const [auctionSessionTeam] = await db
-      .select()
+      .select(auctionSessionTeamPublicSelection)
       .from(auctionSessionTeams)
       .where(
         and(
@@ -95,7 +106,9 @@ export class SqliteAuctionSessionTeamRepository
         renewalCredits: input.renewalCredits,
         remainingCredits: input.remainingCredits
       })
-      .returning();
+      .returning(
+        auctionSessionTeamPublicSelection
+      );
 
     if (!auctionSessionTeam) {
       throw new Error(
@@ -123,7 +136,9 @@ export class SqliteAuctionSessionTeamRepository
           eq(auctionSessionTeams.teamId, teamId)
         )
       )
-      .returning();
+      .returning(
+        auctionSessionTeamPublicSelection
+      );
 
     return auctionSessionTeam ?? null;
   }
