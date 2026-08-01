@@ -1,18 +1,11 @@
-export type RealtimeAuctionEventType =
-  | "AUCTION_CALL_OPENED"
-  | "BID_PLACED"
-  | "TEAM_PASSED"
-  | "TEAM_PASS_UNDONE"
-  | "AUCTION_CALL_CONFIRMED"
-  | "AUCTION_CALL_CANCELLED";
+import type {
+  RealtimeAuctionEvent
+} from "@fantaastaapp/contracts";
 
-export type RealtimeAuctionEvent = {
-  type: RealtimeAuctionEventType;
-  auctionSessionId: string;
-  auctionCallId: string;
-  occurredAt: string;
-  payload: Record<string, unknown>;
-};
+export type {
+  RealtimeAuctionEvent,
+  RealtimeAuctionEventType
+} from "@fantaastaapp/contracts";
 
 export interface RealtimePublisher {
   publishAuctionEvent(

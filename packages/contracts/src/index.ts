@@ -405,7 +405,8 @@ export const realtimeEventNameSchema = z.enum([
   "realtime:connected",
   "realtime:register",
   "realtime:registered",
-  "realtime:error"
+  "realtime:error",
+  "auction:event"
 ]);
 
 export type RealtimeEventName = z.infer<
@@ -445,4 +446,32 @@ export const realtimeRegisteredPayloadSchema = z.object({
 
 export type RealtimeRegisteredPayload = z.infer<
   typeof realtimeRegisteredPayloadSchema
+>;
+
+export const realtimeAuctionEventTypeSchema = z.enum([
+  "AUCTION_CALL_OPENED",
+  "BID_PLACED",
+  "TEAM_PASSED",
+  "TEAM_PASS_UNDONE",
+  "AUCTION_CALL_CONFIRMED",
+  "AUCTION_CALL_CANCELLED"
+]);
+
+export type RealtimeAuctionEventType = z.infer<
+  typeof realtimeAuctionEventTypeSchema
+>;
+
+export const realtimeAuctionEventSchema = z.object({
+  type: realtimeAuctionEventTypeSchema,
+  auctionSessionId: z.string().trim().min(1),
+  auctionCallId: z.string().trim().min(1),
+  occurredAt: z.string().min(1),
+  payload: z.record(
+    z.string(),
+    z.unknown()
+  )
+});
+
+export type RealtimeAuctionEvent = z.infer<
+  typeof realtimeAuctionEventSchema
 >;
