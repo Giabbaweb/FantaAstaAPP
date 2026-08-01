@@ -38,11 +38,16 @@ import {
 import {
   teamRoutes
 } from "./routes/team.routes.js";
+import {
+  createSocketServer
+} from "./realtime/socket-server.js";
 
 export async function buildApp() {
   const app = Fastify({
     logger: true
   });
+
+  createSocketServer(app);
 
   await app.register(cors, {
     origin: true
