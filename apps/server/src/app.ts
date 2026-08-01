@@ -12,6 +12,9 @@ import {
   sqlite
 } from "./db/client.js";
 import {
+  auctionCallRoutes
+} from "./routes/auction-call.routes.js";
+import {
   auctionSessionRoutes
 } from "./routes/auction-session.routes.js";
 import {
@@ -58,6 +61,7 @@ export async function buildApp() {
 
   await app.register(dbHealthRoutes);
   await app.register(auctionSessionRoutes);
+  await app.register(auctionCallRoutes);
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
   await app.register(auctionSessionTeamRoutes);

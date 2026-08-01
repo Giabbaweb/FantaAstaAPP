@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.5.0
+v0.6.0
 ```
 
 Milestone completate:
@@ -48,12 +48,22 @@ Milestone completate:
 - parser FMS ReVo per rose iniziali;
 - importazione archivio giocatori;
 - pianificazione dell'importazione delle rose;
-- importazione transazionale delle rose iniziali.
+- importazione transazionale delle rose iniziali;
+- modello di dominio delle chiamate d'asta;
+- calcolo del massimo rilancio sostenibile;
+- apertura e gestione delle chiamate;
+- rilanci, PASS e annullamento del PASS;
+- aggiudicazione provvisoria;
+- conferma e annullamento delle chiamate;
+- persistenza SQLite delle chiamate d'asta;
+- repository, service e API del motore d'asta;
+- test di dominio e integrazione HTTP del motore d'asta.
 
 Prossima milestone:
 
 ```text
-v0.6.0 — Motore d'asta
+v0.7.0 — Telecomandi realtime
+```
 
 ---
 
@@ -274,9 +284,9 @@ La Milestone 3 conclude esclusivamente l'infrastruttura backend, i contratti con
 
 # v0.6.0 — Motore d’asta
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
-Questa milestone introduce il cuore logico dell’applicazione.
+Questa milestone ha introdotto il cuore logico e applicativo dell’asta.
 
 ## Obiettivi
 
@@ -311,14 +321,64 @@ ROLLED_BACK
 - quando il giro torna al leader si entra in `PROVISIONAL_AWARD`;
 - l’assegnazione non è ancora definitiva.
 
+## Implementazione completata
+
+- aggregate `AuctionCall`;
+- entità `AuctionCallTeam`;
+- macchina a stati della chiamata;
+- calcolo del massimo rilancio sostenibile;
+- apertura della chiamata;
+- gestione dei rilanci;
+- gestione di PASS e annullamento del PASS;
+- esclusione automatica delle squadre non più abilitate;
+- aggiudicazione provvisoria;
+- conferma e annullamento della chiamata;
+- persistenza SQLite dell’aggregate;
+- repository e application service;
+- mapping coerente degli errori HTTP;
+- API di lettura e comando;
+- fixture condivise per i test di integrazione.
+
+## Persistenza
+
+Sono state introdotte le tabelle:
+
+- `auction_calls`;
+- `auction_call_teams`.
+
+La migrazione Drizzle include chiavi esterne, vincoli sulle offerte
+e unicità della partecipazione di una squadra alla chiamata.
+
+## API
+
+Sono disponibili:
+
+- `GET /api/auction-calls/:id`;
+- `GET /api/auction-sessions/:auctionSessionId/auction-call`;
+- `POST /api/auction-calls/:id/commands/:command`.
+
+Comandi HTTP supportati:
+
+- `open`;
+- `bid`;
+- `pass`;
+- `undo-pass`;
+- `confirm`;
+- `cancel`.
+
 ## Criteri di completamento
 
 - motore di dominio indipendente dalla UI;
-- transizioni testate;
+- transizioni di stato testate;
 - massimo sostenibile verificato;
-- gestione completa dei PASS;
-- stato coerente dopo ogni comando;
-- nessuna dipendenza diretta da Fastify o React.
+- gestione completa di rilanci e PASS;
+- persistenza atomica dell’aggregate;
+- API di lettura e comando operative;
+- errori HTTP coerenti;
+- migrazione database disponibile;
+- typecheck e build superati;
+- 63 test server superati;
+- documentazione aggiornata.
 
 ---
 

@@ -1812,3 +1812,336 @@ La memorizzazione integrale delle righe originali non è richiesta in questa mil
 * È necessaria una struttura condivisa per i rapporti di importazione.
 * Le importazioni di grandi dimensioni richiedono attenzione alle prestazioni.
 * Il supporto a formati aggiuntivi dovrà essere introdotto esplicitamente.
+
+---
+
+# ADR-031 — Il motore d'asta è governato da una macchina a stati
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Gestione delle chiamate d'asta
+
+## Contesto
+
+La chiamata di un calciatore rappresenta il processo centrale dell'asta.
+
+Durante il suo ciclo di vita possono verificarsi numerosi eventi:
+
+* apertura della chiamata;
+* rilanci;
+* passaggio del turno;
+* sospensione;
+* ripresa;
+* aggiudicazione provvisoria;
+* conferma;
+* annullamento;
+* eventuale rollback.
+
+Consentire transizioni arbitrarie tra questi stati renderebbe difficile garantire la coerenza dell'asta e aumenterebbe il rischio di comportamenti non prevedibili.
+
+Il server deve essere l'unica autorità in grado di determinare l'evoluzione della chiamata.
+
+## Decisione
+
+Ogni chiamata d'asta è rappresentata da un aggregate `AuctionCall` governato da una macchina a stati esplicita.
+
+Gli stati ammessi sono:
+
+```text
+DRAFT
+OPEN
+PROVISIONAL_AWARD
+SUSPENDED
+CONFIRMED
+CANCELLED
+ROLLED_BACK
+```
+
+Ogni cambiamento di stato può avvenire esclusivamente attraverso una funzione di dominio dedicata.
+
+Le transizioni non previste devono produrre un errore esplicito e non modificare lo stato della chiamata.
+
+L'assegnazione definitiva di un calciatore non avviene automaticamente.
+
+Quando rimane un solo offerente valido la chiamata entra nello stato:
+
+```text
+PROVISIONAL_AWARD
+```
+
+La conferma definitiva richiede sempre un comando esplicito.
+
+L'annullamento della chiamata segue le stesse regole di transizione definite dalla macchina a stati.
+
+## Conseguenze
+
+### Positive
+
+* Stato della chiamata sempre coerente.
+* Transizioni completamente deterministiche.
+* Regole centralizzate nel dominio.
+* Possibilità di testare ogni transizione in modo indipendente.
+* Riduzione della logica distribuita tra service e route.
+
+### Negative
+
+* Ogni nuovo stato richiede l'aggiornamento della macchina a stati.
+* Le nuove funzionalità devono rispettare le transizioni esistenti.
+* Le modifiche al ciclo di vita richiedono l'aggiornamento dei test di dominio.
+
+---
+
+# ADR-032 — Il server governa il turno e il flusso della chiamata
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Svolgimento della chiamata d'asta
+
+## Contesto
+
+Durante una chiamata d'asta ogni squadra deve poter intervenire secondo un ordine ben definito.
+
+L'applicazione deve garantire che:
+
+* il turno venga rispettato;
+* nessuna squadra possa intervenire fuori turno;
+* il PASS abbia effetto solo sulla chiamata corrente;
+* il flusso della chiamata sia identico per tutti i client collegati.
+
+Delegare queste regole ai client produrrebbe facilmente stati divergenti e comportamenti incoerenti.
+
+## Decisione
+
+Il server mantiene in modo autoritativo lo stato della chiamata e determina in ogni istante quale squadra abbia il diritto di intervenire.
+
+L'ordine di tavolo viene stabilito all'inizio della sessione d'asta e rimane invariato per tutta la durata della sessione.
+
+La squadra chiamante apre la chiamata con l'offerta iniziale.
+
+Successivamente il turno passa alla squadra immediatamente successiva nell'ordine di tavolo.
+
+Ogni squadra, quando è il proprio turno, può esclusivamente:
+
+* effettuare un rilancio valido;
+* dichiarare PASS.
+
+Una squadra che dichiara PASS viene esclusa dalla chiamata corrente e non può più effettuare rilanci.
+
+L'annullamento del PASS può avvenire esclusivamente tramite un comando esplicito del server.
+
+Quando il PASS viene annullato, la squadra torna nello stato attivo previsto dal dominio e il turno viene ricalcolato secondo le regole della chiamata.
+
+Quando tutte le squadre, ad eccezione del leader corrente, risultano escluse o hanno dichiarato PASS, la chiamata entra nello stato:
+
+```text
+PROVISIONAL_AWARD
+```
+
+L'aggiudicazione definitiva richiede una conferma esplicita.
+
+## Conseguenze
+
+### Positive
+
+* Un solo flusso operativo valido per tutti i client.
+* Nessuna possibilità di rilanciare fuori turno.
+* PASS e annullamento del PASS gestiti in modo deterministico.
+* Stato della chiamata identico su tutti i dispositivi collegati.
+* Riduzione delle verifiche lato client.
+
+### Negative
+
+* Tutte le operazioni devono transitare dal server.
+* Ogni comando richiede la validazione del turno corrente.
+* Eventuali modifiche alle regole del giro di tavolo devono essere implementate esclusivamente nel dominio.
+
+---
+
+# ADR-033 — Il massimo rilancio sostenibile limita la partecipazione alla chiamata
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Regole economiche dell'asta
+
+## Contesto
+
+Durante una chiamata ogni squadra può rilanciare esclusivamente entro i limiti dei crediti ancora disponibili.
+
+L'applicazione deve garantire che una squadra possa sempre completare la propria rosa rispettando il numero minimo di giocatori ancora da acquistare.
+
+Consentire offerte superiori alla reale capacità economica della squadra potrebbe rendere impossibile completare la rosa e produrre uno stato non valido della sessione.
+
+## Decisione
+
+Per ogni squadra viene calcolato il massimo rilancio sostenibile mediante la formula:
+
+```text
+remainingCredits - remainingRosterSlots + 1
+```
+
+dove:
+
+* `remainingCredits` rappresenta i crediti ancora disponibili;
+* `remainingRosterSlots` rappresenta i giocatori ancora necessari per completare la rosa.
+
+Nessun rilancio può superare tale valore.
+
+Quando l'offerta corrente raggiunge o supera il massimo sostenibile di una squadra, quella squadra viene automaticamente esclusa dalla chiamata corrente.
+
+L'esclusione è limitata esclusivamente alla chiamata in corso e non modifica la partecipazione della squadra alla sessione d'asta.
+
+## Conseguenze
+
+### Positive
+
+* Nessuna squadra può compromettere il completamento della propria rosa.
+* I controlli economici risultano uniformi in tutto il sistema.
+* L'esclusione automatica riduce le verifiche manuali durante l'asta.
+* Il dominio garantisce sempre la validità dei rilanci.
+
+### Negative
+
+* Ogni rilancio richiede il ricalcolo delle squadre ancora abilitate.
+* Eventuali modifiche future alla formula richiederanno l'aggiornamento del dominio e dei relativi test.
+
+---
+
+# ADR-034 — La chiamata d'asta viene persistita come aggregate coerente
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Persistenza del motore d'asta
+
+## Contesto
+
+Una chiamata d'asta non è costituita esclusivamente dallo stato della chiamata, ma comprende anche lo stato di partecipazione delle singole squadre.
+
+Durante l'evoluzione della chiamata vengono modificati contemporaneamente:
+
+* lo stato della chiamata;
+* l'offerta corrente;
+* il leader corrente;
+* il turno corrente;
+* lo stato di ciascuna squadra (ACTIVE, PASSED o EXCLUDED);
+* l'eventuale motivo di esclusione.
+
+Salvare tali informazioni in momenti diversi potrebbe produrre stati intermedi incoerenti e compromettere la corretta ripresa dell'asta.
+
+## Decisione
+
+La persistenza della chiamata d'asta viene gestita come un unico aggregate composto da:
+
+* `AuctionCall`;
+* `AuctionCallTeam`.
+
+L'aggregate rappresenta l'intero stato operativo della chiamata.
+
+Ogni modifica prodotta dal dominio viene salvata in un'unica operazione atomica.
+
+Il repository è responsabile della lettura e della scrittura dell'intero aggregate e non di singole entità indipendenti.
+
+La persistenza utilizza le tabelle:
+
+```text
+auction_calls
+auction_call_teams
+```
+
+Le modifiche all'aggregate devono essere eseguite all'interno di una singola transazione database.
+
+Le operazioni di lettura restituiscono sempre l'intero aggregate comprensivo della chiamata e di tutte le squadre partecipanti.
+
+## Conseguenze
+
+### Positive
+
+* Stato della chiamata sempre consistente.
+* Nessuna possibilità di leggere dati parzialmente aggiornati.
+* Repository semplice e allineato al modello di dominio.
+* Maggiore affidabilità nelle operazioni di ripresa della chiamata.
+* Riduzione del rischio di incoerenze tra chiamata e squadre partecipanti.
+
+### Negative
+
+* Ogni modifica richiede il salvataggio dell'intero aggregate.
+* L'evoluzione dell'aggregate richiede l'aggiornamento della relativa migrazione e del repository.
+* Il repository risulta maggiormente accoppiato alla struttura del dominio.
+
+---
+
+# ADR-035 — Le API del motore d'asta utilizzano un modello a comandi espliciti
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** API HTTP del motore d'asta
+
+## Contesto
+
+Il motore d'asta espone operazioni che rappresentano azioni di dominio e non semplici modifiche di dati.
+
+Operazioni come:
+
+* apertura della chiamata;
+* rilancio;
+* PASS;
+* annullamento del PASS;
+* conferma dell'aggiudicazione;
+* annullamento della chiamata;
+
+producono transizioni di stato governate dal dominio e non possono essere rappresentate come semplici operazioni CRUD.
+
+Un modello basato esclusivamente su `PUT` o `PATCH` renderebbe meno esplicito il significato delle operazioni e aumenterebbe il rischio di aggiornamenti non validi.
+
+## Decisione
+
+Le operazioni del motore d'asta vengono esposte come comandi espliciti.
+
+Le API distinguono chiaramente:
+
+* operazioni di lettura;
+* operazioni di comando.
+
+Le principali operazioni di lettura sono:
+
+```text
+GET /api/auction-calls/:id
+
+GET /api/auction-sessions/:auctionSessionId/auction-call
+```
+
+Le operazioni che modificano lo stato della chiamata vengono esposte tramite:
+
+```text
+POST /api/auction-calls/:id/commands/:command
+```
+
+I comandi attualmente supportati sono:
+
+```text
+open
+bid
+pass
+undo-pass
+confirm
+cancel
+```
+
+Ogni comando viene validato dal dominio prima dell'applicazione.
+
+Gli errori vengono convertiti in risposte HTTP uniformi utilizzando un mapping centralizzato.
+
+## Conseguenze
+
+### Positive
+
+* API allineate al linguaggio del dominio.
+* Maggiore leggibilità delle operazioni disponibili.
+* Riduzione della logica nelle route HTTP.
+* Validazioni centralizzate nel dominio.
+* Maggiore estendibilità per futuri comandi del motore d'asta.
+
+### Negative
+
+* Le API non seguono un modello CRUD puro.
+* L'aggiunta di un nuovo comando richiede l'aggiornamento del dominio, del service e del mapping HTTP.
+* I client devono conoscere i comandi supportati dal server.

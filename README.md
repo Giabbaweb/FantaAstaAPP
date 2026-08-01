@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.5.0-blue" alt="Version v0.5.0">
+  <img src="https://img.shields.io/badge/version-v0.6.0-blue" alt="Version v0.6.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -31,7 +31,13 @@ Unlike traditional auction software, FantaAstaAPP synchronizes every connected d
 
 The application has been designed around the real operational workflow of live fantasy football leagues, providing reliability, consistency and complete traceability of every action.
 
-Starting with v0.5.0, FantaAstaAPP supports the complete preparation workflow of a fantasy football auction, from league configuration to player and initial roster import.
+Starting with v0.6.0, FantaAstaAPP provides the complete backend workflow for a live fantasy football auction, covering:
+
+- league configuration;
+- player archive import;
+- initial roster import;
+- complete Auction Engine;
+- REST APIs for auction operations.
 
 Typical setup:
 
@@ -143,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.5.0**
+**v0.6.0**
 
 Completed milestones
 
@@ -176,6 +182,16 @@ Completed milestones
 - ✅ Transactional roster import
 - ✅ Player import REST API
 - ✅ Initial roster import REST API
+- ✅ Auction Call domain model
+- ✅ Auction Call Team domain model
+- ✅ Maximum bid validation
+- ✅ Auction opening and bidding workflows
+- ✅ Pass and Undo Pass workflows
+- ✅ Provisional award, confirmation and cancellation
+- ✅ Auction Call SQLite persistence and migration
+- ✅ Auction Call repository and application service
+- ✅ Auction Call REST and command APIs
+- ✅ Auction Engine integration test suite
 
 Auction Session lifecycle
 
@@ -196,7 +212,7 @@ RUNNING
 
 Next milestone
 
-➡ **Auction Engine**
+➡ **Realtime Controllers**
 
 ---
 
@@ -269,8 +285,8 @@ The `docs/` directory contains the complete project documentation.
 | v0.2 | ✅ Persistence & Documentation |
 | v0.3 | ✅ Auction Session Management |
 | v0.4 | ✅ League Configuration |
-| v0.5 | ✅ Player Import & Initial Rosters
-| v0.6 | 🚧 Auction Engine
+| v0.5 | ✅ Player Import & Initial Rosters |
+| v0.6 | ✅ Auction Engine |
 | v0.7 | ⏳ Realtime Controllers |
 | v0.8 | ⏳ Public Display |
 | v0.9 | ⏳ Recovery, Manual Operations & FMS Integration |

@@ -4,8 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 5 completata
-- **Prossimo obiettivo:** Versione 0.6 – Motore d'asta
+- **Stato:** Milestone 6 completata
+- **Versione corrente:** v0.6.0
+- **Prossimo obiettivo:** Versione 0.7 – Telecomandi realtime
 
 ## Regole immutabili
 
@@ -137,20 +138,57 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 Nessuna intestazione. Terzo portiere escluso.
 
-## Primo obiettivo
+## Stato implementativo della v0.6.0
 
-Versione 0.1:
+Sono completati:
 
-1. struttura repository;
-2. TypeScript;
-3. Fastify;
-4. SQLite + Drizzle;
-5. schema iniziale;
-6. `/api/health`;
-7. React + Vite;
-8. `/admin` minima;
-9. logging;
-10. test.
+- dominio `AuctionCall`;
+- dominio `AuctionCallTeam`;
+- macchina a stati della chiamata;
+- calcolo del massimo rilancio sostenibile;
+- apertura della chiamata;
+- gestione dei rilanci;
+- gestione di PASS e annullamento del PASS;
+- aggiudicazione provvisoria;
+- conferma e annullamento della chiamata;
+- persistenza SQLite delle chiamate;
+- repository e application service;
+- route HTTP di lettura;
+- route HTTP di comando;
+- mapping degli errori;
+- migrazione Drizzle;
+- fixture condivise per i test;
+- 63 test server verdi.
+
+API principali:
+
+```text
+GET  /api/auction-calls/:id
+GET  /api/auction-sessions/:auctionSessionId/auction-call
+POST /api/auction-calls/:id/commands/:command
+```
+
+Comandi HTTP disponibili:
+
+```text
+open
+bid
+pass
+undo-pass
+confirm
+cancel
+```
+
+## Prossimo obiettivo
+
+Versione 0.7:
+
+- Socket.IO;
+- telecomandi squadra;
+- ruoli `OPERATOR` e `OBSERVER`;
+- sincronizzazione realtime;
+- riconnessione e risincronizzazione;
+- comandi con `commandId` e `stateVersion`.
 
 Fonte autoritativa completa:
 
