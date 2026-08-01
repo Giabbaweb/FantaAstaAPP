@@ -360,8 +360,7 @@ export type RealtimeRole = z.infer<
 >;
 
 export const realtimeConnectionStatusSchema = z.enum([
-  "CONNECTING",
-  "CONNECTED",
+  "UNREGISTERED",
   "REGISTERED",
   "DISCONNECTED"
 ]);
@@ -411,4 +410,39 @@ export const realtimeEventNameSchema = z.enum([
 
 export type RealtimeEventName = z.infer<
   typeof realtimeEventNameSchema
+>;
+
+
+export const realtimeRegistrationRequestSchema = z.object({
+  deviceId: z.string().trim().min(1).max(100),
+  auctionSessionId: z.string().trim().min(1).max(100),
+  auctionSessionTeamId: z.string().trim().min(1).max(100),
+  role: realtimeRoleSchema
+});
+
+export type RealtimeRegistrationRequest = z.infer<
+  typeof realtimeRegistrationRequestSchema
+>;
+
+export const realtimeConnectedPayloadSchema = z.object({
+  socketId: z.string().min(1),
+  connectedAt: z.string().min(1)
+});
+
+export type RealtimeConnectedPayload = z.infer<
+  typeof realtimeConnectedPayloadSchema
+>;
+
+export const realtimeRegisteredPayloadSchema = z.object({
+  socketId: z.string().min(1),
+  deviceId: z.string().min(1),
+  auctionSessionId: z.string().min(1),
+  auctionSessionTeamId: z.string().min(1),
+  role: realtimeRoleSchema,
+  connectedAt: z.string().min(1),
+  registeredAt: z.string().min(1)
+});
+
+export type RealtimeRegisteredPayload = z.infer<
+  typeof realtimeRegisteredPayloadSchema
 >;
