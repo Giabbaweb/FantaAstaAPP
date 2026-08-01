@@ -50,6 +50,13 @@
       "when": 1785539052167,
       "tag": "0006_thick_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785623229348,
+      "tag": "0007_steep_power_man",
+      "breakpoints": true
     }
   ]
 }

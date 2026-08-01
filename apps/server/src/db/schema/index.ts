@@ -177,7 +177,9 @@ export const auctionSessionTeams = sqliteTable(
       .notNull()
       .default(0),
 
-    remainingCredits: integer("remaining_credits").notNull()
+    remainingCredits: integer("remaining_credits").notNull(),
+
+    accessPinHash: text("access_pin_hash")
   },
   (table) => [
     uniqueIndex("auction_session_teams_session_team_unique").on(

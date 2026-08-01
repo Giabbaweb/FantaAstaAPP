@@ -1,0 +1,1 @@
+ALTER TABLE `auction_session_teams` ADD `access_pin_hash` text;
