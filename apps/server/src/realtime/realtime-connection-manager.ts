@@ -91,6 +91,22 @@ export class RealtimeConnectionManager {
     );
   }
 
+  findOperatorByAuctionSessionTeamId(
+    auctionSessionTeamId: string
+  ): RegisteredRealtimeConnection | null {
+    return (
+      this.listConnections().find(
+        (
+          connection
+        ): connection is RegisteredRealtimeConnection =>
+          connection.status === "REGISTERED" &&
+          connection.role === "OPERATOR" &&
+          connection.auctionSessionTeamId ===
+            auctionSessionTeamId
+      ) ?? null
+    );
+  }
+
   listSessionConnections(
     auctionSessionId: string
   ): RegisteredRealtimeConnection[] {

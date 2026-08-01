@@ -17,12 +17,25 @@ import {
 import type {
   RealtimeConnectedPayload,
   RealtimeError,
-  RealtimeRegisteredPayload
+  RealtimeRegisteredPayload,
+  RealtimeRole
 } from "@fantaastaapp/contracts";
 
 import {
   buildApp
 } from "../app.js";
+import {
+  db
+} from "../db/client.js";
+import {
+  auctionSessions,
+  auctionSessionTeams,
+  leagues,
+  teams
+} from "../db/schema/index.js";
+import {
+  hashTeamAccessPin
+} from "./team-access-pin.js";
 
 describe("Socket.IO server", () => {
   let app: Awaited<
@@ -58,6 +71,125 @@ describe("Socket.IO server", () => {
     });
   }
 
+  async function waitForConnection(
+    client: Socket
+  ): Promise<void> {
+    if (client.connected) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      client.once("connect", resolve);
+      client.once("connect_error", reject);
+    });
+  }
+
+  async function seedTeamAccess(
+    input: {
+      auctionSessionTeamId?: string;
+      auctionSessionId?: string;
+      teamId?: string;
+      pin?: string;
+      tableOrder?: number;
+    } = {}
+  ): Promise<{
+    auctionSessionTeamId: string;
+    auctionSessionId: string;
+  }> {
+    const auctionSessionTeamId =
+      input.auctionSessionTeamId ??
+      "auction-session-team-1";
+
+    const auctionSessionId =
+      input.auctionSessionId ??
+      "session-1";
+
+    const teamId =
+      input.teamId ??
+      "team-1";
+
+    const pin =
+      input.pin ??
+      "1234";
+
+    await db.insert(leagues).values({
+      id: "league-1",
+      name: "League 1",
+      normalizedName: "league 1"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: auctionSessionId,
+      leagueId: "league-1",
+      season: "2026/2027",
+      editionNumber: 1,
+      initialCredits: 330
+    });
+
+    await db.insert(teams).values({
+      id: teamId,
+      leagueId: "league-1",
+      name: "Team 1"
+    });
+
+    await db.insert(auctionSessionTeams).values({
+      id: auctionSessionTeamId,
+      auctionSessionId,
+      teamId,
+      tableOrder: input.tableOrder ?? 1,
+      renewalCredits: 0,
+      remainingCredits: 330,
+      accessPinHash:
+        await hashTeamAccessPin(pin)
+    });
+
+    return {
+      auctionSessionTeamId,
+      auctionSessionId
+    };
+  }
+
+  function registerClient(
+    client: Socket,
+    input: {
+      deviceId: string;
+      auctionSessionId: string;
+      auctionSessionTeamId: string;
+      role: RealtimeRole;
+      pin: string;
+    }
+  ): Promise<RealtimeRegisteredPayload> {
+    const registeredPayloadPromise =
+      new Promise<RealtimeRegisteredPayload>(
+        (resolve) => {
+          client.once(
+            "realtime:registered",
+            resolve
+          );
+        }
+      );
+
+    client.emit(
+      "realtime:register",
+      input
+    );
+
+    return registeredPayloadPromise;
+  }
+
+  function waitForRealtimeError(
+    client: Socket
+  ): Promise<RealtimeError> {
+    return new Promise<RealtimeError>(
+      (resolve) => {
+        client.once(
+          "realtime:error",
+          resolve
+        );
+      }
+    );
+  }
+
   it("accepts a realtime client connection", async () => {
     const client = createClient();
 
@@ -78,6 +210,7 @@ describe("Socket.IO server", () => {
         );
 
       expect(client.connected).toBe(true);
+
       expect(payload).toEqual({
         socketId: client.id,
         connectedAt: expect.any(String)
@@ -87,40 +220,31 @@ describe("Socket.IO server", () => {
     }
   });
 
-  it("registers a realtime client", async () => {
+  it("registers a client with the correct PIN", async () => {
+    const {
+      auctionSessionId,
+      auctionSessionTeamId
+    } = await seedTeamAccess();
+
     const client = createClient();
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        client.once("connect", resolve);
-        client.once("connect_error", reject);
-      });
-
-      const registeredPayloadPromise =
-        new Promise<RealtimeRegisteredPayload>(
-          (resolve) => {
-            client.once(
-              "realtime:registered",
-              resolve
-            );
-          }
-        );
-
-      client.emit("realtime:register", {
-        deviceId: "device-1",
-        auctionSessionId: "session-1",
-        auctionSessionTeamId: "session-team-1",
-        role: "OPERATOR"
-      });
+      await waitForConnection(client);
 
       const payload =
-        await registeredPayloadPromise;
+        await registerClient(client, {
+          deviceId: "operator-device",
+          auctionSessionId,
+          auctionSessionTeamId,
+          role: "OPERATOR",
+          pin: "1234"
+        });
 
       expect(payload).toEqual({
         socketId: client.id,
-        deviceId: "device-1",
-        auctionSessionId: "session-1",
-        auctionSessionTeamId: "session-team-1",
+        deviceId: "operator-device",
+        auctionSessionId,
+        auctionSessionTeamId,
         role: "OPERATOR",
         connectedAt: expect.any(String),
         registeredAt: expect.any(String)
@@ -134,25 +258,16 @@ describe("Socket.IO server", () => {
     const client = createClient();
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        client.once("connect", resolve);
-        client.once("connect_error", reject);
-      });
+      await waitForConnection(client);
 
       const errorPayloadPromise =
-        new Promise<RealtimeError>(
-          (resolve) => {
-            client.once(
-              "realtime:error",
-              resolve
-            );
-          }
-        );
+        waitForRealtimeError(client);
 
       client.emit("realtime:register", {
         deviceId: "",
         auctionSessionId: "session-1",
-        role: "OPERATOR"
+        role: "OPERATOR",
+        pin: "1234"
       });
 
       const payload =
@@ -171,6 +286,168 @@ describe("Socket.IO server", () => {
       });
     } finally {
       client.disconnect();
+    }
+  });
+
+  it("rejects registration with an incorrect PIN", async () => {
+    const {
+      auctionSessionId,
+      auctionSessionTeamId
+    } = await seedTeamAccess();
+
+    const client = createClient();
+
+    try {
+      await waitForConnection(client);
+
+      const errorPayloadPromise =
+        waitForRealtimeError(client);
+
+      client.emit("realtime:register", {
+        deviceId: "operator-device",
+        auctionSessionId,
+        auctionSessionTeamId,
+        role: "OPERATOR",
+        pin: "9999"
+      });
+
+      await expect(
+        errorPayloadPromise
+      ).resolves.toEqual({
+        code: "UNAUTHORIZED",
+        message:
+          "Realtime registration is not authorized"
+      });
+    } finally {
+      client.disconnect();
+    }
+  });
+
+  it("rejects registration for a different session", async () => {
+    const {
+      auctionSessionTeamId
+    } = await seedTeamAccess();
+
+    const client = createClient();
+
+    try {
+      await waitForConnection(client);
+
+      const errorPayloadPromise =
+        waitForRealtimeError(client);
+
+      client.emit("realtime:register", {
+        deviceId: "operator-device",
+        auctionSessionId: "different-session",
+        auctionSessionTeamId,
+        role: "OPERATOR",
+        pin: "1234"
+      });
+
+      await expect(
+        errorPayloadPromise
+      ).resolves.toEqual({
+        code: "UNAUTHORIZED",
+        message:
+          "Realtime registration is not authorized"
+      });
+    } finally {
+      client.disconnect();
+    }
+  });
+
+  it("rejects a second operator for the same team", async () => {
+    const {
+      auctionSessionId,
+      auctionSessionTeamId
+    } = await seedTeamAccess();
+
+    const firstClient = createClient();
+    const secondClient = createClient();
+
+    try {
+      await waitForConnection(firstClient);
+
+      await registerClient(firstClient, {
+        deviceId: "operator-device-1",
+        auctionSessionId,
+        auctionSessionTeamId,
+        role: "OPERATOR",
+        pin: "1234"
+      });
+
+      await waitForConnection(secondClient);
+
+      const errorPayloadPromise =
+        waitForRealtimeError(secondClient);
+
+      secondClient.emit("realtime:register", {
+        deviceId: "operator-device-2",
+        auctionSessionId,
+        auctionSessionTeamId,
+        role: "OPERATOR",
+        pin: "1234"
+      });
+
+      await expect(
+        errorPayloadPromise
+      ).resolves.toEqual({
+        code: "OPERATOR_ALREADY_CONNECTED",
+        message:
+          "An operator is already connected for this auction session team"
+      });
+    } finally {
+      firstClient.disconnect();
+      secondClient.disconnect();
+    }
+  });
+
+  it("allows multiple observers for the same team", async () => {
+    const {
+      auctionSessionId,
+      auctionSessionTeamId
+    } = await seedTeamAccess();
+
+    const firstClient = createClient();
+    const secondClient = createClient();
+
+    try {
+      await waitForConnection(firstClient);
+
+      const firstRegistration =
+        await registerClient(firstClient, {
+          deviceId: "observer-device-1",
+          auctionSessionId,
+          auctionSessionTeamId,
+          role: "OBSERVER",
+          pin: "1234"
+        });
+
+      await waitForConnection(secondClient);
+
+      const secondRegistration =
+        await registerClient(secondClient, {
+          deviceId: "observer-device-2",
+          auctionSessionId,
+          auctionSessionTeamId,
+          role: "OBSERVER",
+          pin: "1234"
+        });
+
+      expect(firstRegistration.role).toBe(
+        "OBSERVER"
+      );
+
+      expect(secondRegistration.role).toBe(
+        "OBSERVER"
+      );
+
+      expect(firstRegistration.socketId).not.toBe(
+        secondRegistration.socketId
+      );
+    } finally {
+      firstClient.disconnect();
+      secondClient.disconnect();
     }
   });
 });

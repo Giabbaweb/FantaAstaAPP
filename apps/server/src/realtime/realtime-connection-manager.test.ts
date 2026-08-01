@@ -179,4 +179,54 @@ describe("RealtimeConnectionManager", () => {
       })
     ]);
   });
+
+  it("finds the active operator for an auction session team", () => {
+    const manager =
+      new RealtimeConnectionManager();
+
+    manager.connect({
+      socketId: "operator-socket"
+    });
+
+    manager.register("operator-socket", {
+      deviceId: "operator-device",
+      auctionSessionId: "session-1",
+      auctionSessionTeamId: "session-team-1",
+      role: "OPERATOR"
+    });
+
+    manager.connect({
+      socketId: "observer-socket"
+    });
+
+    manager.register("observer-socket", {
+      deviceId: "observer-device",
+      auctionSessionId: "session-1",
+      auctionSessionTeamId: "session-team-1",
+      role: "OBSERVER"
+    });
+
+    expect(
+      manager.findOperatorByAuctionSessionTeamId(
+        "session-team-1"
+      )
+    ).toEqual(
+      expect.objectContaining({
+        socketId: "operator-socket",
+        role: "OPERATOR"
+      })
+    );
+  });
+
+  it("returns null when a team has no active operator", () => {
+    const manager =
+      new RealtimeConnectionManager();
+
+    expect(
+      manager.findOperatorByAuctionSessionTeamId(
+        "session-team-1"
+      )
+    ).toBeNull();
+  });
+
 });

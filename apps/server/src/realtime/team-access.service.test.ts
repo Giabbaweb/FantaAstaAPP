@@ -159,4 +159,54 @@ describe("TeamAccessService", () => {
       "accessPinHash"
     );
   });
+
+  it("authorizes a registration with matching session and PIN", async () => {
+    await service.setAccessPin(
+      auctionSessionTeamId,
+      "1234"
+    );
+
+    await expect(
+      service.authorizeRegistration(
+        auctionSessionTeamId,
+        "session-1",
+        "1234"
+      )
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects registration for a different session", async () => {
+    await service.setAccessPin(
+      auctionSessionTeamId,
+      "1234"
+    );
+
+    await expect(
+      service.authorizeRegistration(
+        auctionSessionTeamId,
+        "different-session",
+        "1234"
+      )
+    ).rejects.toMatchObject({
+      code: "TEAM_ACCESS_SESSION_MISMATCH"
+    });
+  });
+
+  it("rejects registration with an invalid PIN", async () => {
+    await service.setAccessPin(
+      auctionSessionTeamId,
+      "1234"
+    );
+
+    await expect(
+      service.authorizeRegistration(
+        auctionSessionTeamId,
+        "session-1",
+        "9999"
+      )
+    ).rejects.toMatchObject({
+      code: "TEAM_ACCESS_PIN_INVALID"
+    });
+  });
+
 });

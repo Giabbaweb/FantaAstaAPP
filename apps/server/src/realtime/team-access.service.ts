@@ -9,7 +9,9 @@ import {
 
 export type TeamAccessServiceErrorCode =
   | "TEAM_ACCESS_NOT_FOUND"
+  | "TEAM_ACCESS_SESSION_MISMATCH"
   | "TEAM_ACCESS_PIN_NOT_CONFIGURED"
+  | "TEAM_ACCESS_PIN_INVALID"
   | "TEAM_ACCESS_PIN_UPDATE_FAILED";
 
 export class TeamAccessServiceError
@@ -55,6 +57,47 @@ export class TeamAccessService {
       throw new TeamAccessServiceError(
         "TEAM_ACCESS_PIN_UPDATE_FAILED",
         `Failed to update access PIN for auction session team "${auctionSessionTeamId}"`
+      );
+    }
+  }
+
+  async authorizeRegistration(
+    auctionSessionTeamId: string,
+    auctionSessionId: string,
+    pin: string
+  ): Promise<void> {
+    const credential =
+      await this.requireCredential(
+        auctionSessionTeamId
+      );
+
+    if (
+      credential.auctionSessionId !==
+      auctionSessionId
+    ) {
+      throw new TeamAccessServiceError(
+        "TEAM_ACCESS_SESSION_MISMATCH",
+        `Auction session team "${auctionSessionTeamId}" does not belong to auction session "${auctionSessionId}"`
+      );
+    }
+
+    if (!credential.accessPinHash) {
+      throw new TeamAccessServiceError(
+        "TEAM_ACCESS_PIN_NOT_CONFIGURED",
+        `Access PIN is not configured for auction session team "${auctionSessionTeamId}"`
+      );
+    }
+
+    const valid =
+      await verifyTeamAccessPin(
+        pin,
+        credential.accessPinHash
+      );
+
+    if (!valid) {
+      throw new TeamAccessServiceError(
+        "TEAM_ACCESS_PIN_INVALID",
+        "The supplied team access PIN is invalid"
       );
     }
   }

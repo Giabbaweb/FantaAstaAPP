@@ -16,6 +16,13 @@ import {
   RealtimeConnectionManager
 } from "./realtime-connection-manager.js";
 import {
+  SqliteTeamAccessRepository
+} from "./team-access.repository.js";
+import {
+  TeamAccessService,
+  TeamAccessServiceError
+} from "./team-access.service.js";
+import {
   auctionSessionObserversRoom,
   auctionSessionOperatorsRoom,
   auctionSessionRoom,
@@ -33,6 +40,11 @@ export function createSocketServer(
 
   const connectionManager =
     new RealtimeConnectionManager();
+
+  const teamAccessService =
+    new TeamAccessService(
+      new SqliteTeamAccessRepository()
+    );
 
   io.on("connection", (socket) => {
     const connection =
@@ -85,10 +97,44 @@ export function createSocketServer(
         }
 
         try {
+          const {
+            pin,
+            ...registration
+          } = parsedPayload.data;
+
+          await teamAccessService
+            .authorizeRegistration(
+              registration.auctionSessionTeamId,
+              registration.auctionSessionId,
+              pin
+            );
+
+          if (
+            registration.role === "OPERATOR" &&
+            connectionManager
+              .findOperatorByAuctionSessionTeamId(
+                registration.auctionSessionTeamId
+              )
+          ) {
+            const errorPayload: RealtimeError = {
+              code:
+                "OPERATOR_ALREADY_CONNECTED",
+              message:
+                "An operator is already connected for this auction session team"
+            };
+
+            socket.emit(
+              "realtime:error",
+              errorPayload
+            );
+
+            return;
+          }
+
           const registeredConnection =
             connectionManager.register(
               socket.id,
-              parsedPayload.data
+              registration
             );
 
           await socket.join(
@@ -148,13 +194,20 @@ export function createSocketServer(
             "Realtime client registered"
           );
         } catch (error) {
-          const errorPayload: RealtimeError = {
-            code: "INTERNAL_ERROR",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Realtime registration failed"
-          };
+          const errorPayload: RealtimeError =
+            error instanceof TeamAccessServiceError
+              ? {
+                  code: "UNAUTHORIZED",
+                  message:
+                    "Realtime registration is not authorized"
+                }
+              : {
+                  code: "INTERNAL_ERROR",
+                  message:
+                    error instanceof Error
+                      ? error.message
+                      : "Realtime registration failed"
+                };
 
           socket.emit(
             "realtime:error",

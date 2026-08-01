@@ -381,6 +381,7 @@ export type RealtimeCommandMetadata = z.infer<
 export const realtimeErrorCodeSchema = z.enum([
   "VALIDATION_ERROR",
   "UNAUTHORIZED",
+  "OPERATOR_ALREADY_CONNECTED",
   "INTERNAL_ERROR"
 ]);
 
@@ -418,7 +419,10 @@ export const realtimeRegistrationRequestSchema = z.object({
   deviceId: z.string().trim().min(1).max(100),
   auctionSessionId: z.string().trim().min(1).max(100),
   auctionSessionTeamId: z.string().trim().min(1).max(100),
-  role: realtimeRoleSchema
+  role: realtimeRoleSchema,
+  pin: z.string().regex(/^\d{4,8}$/, {
+    message: "PIN must contain between 4 and 8 digits"
+  })
 });
 
 export type RealtimeRegistrationRequest = z.infer<
