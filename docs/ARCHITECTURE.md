@@ -356,7 +356,7 @@ apps/server/src/
 ├── shared/
 └── types/
 ```
-> **Nota:** la struttura mostrata rappresenta l'architettura di riferimento verso cui evolverà il progetto. Nella versione **v0.5.0** alcuni moduli sono ancora organizzati secondo una struttura semplificata (route, repository, service e database), mantenendo comunque la separazione delle responsabilità descritta in questo documento.
+> **Nota:** la struttura mostrata rappresenta l'architettura di riferimento verso cui evolverà il progetto. Nella versione **v0.6.0** alcuni moduli sono ancora organizzati secondo una struttura semplificata (route, repository, service e database), mantenendo comunque la separazione delle responsabilità descritta in questo documento. La completa modularizzazione è prevista a partire dalla v0.7.0 con l'introduzione del layer realtime.
 
 Ogni modulo potrà includere, quando necessario:
 
@@ -466,7 +466,7 @@ La scelta di SQLite è coerente con i requisiti:
 
 ---
 
-### 8.2 Stato della v0.5.0
+### 8.2 Stato della v0.6.0
 
 Le tabelle attualmente presenti comprendono:
 
@@ -522,7 +522,7 @@ In caso di errore, l’intera operazione deve essere annullata.
 
 ## 9. API HTTP
 
-La v0.5.0 espone:
+La v0.6.0 espone:
 
 ```text
 GET    /api/health

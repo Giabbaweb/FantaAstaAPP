@@ -14,6 +14,44 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.6.0] - 2026-08-01
+
+### Added
+
+* Auction Call domain entity
+* Auction Call Team domain entity
+* Complete Auction Engine domain workflow
+* Maximum bid calculation rules
+* Auction opening workflow
+* Bid management workflow
+* Pass and Undo Pass workflows
+* Auction confirmation workflow
+* Auction cancellation workflow
+* SQLite persistence for Auction Calls
+* Auction Call repository
+* Auction Call application service
+* REST APIs for Auction Calls
+* HTTP command endpoints for auction operations
+* Shared integration test fixtures for the auction engine
+
+### Changed
+
+* Backend architecture extended with a complete Auction Engine module
+* Auction workflow is now fully server-authoritative
+* HTTP command routing aligned with the domain command model
+
+### Tested
+
+* Backend type checking
+* Backend production build
+* Complete Auction Call REST API
+* Repository integration
+* Service integration
+* Auction command workflows
+* 63 automated backend tests
+
+---
+
 ## [0.5.0] - 2026-07-30
 
 ### Added
