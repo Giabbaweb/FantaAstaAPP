@@ -528,10 +528,9 @@ export type AuctionCallTeamStatus = z.infer<
 
 export const auctionCallTeamExclusionReasonSchema =
   z.enum([
-    "MAX_BID_EXCEEDED",
-    "NO_ROSTER_SLOT",
-    "TEAM_SUSPENDED",
-    "MANUAL_EXCLUSION"
+    "MAXIMUM_BID_TOO_LOW",
+    "ROSTER_FULL",
+    "ROLE_LIMIT_REACHED"
   ]);
 
 export type AuctionCallTeamExclusionReason = z.infer<

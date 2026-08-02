@@ -153,4 +153,21 @@ describe("realtime auction snapshot contracts", () => {
       )
     ).toBe("auction:snapshot");
   });
+
+  it("validates a domain exclusion reason", () => {
+    expect(
+      auctionCallTeamSchema.parse({
+        ...auctionCallTeam,
+        status: "EXCLUDED",
+        exclusionReason:
+          "MAXIMUM_BID_TOO_LOW"
+      })
+    ).toEqual({
+      ...auctionCallTeam,
+      status: "EXCLUDED",
+      exclusionReason:
+        "MAXIMUM_BID_TOO_LOW"
+    });
+  });
+
 });
