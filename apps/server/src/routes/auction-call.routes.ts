@@ -8,9 +8,6 @@ import {
 import type {
   AuctionCallNotFoundResponse
 } from "../http/auction-call-errors.js";
-import {
-  SqliteAuctionCallRepository
-} from "../repositories/auction-call.repository.js";
 import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
@@ -60,14 +57,10 @@ type AuctionCallCommandResponse = {
   error: null;
 };
 
-const repository =
-  new SqliteAuctionCallRepository();
-
-const service =
-  new AuctionCallService(repository);
-
-export const auctionCallRoutes: FastifyPluginAsync =
-  async (fastify) => {
+export function auctionCallRoutes(
+  service: AuctionCallService
+): FastifyPluginAsync {
+  return async (fastify) => {
     fastify.get<{
       Params: AuctionCallParams;
       Reply:
@@ -305,3 +298,4 @@ export const auctionCallRoutes: FastifyPluginAsync =
       }
     );
   };
+}

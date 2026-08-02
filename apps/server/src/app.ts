@@ -12,6 +12,9 @@ import {
   sqlite
 } from "./db/client.js";
 import {
+  SqliteAuctionCallRepository
+} from "./repositories/auction-call.repository.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -41,6 +44,9 @@ import {
 import {
   createSocketServer
 } from "./realtime/socket-server.js";
+import {
+  AuctionCallService
+} from "./services/auction-call.service.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -48,6 +54,14 @@ export async function buildApp() {
   });
 
   createSocketServer(app);
+
+  const auctionCallRepository =
+    new SqliteAuctionCallRepository();
+
+  const auctionCallService =
+    new AuctionCallService(
+      auctionCallRepository
+    );
 
   await app.register(cors, {
     origin: true
@@ -66,7 +80,11 @@ export async function buildApp() {
 
   await app.register(dbHealthRoutes);
   await app.register(auctionSessionRoutes);
-  await app.register(auctionCallRoutes);
+  await app.register(
+    auctionCallRoutes(
+      auctionCallService
+    )
+  );
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
   await app.register(auctionSessionTeamRoutes);
