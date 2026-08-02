@@ -58,18 +58,25 @@ describe("AuctionCallCommandCoordinator", () => {
         vi.fn().mockResolvedValue(undefined)
     };
 
+    const snapshotDispatcher = {
+      dispatch:
+        vi.fn().mockResolvedValue(undefined)
+    };
+
     const onDispatchFailure = vi.fn();
 
     const coordinator =
       new AuctionCallCommandCoordinator(
         service,
         dispatcher,
+        snapshotDispatcher,
         onDispatchFailure
       );
 
     return {
       service,
       dispatcher,
+      snapshotDispatcher,
       onDispatchFailure,
       coordinator
     };
@@ -79,6 +86,7 @@ describe("AuctionCallCommandCoordinator", () => {
     const {
       service,
       dispatcher,
+      snapshotDispatcher,
       coordinator
     } = createFixture();
 
@@ -108,6 +116,18 @@ describe("AuctionCallCommandCoordinator", () => {
       dispatcher.dispatch.mock
         .invocationCallOrder[0]!
     );
+
+    expect(
+      dispatcher.dispatch.mock
+        .invocationCallOrder[0]
+    ).toBeLessThan(
+      snapshotDispatcher.dispatch.mock
+        .invocationCallOrder[0]!
+    );
+
+    expect(
+      snapshotDispatcher.dispatch
+    ).toHaveBeenCalledWith("session-1");
   });
 
   it("maps bid, pass and undo pass events", async () => {
@@ -249,9 +269,65 @@ describe("AuctionCallCommandCoordinator", () => {
     expect(
       onDispatchFailure
     ).toHaveBeenCalledWith({
+      stage: "EVENT",
       type: "AUCTION_CALL_OPENED",
       aggregate,
       error: publicationError
+    });
+  });
+
+  it("attempts the snapshot when event dispatch fails", async () => {
+    const {
+      dispatcher,
+      snapshotDispatcher,
+      coordinator
+    } = createFixture();
+
+    dispatcher.dispatch.mockRejectedValueOnce(
+      new Error("Event failed")
+    );
+
+    await expect(
+      coordinator.open(
+        "auction-call-1",
+        1
+      )
+    ).resolves.toBe(aggregate);
+
+    expect(
+      snapshotDispatcher.dispatch
+    ).toHaveBeenCalledWith("session-1");
+  });
+
+  it("reports snapshot failures without failing the command", async () => {
+    const {
+      snapshotDispatcher,
+      onDispatchFailure,
+      coordinator
+    } = createFixture();
+
+    const snapshotError =
+      new Error("Snapshot failed");
+
+    snapshotDispatcher.dispatch
+      .mockRejectedValueOnce(
+        snapshotError
+      );
+
+    await expect(
+      coordinator.open(
+        "auction-call-1",
+        1
+      )
+    ).resolves.toBe(aggregate);
+
+    expect(
+      onDispatchFailure
+    ).toHaveBeenCalledWith({
+      stage: "SNAPSHOT",
+      type: "AUCTION_CALL_OPENED",
+      aggregate,
+      error: snapshotError
     });
   });
 });

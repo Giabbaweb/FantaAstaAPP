@@ -12,6 +12,9 @@ import type {
   AuctionRealtimeDispatchInput,
   AuctionRealtimeDispatcher
 } from "./auction-realtime-dispatcher.js";
+import type {
+  AuctionSnapshotDispatcher
+} from "./auction-snapshot-dispatcher.js";
 
 type AuctionCallCommandService = Pick<
   AuctionCallService,
@@ -28,7 +31,13 @@ type AuctionRealtimeDispatcherPort = Pick<
   "dispatch"
 >;
 
+type AuctionSnapshotDispatcherPort = Pick<
+  AuctionSnapshotDispatcher,
+  "dispatch"
+>;
+
 export type AuctionRealtimeDispatchFailure = {
+  stage: "EVENT" | "SNAPSHOT";
   type: RealtimeAuctionEventType;
   aggregate: AuctionCallAggregate;
   error: unknown;
@@ -44,6 +53,8 @@ export class AuctionCallCommandCoordinator {
       AuctionCallCommandService,
     private readonly dispatcher:
       AuctionRealtimeDispatcherPort,
+    private readonly snapshotDispatcher:
+      AuctionSnapshotDispatcherPort,
     private readonly onDispatchFailure:
       AuctionRealtimeDispatchFailureHandler =
         () => undefined
@@ -59,7 +70,7 @@ export class AuctionCallCommandCoordinator {
         openingBid
       );
 
-    await this.dispatchSafely({
+    await this.synchronizeSafely({
       type: "AUCTION_CALL_OPENED",
       aggregate,
       payload: {
@@ -82,7 +93,7 @@ export class AuctionCallCommandCoordinator {
         bid
       );
 
-    await this.dispatchSafely({
+    await this.synchronizeSafely({
       type: "BID_PLACED",
       aggregate,
       payload: {
@@ -104,7 +115,7 @@ export class AuctionCallCommandCoordinator {
         auctionSessionTeamId
       );
 
-    await this.dispatchSafely({
+    await this.synchronizeSafely({
       type: "TEAM_PASSED",
       aggregate,
       payload: {
@@ -125,7 +136,7 @@ export class AuctionCallCommandCoordinator {
         auctionSessionTeamId
       );
 
-    await this.dispatchSafely({
+    await this.synchronizeSafely({
       type: "TEAM_PASS_UNDONE",
       aggregate,
       payload: {
@@ -143,7 +154,7 @@ export class AuctionCallCommandCoordinator {
       await this.service
         .confirmAuctionCall(id);
 
-    await this.dispatchSafely({
+    await this.synchronizeSafely({
       type: "AUCTION_CALL_CONFIRMED",
       aggregate
     });
@@ -158,7 +169,7 @@ export class AuctionCallCommandCoordinator {
       await this.service
         .cancelAuctionCall(id);
 
-    await this.dispatchSafely({
+    await this.synchronizeSafely({
       type: "AUCTION_CALL_CANCELLED",
       aggregate
     });
@@ -166,13 +177,27 @@ export class AuctionCallCommandCoordinator {
     return aggregate;
   }
 
-  private async dispatchSafely(
+  private async synchronizeSafely(
     input: AuctionRealtimeDispatchInput
   ): Promise<void> {
     try {
       await this.dispatcher.dispatch(input);
     } catch (error) {
       this.onDispatchFailure({
+        stage: "EVENT",
+        type: input.type,
+        aggregate: input.aggregate,
+        error
+      });
+    }
+
+    try {
+      await this.snapshotDispatcher.dispatch(
+        input.aggregate.call.auctionSessionId
+      );
+    } catch (error) {
+      this.onDispatchFailure({
+        stage: "SNAPSHOT",
         type: input.type,
         aggregate: input.aggregate,
         error

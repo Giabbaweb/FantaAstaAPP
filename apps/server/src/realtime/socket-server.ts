@@ -13,16 +13,9 @@ import {
 } from "@fantaastaapp/contracts";
 
 import {
-  SqliteAuctionCallRepository
-} from "../repositories/auction-call.repository.js";
-import {
   RealtimeConnectionManager
 } from "./realtime-connection-manager.js";
-import {
-  SqliteRealtimeSnapshotSessionReader,
-  SqliteRealtimeSnapshotTeamReader
-} from "./realtime-snapshot.repository.js";
-import {
+import type {
   RealtimeSnapshotService
 } from "./realtime-snapshot.service.js";
 import {
@@ -40,7 +33,9 @@ import {
 } from "./room-name.js";
 
 export function createSocketServer(
-  app: FastifyInstance
+  app: FastifyInstance,
+  realtimeSnapshotService:
+    RealtimeSnapshotService
 ): SocketIOServer {
   const io = new SocketIOServer(app.server, {
     cors: {
@@ -54,13 +49,6 @@ export function createSocketServer(
   const teamAccessService =
     new TeamAccessService(
       new SqliteTeamAccessRepository()
-    );
-
-  const realtimeSnapshotService =
-    new RealtimeSnapshotService(
-      new SqliteRealtimeSnapshotSessionReader(),
-      new SqliteRealtimeSnapshotTeamReader(),
-      new SqliteAuctionCallRepository()
     );
 
   io.on("connection", (socket) => {

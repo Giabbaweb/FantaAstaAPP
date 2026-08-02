@@ -48,6 +48,16 @@ import {
   AuctionRealtimeDispatcher
 } from "./realtime/auction-realtime-dispatcher.js";
 import {
+  AuctionSnapshotDispatcher
+} from "./realtime/auction-snapshot-dispatcher.js";
+import {
+  SqliteRealtimeSnapshotSessionReader,
+  SqliteRealtimeSnapshotTeamReader
+} from "./realtime/realtime-snapshot.repository.js";
+import {
+  RealtimeSnapshotService
+} from "./realtime/realtime-snapshot.service.js";
+import {
   createSocketServer
 } from "./realtime/socket-server.js";
 import {
@@ -62,7 +72,20 @@ export async function buildApp() {
     logger: true
   });
 
-  const io = createSocketServer(app);
+  const auctionCallRepository =
+    new SqliteAuctionCallRepository();
+
+  const realtimeSnapshotService =
+    new RealtimeSnapshotService(
+      new SqliteRealtimeSnapshotSessionReader(),
+      new SqliteRealtimeSnapshotTeamReader(),
+      auctionCallRepository
+    );
+
+  const io = createSocketServer(
+    app,
+    realtimeSnapshotService
+  );
 
   const realtimePublisher =
     new SocketIoRealtimePublisher(io);
@@ -72,8 +95,11 @@ export async function buildApp() {
       realtimePublisher
     );
 
-  const auctionCallRepository =
-    new SqliteAuctionCallRepository();
+  const auctionSnapshotDispatcher =
+    new AuctionSnapshotDispatcher(
+      realtimeSnapshotService,
+      realtimePublisher
+    );
 
   const auctionCallService =
     new AuctionCallService(
@@ -84,7 +110,13 @@ export async function buildApp() {
     new AuctionCallCommandCoordinator(
       auctionCallService,
       auctionRealtimeDispatcher,
-      ({ type, aggregate, error }) => {
+      auctionSnapshotDispatcher,
+      ({
+        stage,
+        type,
+        aggregate,
+        error
+      }) => {
         app.log.error(
           {
             module: "realtime",
@@ -92,6 +124,7 @@ export async function buildApp() {
               aggregate.call.auctionSessionId,
             auctionCallId:
               aggregate.call.id,
+            dispatchStage: stage,
             eventType: type,
             error
           },
