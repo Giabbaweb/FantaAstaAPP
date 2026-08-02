@@ -10,6 +10,11 @@ import type {
   RealtimePublisher
 } from "./realtime-publisher.js";
 
+type AuctionEventPublisher = Pick<
+  RealtimePublisher,
+  "publishAuctionEvent"
+>;
+
 export type AuctionRealtimeDispatchInput = {
   type: RealtimeAuctionEventType;
   aggregate: AuctionCallAggregate;
@@ -19,7 +24,7 @@ export type AuctionRealtimeDispatchInput = {
 export class AuctionRealtimeDispatcher {
   constructor(
     private readonly publisher:
-      RealtimePublisher,
+      AuctionEventPublisher,
     private readonly now:
       () => string = () =>
         new Date().toISOString()

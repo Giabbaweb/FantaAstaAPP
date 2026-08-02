@@ -3,7 +3,8 @@ import type {
 } from "socket.io";
 
 import type {
-  RealtimeAuctionEvent
+  RealtimeAuctionEvent,
+  RealtimeAuctionSnapshot
 } from "@fantaastaapp/contracts";
 
 import type {
@@ -32,6 +33,21 @@ export class SocketIoRealtimePublisher
       .emit(
         "auction:event",
         event
+      );
+  }
+
+  async publishAuctionSnapshot(
+    snapshot: RealtimeAuctionSnapshot
+  ): Promise<void> {
+    this.io
+      .to(
+        auctionSessionRoom(
+          snapshot.session.id
+        )
+      )
+      .emit(
+        "auction:snapshot",
+        snapshot
       );
   }
 }

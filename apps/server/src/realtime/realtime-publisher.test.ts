@@ -7,6 +7,7 @@ import {
 import {
   NoopRealtimePublisher,
   type RealtimeAuctionEvent,
+  type RealtimeAuctionSnapshot,
   type RealtimePublisher
 } from "./realtime-publisher.js";
 
@@ -19,15 +20,48 @@ describe("RealtimePublisher", () => {
       type: "BID_PLACED",
       auctionSessionId: "session-1",
       auctionCallId: "auction-call-1",
-      occurredAt: "2026-08-01T21:00:00.000Z",
+      occurredAt:
+        "2026-08-02T21:00:00.000Z",
       payload: {
-        auctionSessionTeamId: "session-team-1",
-        amount: 25
+        auctionSessionTeamId:
+          "session-team-1",
+        bid: 25
       }
     };
 
     await expect(
       publisher.publishAuctionEvent(event)
+    ).resolves.toBeUndefined();
+  });
+
+  it("supports publishing an auction snapshot", async () => {
+    const publisher: RealtimePublisher =
+      new NoopRealtimePublisher();
+
+    const snapshot: RealtimeAuctionSnapshot = {
+      stateVersion: 1,
+      generatedAt:
+        "2026-08-02T21:00:00.000Z",
+      session: {
+        id: "session-1",
+        leagueId: "league-1",
+        season: "2026/2027",
+        editionNumber: 35,
+        status: "RUNNING",
+        initialCredits: 330,
+        createdAt:
+          "2026-08-02T20:00:00.000Z",
+        updatedAt:
+          "2026-08-02T21:00:00.000Z"
+      },
+      sessionTeams: [],
+      operationalAuctionCall: null
+    };
+
+    await expect(
+      publisher.publishAuctionSnapshot(
+        snapshot
+      )
     ).resolves.toBeUndefined();
   });
 
@@ -51,7 +85,7 @@ describe("RealtimePublisher", () => {
           auctionSessionId: "session-1",
           auctionCallId: "auction-call-1",
           occurredAt:
-            "2026-08-01T21:00:00.000Z",
+            "2026-08-02T21:00:00.000Z",
           payload: {}
         })
       ).resolves.toBeUndefined();
@@ -66,7 +100,8 @@ describe("RealtimePublisher", () => {
       type: "AUCTION_CALL_OPENED",
       auctionSessionId: "session-1",
       auctionCallId: "auction-call-1",
-      occurredAt: "2026-08-01T21:00:00.000Z",
+      occurredAt:
+        "2026-08-02T21:00:00.000Z",
       payload: {
         openingBid: 1
       }

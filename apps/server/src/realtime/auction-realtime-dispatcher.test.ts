@@ -8,9 +8,6 @@ import {
 import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
-import type {
-  RealtimePublisher
-} from "./realtime-publisher.js";
 import {
   AuctionRealtimeDispatcher
 } from "./auction-realtime-dispatcher.js";
@@ -54,7 +51,7 @@ describe("AuctionRealtimeDispatcher", () => {
     const publishAuctionEvent =
       vi.fn().mockResolvedValue(undefined);
 
-    const publisher: RealtimePublisher = {
+    const publisher = {
       publishAuctionEvent
     };
 
