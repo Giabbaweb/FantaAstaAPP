@@ -58,6 +58,10 @@ export const auctionSessions = sqliteTable(
       .notNull()
       .default(330),
 
+    stateVersion: integer("state_version")
+      .notNull()
+      .default(0),
+
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),

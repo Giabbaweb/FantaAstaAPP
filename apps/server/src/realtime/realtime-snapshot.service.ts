@@ -1,5 +1,4 @@
 import type {
-  AuctionSession,
   RealtimeAuctionSnapshot
 } from "@fantaastaapp/contracts";
 
@@ -7,9 +6,7 @@ import type {
   AuctionCallReader
 } from "../repositories/auction-call.repository.js";
 import type {
-  AuctionSessionRepository
-} from "../repositories/auction-session.repository.js";
-import type {
+  RealtimeSnapshotSessionReader,
   RealtimeSnapshotTeamReader
 } from "./realtime-snapshot.repository.js";
 
@@ -35,15 +32,10 @@ export class RealtimeSnapshotServiceError
   }
 }
 
-type AuctionSessionReader = Pick<
-  AuctionSessionRepository,
-  "findById"
->;
-
 export class RealtimeSnapshotService {
   constructor(
     private readonly sessionReader:
-      AuctionSessionReader,
+      RealtimeSnapshotSessionReader,
     private readonly sessionTeamReader:
       RealtimeSnapshotTeamReader,
     private readonly auctionCallReader:
@@ -54,22 +46,19 @@ export class RealtimeSnapshotService {
   ) {}
 
   async buildSnapshot(
-    auctionSessionId: string,
-    stateVersion: number
+    auctionSessionId: string
   ): Promise<RealtimeAuctionSnapshot> {
-    if (
-      !Number.isInteger(stateVersion) ||
-      stateVersion < 0
-    ) {
-      throw new Error(
-        "Realtime state version must be a nonnegative integer"
-      );
-    }
-
-    const session =
-      await this.requireSession(
+    const sessionState =
+      await this.sessionReader.findById(
         auctionSessionId
       );
+
+    if (!sessionState) {
+      throw new RealtimeSnapshotServiceError(
+        "REALTIME_SNAPSHOT_SESSION_NOT_FOUND",
+        `Auction session "${auctionSessionId}" was not found`
+      );
+    }
 
     const [
       sessionTeams,
@@ -87,29 +76,12 @@ export class RealtimeSnapshotService {
     ]);
 
     return {
-      stateVersion,
+      stateVersion:
+        sessionState.stateVersion,
       generatedAt: this.now(),
-      session,
+      session: sessionState.session,
       sessionTeams,
       operationalAuctionCall
     };
-  }
-
-  private async requireSession(
-    auctionSessionId: string
-  ): Promise<AuctionSession> {
-    const session =
-      await this.sessionReader.findById(
-        auctionSessionId
-      );
-
-    if (!session) {
-      throw new RealtimeSnapshotServiceError(
-        "REALTIME_SNAPSHOT_SESSION_NOT_FOUND",
-        `Auction session "${auctionSessionId}" was not found`
-      );
-    }
-
-    return session;
   }
 }

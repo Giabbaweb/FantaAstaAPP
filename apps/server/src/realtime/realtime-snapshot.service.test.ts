@@ -65,49 +65,44 @@ describe("RealtimeSnapshotService", () => {
       ]
     };
 
-  it("builds an authoritative snapshot", async () => {
-    const sessionReader = {
-      findById: vi.fn().mockResolvedValue(
-        session
-      )
-    };
-
-    const sessionTeamReader = {
-      findByAuctionSessionId:
-        vi.fn().mockResolvedValue([
-          {
-            id: "auction-session-team-1",
-            auctionSessionId: "session-1",
-            teamId: "team-1",
-            tableOrder: 1,
-            renewalCredits: 20,
-            remainingCredits: 310
-          }
-        ])
-    };
-
-    const auctionCallReader = {
-      findById: vi.fn(),
-      findOperationalByAuctionSessionId:
-        vi.fn().mockResolvedValue(
-          operationalAuctionCall
-        )
-    };
-
+  it("builds an authoritative snapshot using the persisted version", async () => {
     const service =
       new RealtimeSnapshotService(
-        sessionReader,
-        sessionTeamReader,
-        auctionCallReader,
+        {
+          findById:
+            vi.fn().mockResolvedValue({
+              session,
+              stateVersion: 4
+            })
+        },
+        {
+          findByAuctionSessionId:
+            vi.fn().mockResolvedValue([
+              {
+                id:
+                  "auction-session-team-1",
+                auctionSessionId:
+                  "session-1",
+                teamId: "team-1",
+                tableOrder: 1,
+                renewalCredits: 20,
+                remainingCredits: 310
+              }
+            ])
+        },
+        {
+          findById: vi.fn(),
+          findOperationalByAuctionSessionId:
+            vi.fn().mockResolvedValue(
+              operationalAuctionCall
+            )
+        },
         () =>
           "2026-08-02T20:02:00.000Z"
       );
 
     await expect(
-      service.buildSnapshot(
-        "session-1",
-        4
-      )
+      service.buildSnapshot("session-1")
     ).resolves.toEqual({
       stateVersion: 4,
       generatedAt:
@@ -132,9 +127,10 @@ describe("RealtimeSnapshotService", () => {
       new RealtimeSnapshotService(
         {
           findById:
-            vi.fn().mockResolvedValue(
-              session
-            )
+            vi.fn().mockResolvedValue({
+              session,
+              stateVersion: 0
+            })
         },
         {
           findByAuctionSessionId:
@@ -151,8 +147,7 @@ describe("RealtimeSnapshotService", () => {
 
     const snapshot =
       await service.buildSnapshot(
-        "session-1",
-        0
+        "session-1"
       );
 
     expect(
@@ -182,42 +177,11 @@ describe("RealtimeSnapshotService", () => {
 
     await expect(
       service.buildSnapshot(
-        "missing-session",
-        0
+        "missing-session"
       )
     ).rejects.toMatchObject({
       code:
         "REALTIME_SNAPSHOT_SESSION_NOT_FOUND"
     });
-  });
-
-  it("rejects an invalid state version", async () => {
-    const service =
-      new RealtimeSnapshotService(
-        {
-          findById:
-            vi.fn().mockResolvedValue(
-              session
-            )
-        },
-        {
-          findByAuctionSessionId:
-            vi.fn()
-        },
-        {
-          findById: vi.fn(),
-          findOperationalByAuctionSessionId:
-            vi.fn()
-        }
-      );
-
-    await expect(
-      service.buildSnapshot(
-        "session-1",
-        -1
-      )
-    ).rejects.toThrow(
-      "Realtime state version must be a nonnegative integer"
-    );
   });
 });

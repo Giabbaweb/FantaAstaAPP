@@ -13,8 +13,18 @@ import {
 } from "@fantaastaapp/contracts";
 
 import {
+  SqliteAuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import {
   RealtimeConnectionManager
 } from "./realtime-connection-manager.js";
+import {
+  SqliteRealtimeSnapshotSessionReader,
+  SqliteRealtimeSnapshotTeamReader
+} from "./realtime-snapshot.repository.js";
+import {
+  RealtimeSnapshotService
+} from "./realtime-snapshot.service.js";
 import {
   SqliteTeamAccessRepository
 } from "./team-access.repository.js";
@@ -44,6 +54,13 @@ export function createSocketServer(
   const teamAccessService =
     new TeamAccessService(
       new SqliteTeamAccessRepository()
+    );
+
+  const realtimeSnapshotService =
+    new RealtimeSnapshotService(
+      new SqliteRealtimeSnapshotSessionReader(),
+      new SqliteRealtimeSnapshotTeamReader(),
+      new SqliteAuctionCallRepository()
     );
 
   io.on("connection", (socket) => {
@@ -177,6 +194,17 @@ export function createSocketServer(
           socket.emit(
             "realtime:registered",
             registeredPayload
+          );
+
+          const snapshot =
+            await realtimeSnapshotService
+              .buildSnapshot(
+                registeredConnection.auctionSessionId
+              );
+
+          socket.emit(
+            "auction:snapshot",
+            snapshot
           );
 
           app.log.info(

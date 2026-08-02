@@ -15,6 +15,7 @@ import {
 } from "socket.io-client";
 
 import type {
+  RealtimeAuctionSnapshot,
   RealtimeConnectedPayload,
   RealtimeError,
   RealtimeRegisteredPayload,
@@ -91,6 +92,7 @@ describe("Socket.IO server", () => {
       teamId?: string;
       pin?: string;
       tableOrder?: number;
+      stateVersion?: number;
     } = {}
   ): Promise<{
     auctionSessionTeamId: string;
@@ -123,7 +125,8 @@ describe("Socket.IO server", () => {
       leagueId: "league-1",
       season: "2026/2027",
       editionNumber: 1,
-      initialCredits: 330
+      initialCredits: 330,
+      stateVersion: input.stateVersion ?? 0
     });
 
     await db.insert(teams).values({
@@ -450,4 +453,109 @@ describe("Socket.IO server", () => {
       secondClient.disconnect();
     }
   });
+
+  it("sends the authoritative snapshot after registration", async () => {
+    const {
+      auctionSessionId,
+      auctionSessionTeamId
+    } = await seedTeamAccess({
+      stateVersion: 7
+    });
+
+    const client = createClient();
+
+    try {
+      await waitForConnection(client);
+
+      const eventOrder: string[] = [];
+
+      const registeredPromise =
+        new Promise<RealtimeRegisteredPayload>(
+          (resolve) => {
+            client.once(
+              "realtime:registered",
+              (payload) => {
+                eventOrder.push(
+                  "realtime:registered"
+                );
+
+                resolve(payload);
+              }
+            );
+          }
+        );
+
+      const snapshotPromise =
+        new Promise<RealtimeAuctionSnapshot>(
+          (resolve) => {
+            client.once(
+              "auction:snapshot",
+              (payload) => {
+                eventOrder.push(
+                  "auction:snapshot"
+                );
+
+                resolve(payload);
+              }
+            );
+          }
+        );
+
+      client.emit("realtime:register", {
+        deviceId: "snapshot-device",
+        auctionSessionId,
+        auctionSessionTeamId,
+        role: "OBSERVER",
+        pin: "1234"
+      });
+
+      const [
+        registered,
+        snapshot
+      ] = await Promise.all([
+        registeredPromise,
+        snapshotPromise
+      ]);
+
+      expect(registered.role).toBe(
+        "OBSERVER"
+      );
+
+      expect(eventOrder).toEqual([
+        "realtime:registered",
+        "auction:snapshot"
+      ]);
+
+      expect(snapshot.stateVersion).toBe(7);
+
+      expect(snapshot.session).toEqual({
+        id: auctionSessionId,
+        leagueId: "league-1",
+        season: "2026/2027",
+        editionNumber: 1,
+        status: "SETUP",
+        initialCredits: 330,
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String)
+      });
+
+      expect(snapshot.sessionTeams).toEqual([
+        {
+          id: auctionSessionTeamId,
+          auctionSessionId,
+          teamId: "team-1",
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 330
+        }
+      ]);
+
+      expect(
+        snapshot.operationalAuctionCall
+      ).toBeNull();
+    } finally {
+      client.disconnect();
+    }
+  });
+
 });

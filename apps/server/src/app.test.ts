@@ -135,6 +135,10 @@ describe("application integration", () => {
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
+
+      expect(body.data).not.toHaveProperty(
+        "stateVersion"
+      );
     });
     it("returns 404 when the auction session does not exist", async () => {
       const response = await app.inject({
