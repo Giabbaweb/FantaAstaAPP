@@ -1,0 +1,257 @@
+import {
+  describe,
+  expect,
+  it,
+  vi
+} from "vitest";
+
+import type {
+  AuctionCallAggregate
+} from "../repositories/auction-call.repository.js";
+import {
+  AuctionCallCommandCoordinator
+} from "./auction-call-command-coordinator.js";
+
+describe("AuctionCallCommandCoordinator", () => {
+  const aggregate: AuctionCallAggregate = {
+    call: {
+      id: "auction-call-1",
+      auctionSessionId: "session-1",
+      playerId: "player-1",
+      callerAuctionSessionTeamId:
+        "auction-session-team-1",
+      status: "OPEN",
+      openingBid: 1,
+      currentBid: 5,
+      currentLeaderAuctionSessionTeamId:
+        "auction-session-team-2",
+      currentTurnAuctionSessionTeamId:
+        "auction-session-team-3",
+      provisionalWinnerAuctionSessionTeamId:
+        null,
+      createdAt:
+        "2026-08-02T20:00:00.000Z",
+      updatedAt:
+        "2026-08-02T20:01:00.000Z"
+    },
+    teams: []
+  };
+
+  function createFixture() {
+    const service = {
+      open:
+        vi.fn().mockResolvedValue(aggregate),
+      placeBid:
+        vi.fn().mockResolvedValue(aggregate),
+      passTurn:
+        vi.fn().mockResolvedValue(aggregate),
+      undoPass:
+        vi.fn().mockResolvedValue(aggregate),
+      confirmAuctionCall:
+        vi.fn().mockResolvedValue(aggregate),
+      cancelAuctionCall:
+        vi.fn().mockResolvedValue(aggregate)
+    };
+
+    const dispatcher = {
+      dispatch:
+        vi.fn().mockResolvedValue(undefined)
+    };
+
+    const onDispatchFailure = vi.fn();
+
+    const coordinator =
+      new AuctionCallCommandCoordinator(
+        service,
+        dispatcher,
+        onDispatchFailure
+      );
+
+    return {
+      service,
+      dispatcher,
+      onDispatchFailure,
+      coordinator
+    };
+  }
+
+  it("dispatches the opened event after opening", async () => {
+    const {
+      service,
+      dispatcher,
+      coordinator
+    } = createFixture();
+
+    await expect(
+      coordinator.open(
+        "auction-call-1",
+        1
+      )
+    ).resolves.toBe(aggregate);
+
+    expect(service.open).toHaveBeenCalledWith(
+      "auction-call-1",
+      1
+    );
+
+    expect(dispatcher.dispatch).toHaveBeenCalledWith({
+      type: "AUCTION_CALL_OPENED",
+      aggregate,
+      payload: {
+        openingBid: 1
+      }
+    });
+
+    expect(
+      service.open.mock.invocationCallOrder[0]
+    ).toBeLessThan(
+      dispatcher.dispatch.mock
+        .invocationCallOrder[0]!
+    );
+  });
+
+  it("maps bid, pass and undo pass events", async () => {
+    const {
+      dispatcher,
+      coordinator
+    } = createFixture();
+
+    await coordinator.placeBid(
+      "auction-call-1",
+      "auction-session-team-2",
+      5
+    );
+
+    await coordinator.passTurn(
+      "auction-call-1",
+      "auction-session-team-3"
+    );
+
+    await coordinator.undoPass(
+      "auction-call-1",
+      "auction-session-team-3"
+    );
+
+    expect(
+      dispatcher.dispatch.mock.calls
+    ).toEqual([
+      [
+        {
+          type: "BID_PLACED",
+          aggregate,
+          payload: {
+            auctionSessionTeamId:
+              "auction-session-team-2",
+            bid: 5
+          }
+        }
+      ],
+      [
+        {
+          type: "TEAM_PASSED",
+          aggregate,
+          payload: {
+            auctionSessionTeamId:
+              "auction-session-team-3"
+          }
+        }
+      ],
+      [
+        {
+          type: "TEAM_PASS_UNDONE",
+          aggregate,
+          payload: {
+            auctionSessionTeamId:
+              "auction-session-team-3"
+          }
+        }
+      ]
+    ]);
+  });
+
+  it("maps confirmation and cancellation events", async () => {
+    const {
+      dispatcher,
+      coordinator
+    } = createFixture();
+
+    await coordinator.confirmAuctionCall(
+      "auction-call-1"
+    );
+
+    await coordinator.cancelAuctionCall(
+      "auction-call-1"
+    );
+
+    expect(
+      dispatcher.dispatch.mock.calls
+    ).toEqual([
+      [
+        {
+          type: "AUCTION_CALL_CONFIRMED",
+          aggregate
+        }
+      ],
+      [
+        {
+          type: "AUCTION_CALL_CANCELLED",
+          aggregate
+        }
+      ]
+    ]);
+  });
+
+  it("does not dispatch when the command fails", async () => {
+    const {
+      service,
+      dispatcher,
+      coordinator
+    } = createFixture();
+
+    service.placeBid.mockRejectedValueOnce(
+      new Error("Command failed")
+    );
+
+    await expect(
+      coordinator.placeBid(
+        "auction-call-1",
+        "auction-session-team-2",
+        5
+      )
+    ).rejects.toThrow("Command failed");
+
+    expect(
+      dispatcher.dispatch
+    ).not.toHaveBeenCalled();
+  });
+
+  it("returns persisted state when dispatch fails", async () => {
+    const {
+      dispatcher,
+      onDispatchFailure,
+      coordinator
+    } = createFixture();
+
+    const publicationError =
+      new Error("Publication failed");
+
+    dispatcher.dispatch.mockRejectedValueOnce(
+      publicationError
+    );
+
+    await expect(
+      coordinator.open(
+        "auction-call-1",
+        1
+      )
+    ).resolves.toBe(aggregate);
+
+    expect(
+      onDispatchFailure
+    ).toHaveBeenCalledWith({
+      type: "AUCTION_CALL_OPENED",
+      aggregate,
+      error: publicationError
+    });
+  });
+});

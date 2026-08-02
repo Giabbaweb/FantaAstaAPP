@@ -42,8 +42,17 @@ import {
   teamRoutes
 } from "./routes/team.routes.js";
 import {
+  AuctionCallCommandCoordinator
+} from "./realtime/auction-call-command-coordinator.js";
+import {
+  AuctionRealtimeDispatcher
+} from "./realtime/auction-realtime-dispatcher.js";
+import {
   createSocketServer
 } from "./realtime/socket-server.js";
+import {
+  SocketIoRealtimePublisher
+} from "./realtime/socket-io-realtime-publisher.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
@@ -53,7 +62,15 @@ export async function buildApp() {
     logger: true
   });
 
-  createSocketServer(app);
+  const io = createSocketServer(app);
+
+  const realtimePublisher =
+    new SocketIoRealtimePublisher(io);
+
+  const auctionRealtimeDispatcher =
+    new AuctionRealtimeDispatcher(
+      realtimePublisher
+    );
 
   const auctionCallRepository =
     new SqliteAuctionCallRepository();
@@ -61,6 +78,26 @@ export async function buildApp() {
   const auctionCallService =
     new AuctionCallService(
       auctionCallRepository
+    );
+
+  const auctionCallCommandCoordinator =
+    new AuctionCallCommandCoordinator(
+      auctionCallService,
+      auctionRealtimeDispatcher,
+      ({ type, aggregate, error }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId:
+              aggregate.call.auctionSessionId,
+            auctionCallId:
+              aggregate.call.id,
+            eventType: type,
+            error
+          },
+          "Failed to publish auction realtime event"
+        );
+      }
     );
 
   await app.register(cors, {
@@ -82,7 +119,8 @@ export async function buildApp() {
   await app.register(auctionSessionRoutes);
   await app.register(
     auctionCallRoutes(
-      auctionCallService
+      auctionCallService,
+      auctionCallCommandCoordinator
     )
   );
   await app.register(teamRoutes);

@@ -14,6 +14,9 @@ import type {
 import {
   AuctionCallService
 } from "../services/auction-call.service.js";
+import {
+  AuctionCallCommandCoordinator
+} from "../realtime/auction-call-command-coordinator.js";
 
 type AuctionCallParams = {
   id: string;
@@ -58,7 +61,9 @@ type AuctionCallCommandResponse = {
 };
 
 export function auctionCallRoutes(
-  service: AuctionCallService
+  service: AuctionCallService,
+  commandCoordinator:
+    AuctionCallCommandCoordinator
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{
@@ -129,7 +134,7 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await service.open(
+              aggregate = await commandCoordinator.open(
                 id,
                 openingBid
               );
@@ -172,7 +177,7 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await service.placeBid(
+              aggregate = await commandCoordinator.placeBid(
                 id,
                 auctionSessionTeamId,
                 bid
@@ -200,7 +205,7 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await service.passTurn(
+              aggregate = await commandCoordinator.passTurn(
                 id,
                 auctionSessionTeamId
               );
@@ -227,7 +232,7 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await service.undoPass(
+              aggregate = await commandCoordinator.undoPass(
                 id,
                 auctionSessionTeamId
               );
@@ -237,14 +242,14 @@ export function auctionCallRoutes(
 
             case "confirm": {
               aggregate =
-                await service.confirmAuctionCall(id);
+                await commandCoordinator.confirmAuctionCall(id);
 
               break;
             }
 
             case "cancel": {
               aggregate =
-                await service.cancelAuctionCall(id);
+                await commandCoordinator.cancelAuctionCall(id);
 
               break;
             }
