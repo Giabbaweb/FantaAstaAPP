@@ -64,6 +64,13 @@
       "when": 1785703220810,
       "tag": "0008_broken_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785793323210,
+      "tag": "0009_talented_korath",
+      "breakpoints": true
     }
   ]
 }

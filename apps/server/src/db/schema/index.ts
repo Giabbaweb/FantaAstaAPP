@@ -458,3 +458,78 @@ export const auctionCallTeams = sqliteTable(
     )
   ]
 );
+
+export const commandRegistry = sqliteTable(
+  "command_registry",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionId: text("auction_session_id")
+      .notNull()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    auctionCallId: text("auction_call_id")
+      .notNull()
+      .references(() => auctionCalls.id, {
+        onDelete: "cascade"
+      }),
+
+    commandId: text("command_id").notNull(),
+
+    commandType: text("command_type", {
+      enum: [
+        "OPEN",
+        "BID",
+        "PASS",
+        "UNDO_PASS",
+        "CONFIRM",
+        "CANCEL"
+      ]
+    }).notNull(),
+
+    expectedStateVersion: integer(
+      "expected_state_version"
+    ).notNull(),
+
+    resultStateVersion: integer(
+      "result_state_version"
+    ).notNull(),
+
+    requestFingerprint: text(
+      "request_fingerprint"
+    ).notNull(),
+
+    resultPayload: text(
+      "result_payload"
+    ).notNull(),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex(
+      "command_registry_session_command_unique"
+    ).on(
+      table.auctionSessionId,
+      table.commandId
+    ),
+
+    check(
+      "command_registry_expected_version_nonnegative",
+      sql`${table.expectedStateVersion} >= 0`
+    ),
+
+    check(
+      "command_registry_result_version_positive",
+      sql`${table.resultStateVersion} >= 1`
+    ),
+
+    check(
+      "command_registry_version_progression",
+      sql`${table.resultStateVersion} = ${table.expectedStateVersion} + 1`
+    )
+  ]
+);
