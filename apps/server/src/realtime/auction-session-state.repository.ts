@@ -7,6 +7,9 @@ import {
 import {
   db
 } from "../db/client.js";
+import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
 import {
   auctionSessions
 } from "../db/schema/index.js";
@@ -29,6 +32,12 @@ export interface AuctionSessionStateRepository {
     auctionSessionId: string,
     expectedStateVersion: number
   ): Promise<number | null>;
+
+  incrementStateVersionIfMatchesWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string,
+    expectedStateVersion: number
+  ): number | null;
 }
 
 export class SqliteAuctionSessionStateRepository
@@ -80,7 +89,20 @@ export class SqliteAuctionSessionStateRepository
     auctionSessionId: string,
     expectedStateVersion: number
   ): Promise<number | null> {
-    const [updatedState] = await db
+    return this
+      .incrementStateVersionIfMatchesWithExecutor(
+        db,
+        auctionSessionId,
+        expectedStateVersion
+      );
+  }
+
+  incrementStateVersionIfMatchesWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string,
+    expectedStateVersion: number
+  ): number | null {
+    const [updatedState] = executor
       .update(auctionSessions)
       .set({
         stateVersion:
@@ -102,7 +124,8 @@ export class SqliteAuctionSessionStateRepository
       .returning({
         stateVersion:
           auctionSessions.stateVersion
-      });
+      })
+      .all();
 
     return updatedState?.stateVersion ?? null;
   }

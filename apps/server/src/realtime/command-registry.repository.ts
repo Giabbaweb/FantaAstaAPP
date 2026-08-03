@@ -14,6 +14,9 @@ import {
 import {
   db
 } from "../db/client.js";
+import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
 import {
   commandRegistry
 } from "../db/schema/index.js";
@@ -62,6 +65,11 @@ export interface CommandRegistryRepository {
   create(
     input: RegisterAuctionCommandInput
   ): Promise<RegisteredAuctionCommand>;
+
+  createWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterAuctionCommandInput
+  ): RegisteredAuctionCommand;
 }
 
 export class SqliteCommandRegistryRepository
@@ -98,7 +106,17 @@ export class SqliteCommandRegistryRepository
   async create(
     input: RegisterAuctionCommandInput
   ): Promise<RegisteredAuctionCommand> {
-    const [record] = await db
+    return this.createWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterAuctionCommandInput
+  ): RegisteredAuctionCommand {
+    const [record] = executor
       .insert(commandRegistry)
       .values({
         id: randomUUID(),
@@ -119,7 +137,8 @@ export class SqliteCommandRegistryRepository
         resultPayload:
           JSON.stringify(input.result)
       })
-      .returning();
+      .returning()
+      .all();
 
     if (!record) {
       throw new Error(

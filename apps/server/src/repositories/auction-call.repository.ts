@@ -13,7 +13,12 @@ import {
   sql
 } from "drizzle-orm";
 
-import { db } from "../db/client.js";
+import {
+  db
+} from "../db/client.js";
+import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
 import {
   auctionCalls,
   auctionCallTeams,
@@ -26,11 +31,7 @@ export type AuctionCallAggregate = {
 };
 
 export type AuctionCallWriteExecutor =
-  Parameters<
-    Parameters<
-      typeof db.transaction
-    >[0]
-  >[0];
+  DatabaseWriteExecutor;
 
 export interface AuctionCallReader {
   findById(
