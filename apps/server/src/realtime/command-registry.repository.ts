@@ -62,6 +62,12 @@ export interface CommandRegistryRepository {
     commandId: string
   ): Promise<RegisteredAuctionCommand | null>;
 
+  findByCommandIdWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string,
+    commandId: string
+  ): RegisteredAuctionCommand | null;
+
   create(
     input: RegisterAuctionCommandInput
   ): Promise<RegisteredAuctionCommand>;
@@ -79,7 +85,20 @@ export class SqliteCommandRegistryRepository
     auctionSessionId: string,
     commandId: string
   ): Promise<RegisteredAuctionCommand | null> {
-    const [record] = await db
+    return this
+      .findByCommandIdWithExecutor(
+        db,
+        auctionSessionId,
+        commandId
+      );
+  }
+
+  findByCommandIdWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string,
+    commandId: string
+  ): RegisteredAuctionCommand | null {
+    const [record] = executor
       .select()
       .from(commandRegistry)
       .where(
@@ -94,7 +113,8 @@ export class SqliteCommandRegistryRepository
           )
         )
       )
-      .limit(1);
+      .limit(1)
+      .all();
 
     if (!record) {
       return null;

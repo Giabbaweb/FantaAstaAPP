@@ -28,6 +28,11 @@ export interface AuctionSessionStateRepository {
     auctionSessionId: string
   ): Promise<number | null>;
 
+  getCurrentStateVersionWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string
+  ): number | null;
+
   incrementStateVersionIfMatches(
     auctionSessionId: string,
     expectedStateVersion: number
@@ -68,7 +73,18 @@ export class SqliteAuctionSessionStateRepository
   async getCurrentStateVersion(
     auctionSessionId: string
   ): Promise<number | null> {
-    const [row] = await db
+    return this
+      .getCurrentStateVersionWithExecutor(
+        db,
+        auctionSessionId
+      );
+  }
+
+  getCurrentStateVersionWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string
+  ): number | null {
+    const [row] = executor
       .select({
         stateVersion:
           auctionSessions.stateVersion
@@ -80,7 +96,8 @@ export class SqliteAuctionSessionStateRepository
           auctionSessionId
         )
       )
-      .limit(1);
+      .limit(1)
+      .all();
 
     return row?.stateVersion ?? null;
   }

@@ -54,6 +54,11 @@ export interface AuctionCallRepository
     aggregate: AuctionCallAggregate
   ): string;
 
+  findByIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    id: string
+  ): AuctionCallAggregate | null;
+
   delete(id: string): Promise<boolean>;
 }
 
@@ -70,19 +75,32 @@ export class SqliteAuctionCallRepository
   async findById(
     id: string
   ): Promise<AuctionCallAggregate | null> {
-    const [call] = await db
+    return this.findByIdWithExecutor(
+      db,
+      id
+    );
+  }
+
+  findByIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    id: string
+  ): AuctionCallAggregate | null {
+    const [call] = executor
       .select()
       .from(auctionCalls)
       .where(eq(auctionCalls.id, id))
-      .limit(1);
+      .limit(1)
+      .all();
 
     if (!call) {
       return null;
     }
 
-    const teams = await this.findTeamsByAuctionCallId(
-      call.id
-    );
+    const teams =
+      this.findTeamsByAuctionCallIdWithExecutor(
+        executor,
+        call.id
+      );
 
     return {
       call,
@@ -289,7 +307,18 @@ export class SqliteAuctionCallRepository
   private async findTeamsByAuctionCallId(
     auctionCallId: string
   ): Promise<AuctionCallTeam[]> {
-    return db
+    return this
+      .findTeamsByAuctionCallIdWithExecutor(
+        db,
+        auctionCallId
+      );
+  }
+
+  private findTeamsByAuctionCallIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionCallId: string
+  ): AuctionCallTeam[] {
+    return executor
       .select({
         auctionCallId:
           auctionCallTeams.auctionCallId,
@@ -323,6 +352,7 @@ export class SqliteAuctionCallRepository
         asc(
           auctionCallTeams.auctionSessionTeamId
         )
-      );
+      )
+      .all();
   }
 }
