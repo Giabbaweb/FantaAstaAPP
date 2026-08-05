@@ -113,7 +113,6 @@ describe("AtomicAuctionCommandExecutor", () => {
     }> = {}
   ) {
     return {
-      auctionSessionId,
       auctionCallId,
       commandId:
         overrides.commandId ??

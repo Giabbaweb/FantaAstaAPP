@@ -39,7 +39,6 @@ export class AtomicAuctionCommandExecutorError
 }
 
 export type ExecuteAtomicAuctionCommandInput = {
-  auctionSessionId: string;
   auctionCallId: string;
   commandId: string;
   commandType: RegisteredAuctionCommandType;
@@ -70,11 +69,28 @@ export class AtomicAuctionCommandExecutor {
     input: ExecuteAtomicAuctionCommandInput
   ): Promise<ExecuteAtomicAuctionCommandResult> {
     return db.transaction((tx) => {
+      const currentAggregate =
+        this.auctionCallRepository
+          .findByIdWithExecutor(
+            tx,
+            input.auctionCallId
+          );
+
+      if (!currentAggregate) {
+        throw new AtomicAuctionCommandExecutorError(
+          "AUCTION_CALL_NOT_FOUND",
+          `Auction call "${input.auctionCallId}" was not found`
+        );
+      }
+
+      const auctionSessionId =
+        currentAggregate.call.auctionSessionId;
+
       const existingCommand =
         this.commandRegistryRepository
           .findByCommandIdWithExecutor(
             tx,
-            input.auctionSessionId,
+            auctionSessionId,
             input.commandId
           );
 
@@ -97,13 +113,13 @@ export class AtomicAuctionCommandExecutor {
         this.stateRepository
           .getCurrentStateVersionWithExecutor(
             tx,
-            input.auctionSessionId
+            auctionSessionId
           );
 
       if (currentStateVersion === null) {
         throw new AtomicAuctionCommandExecutorError(
           "AUCTION_SESSION_STATE_NOT_FOUND",
-          `Auction session state "${input.auctionSessionId}" was not found`
+          `Auction session state "${auctionSessionId}" was not found`
         );
       }
 
@@ -113,21 +129,7 @@ export class AtomicAuctionCommandExecutor {
       ) {
         throw new AtomicAuctionCommandExecutorError(
           "STALE_STATE",
-          `Auction session "${input.auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentStateVersion}`
-        );
-      }
-
-      const currentAggregate =
-        this.auctionCallRepository
-          .findByIdWithExecutor(
-            tx,
-            input.auctionCallId
-          );
-
-      if (!currentAggregate) {
-        throw new AtomicAuctionCommandExecutorError(
-          "AUCTION_CALL_NOT_FOUND",
-          `Auction call "${input.auctionCallId}" was not found`
+          `Auction session "${auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentStateVersion}`
         );
       }
 
@@ -159,14 +161,14 @@ export class AtomicAuctionCommandExecutor {
         this.stateRepository
           .incrementStateVersionIfMatchesWithExecutor(
             tx,
-            input.auctionSessionId,
+            auctionSessionId,
             input.expectedStateVersion
           );
 
       if (resultStateVersion === null) {
         throw new AtomicAuctionCommandExecutorError(
           "STALE_STATE",
-          `Auction session "${input.auctionSessionId}" no longer matches state version ${input.expectedStateVersion}`
+          `Auction session "${auctionSessionId}" no longer matches state version ${input.expectedStateVersion}`
         );
       }
 
@@ -175,8 +177,7 @@ export class AtomicAuctionCommandExecutor {
           .createWithExecutor(
             tx,
             {
-              auctionSessionId:
-                input.auctionSessionId,
+              auctionSessionId,
               auctionCallId:
                 input.auctionCallId,
               commandId:
