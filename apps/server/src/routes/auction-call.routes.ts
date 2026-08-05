@@ -3,6 +3,10 @@ import type {
 } from "fastify";
 
 import {
+  realtimeCommandMetadataSchema
+} from "@fantaastaapp/contracts";
+
+import {
   mapAuctionCallError
 } from "../http/auction-call-errors.js";
 import type {
@@ -28,6 +32,8 @@ type AuctionCallCommandParams = {
 };
 
 type AuctionCallCommandBody = {
+  commandId?: unknown;
+  stateVersion?: unknown;
   openingBid?: unknown;
   auctionSessionTeamId?: unknown;
   bid?: unknown;
@@ -57,6 +63,8 @@ type OperationalAuctionCallResponse = {
 
 type AuctionCallCommandResponse = {
   data: AuctionCallAggregate;
+  stateVersion: number;
+  idempotentReplay: boolean;
   error: null;
 };
 
@@ -112,8 +120,27 @@ export function auctionCallRoutes(
         const { id, command } = request.params;
         const body = request.body ?? {};
 
+        const metadataResult =
+          realtimeCommandMetadataSchema.safeParse({
+            commandId: body.commandId,
+            stateVersion: body.stateVersion
+          });
+
+        if (!metadataResult.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+
+        const metadata = metadataResult.data;
+
         try {
-          let aggregate: AuctionCallAggregate;
+          let result;
 
           switch (command) {
             case "open": {
@@ -134,8 +161,9 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await commandCoordinator.open(
+              result = await commandCoordinator.open(
                 id,
+                metadata,
                 openingBid
               );
 
@@ -177,8 +205,9 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await commandCoordinator.placeBid(
+              result = await commandCoordinator.placeBid(
                 id,
+                metadata,
                 auctionSessionTeamId,
                 bid
               );
@@ -205,8 +234,9 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await commandCoordinator.passTurn(
+              result = await commandCoordinator.passTurn(
                 id,
+                metadata,
                 auctionSessionTeamId
               );
 
@@ -232,8 +262,9 @@ export function auctionCallRoutes(
                 });
               }
 
-              aggregate = await commandCoordinator.undoPass(
+              result = await commandCoordinator.undoPass(
                 id,
+                metadata,
                 auctionSessionTeamId
               );
 
@@ -241,15 +272,21 @@ export function auctionCallRoutes(
             }
 
             case "confirm": {
-              aggregate =
-                await commandCoordinator.confirmAuctionCall(id);
+              result =
+                await commandCoordinator.confirmAuctionCall(
+                  id,
+                  metadata
+                );
 
               break;
             }
 
             case "cancel": {
-              aggregate =
-                await commandCoordinator.cancelAuctionCall(id);
+              result =
+                await commandCoordinator.cancelAuctionCall(
+                  id,
+                  metadata
+                );
 
               break;
             }
@@ -266,7 +303,11 @@ export function auctionCallRoutes(
           }
 
           return reply.code(200).send({
-            data: aggregate,
+            data: result.aggregate,
+            stateVersion:
+              result.stateVersion,
+            idempotentReplay:
+              result.idempotentReplay,
             error: null
           });
         } catch (error) {

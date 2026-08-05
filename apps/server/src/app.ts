@@ -42,8 +42,20 @@ import {
   teamRoutes
 } from "./routes/team.routes.js";
 import {
+  AtomicAuctionCallCommandService
+} from "./realtime/atomic-auction-call-command.service.js";
+import {
+  AtomicAuctionCommandExecutor
+} from "./realtime/atomic-auction-command.executor.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
+import {
+  SqliteAuctionSessionStateRepository
+} from "./realtime/auction-session-state.repository.js";
+import {
+  SqliteCommandRegistryRepository
+} from "./realtime/command-registry.repository.js";
 import {
   AuctionRealtimeDispatcher
 } from "./realtime/auction-realtime-dispatcher.js";
@@ -63,6 +75,9 @@ import {
 import {
   SocketIoRealtimePublisher
 } from "./realtime/socket-io-realtime-publisher.js";
+import {
+  AuctionCallCommandHandler
+} from "./services/auction-call-command-handler.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
@@ -101,14 +116,31 @@ export async function buildApp() {
       realtimePublisher
     );
 
+  const auctionCallCommandHandler =
+    new AuctionCallCommandHandler();
+
   const auctionCallService =
     new AuctionCallService(
-      auctionCallRepository
+      auctionCallRepository,
+      auctionCallCommandHandler
+    );
+
+  const atomicAuctionCommandExecutor =
+    new AtomicAuctionCommandExecutor(
+      auctionCallRepository,
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository()
+    );
+
+  const atomicAuctionCallCommandService =
+    new AtomicAuctionCallCommandService(
+      atomicAuctionCommandExecutor,
+      auctionCallCommandHandler
     );
 
   const auctionCallCommandCoordinator =
     new AuctionCallCommandCoordinator(
-      auctionCallService,
+      atomicAuctionCallCommandService,
       auctionRealtimeDispatcher,
       auctionSnapshotDispatcher,
       ({

@@ -1,13 +1,17 @@
 import type {
-  RealtimeAuctionEventType
+  RealtimeAuctionEventType,
+  RealtimeCommandMetadata
 } from "@fantaastaapp/contracts";
 
 import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import type {
-  AuctionCallService
-} from "../services/auction-call.service.js";
+  AtomicAuctionCallCommandService
+} from "./atomic-auction-call-command.service.js";
+import type {
+  ExecuteAtomicAuctionCommandResult
+} from "./atomic-auction-command.executor.js";
 import type {
   AuctionRealtimeDispatchInput,
   AuctionRealtimeDispatcher
@@ -16,8 +20,8 @@ import type {
   AuctionSnapshotDispatcher
 } from "./auction-snapshot-dispatcher.js";
 
-type AuctionCallCommandService = Pick<
-  AuctionCallService,
+type AtomicAuctionCallCommandServicePort = Pick<
+  AtomicAuctionCallCommandService,
   | "open"
   | "placeBid"
   | "passTurn"
@@ -50,7 +54,7 @@ export type AuctionRealtimeDispatchFailureHandler = (
 export class AuctionCallCommandCoordinator {
   constructor(
     private readonly service:
-      AuctionCallCommandService,
+      AtomicAuctionCallCommandServicePort,
     private readonly dispatcher:
       AuctionRealtimeDispatcherPort,
     private readonly snapshotDispatcher:
@@ -62,119 +66,164 @@ export class AuctionCallCommandCoordinator {
 
   async open(
     id: string,
+    metadata: RealtimeCommandMetadata,
     openingBid: number
-  ): Promise<AuctionCallAggregate> {
-    const aggregate =
+  ): Promise<ExecuteAtomicAuctionCommandResult> {
+    const result =
       await this.service.open(
         id,
+        metadata,
         openingBid
       );
 
-    await this.synchronizeSafely({
-      type: "AUCTION_CALL_OPENED",
-      aggregate,
-      payload: {
-        openingBid
+    await this.synchronizeResult(
+      result,
+      {
+        type: "AUCTION_CALL_OPENED",
+        aggregate: result.aggregate,
+        payload: {
+          openingBid
+        }
       }
-    });
+    );
 
-    return aggregate;
+    return result;
   }
 
   async placeBid(
     id: string,
+    metadata: RealtimeCommandMetadata,
     auctionSessionTeamId: string,
     bid: number
-  ): Promise<AuctionCallAggregate> {
-    const aggregate =
+  ): Promise<ExecuteAtomicAuctionCommandResult> {
+    const result =
       await this.service.placeBid(
         id,
+        metadata,
         auctionSessionTeamId,
         bid
       );
 
-    await this.synchronizeSafely({
-      type: "BID_PLACED",
-      aggregate,
-      payload: {
-        auctionSessionTeamId,
-        bid
+    await this.synchronizeResult(
+      result,
+      {
+        type: "BID_PLACED",
+        aggregate: result.aggregate,
+        payload: {
+          auctionSessionTeamId,
+          bid
+        }
       }
-    });
+    );
 
-    return aggregate;
+    return result;
   }
 
   async passTurn(
     id: string,
+    metadata: RealtimeCommandMetadata,
     auctionSessionTeamId: string
-  ): Promise<AuctionCallAggregate> {
-    const aggregate =
+  ): Promise<ExecuteAtomicAuctionCommandResult> {
+    const result =
       await this.service.passTurn(
         id,
+        metadata,
         auctionSessionTeamId
       );
 
-    await this.synchronizeSafely({
-      type: "TEAM_PASSED",
-      aggregate,
-      payload: {
-        auctionSessionTeamId
+    await this.synchronizeResult(
+      result,
+      {
+        type: "TEAM_PASSED",
+        aggregate: result.aggregate,
+        payload: {
+          auctionSessionTeamId
+        }
       }
-    });
+    );
 
-    return aggregate;
+    return result;
   }
 
   async undoPass(
     id: string,
+    metadata: RealtimeCommandMetadata,
     auctionSessionTeamId: string
-  ): Promise<AuctionCallAggregate> {
-    const aggregate =
+  ): Promise<ExecuteAtomicAuctionCommandResult> {
+    const result =
       await this.service.undoPass(
         id,
+        metadata,
         auctionSessionTeamId
       );
 
-    await this.synchronizeSafely({
-      type: "TEAM_PASS_UNDONE",
-      aggregate,
-      payload: {
-        auctionSessionTeamId
+    await this.synchronizeResult(
+      result,
+      {
+        type: "TEAM_PASS_UNDONE",
+        aggregate: result.aggregate,
+        payload: {
+          auctionSessionTeamId
+        }
       }
-    });
+    );
 
-    return aggregate;
+    return result;
   }
 
   async confirmAuctionCall(
-    id: string
-  ): Promise<AuctionCallAggregate> {
-    const aggregate =
+    id: string,
+    metadata: RealtimeCommandMetadata
+  ): Promise<ExecuteAtomicAuctionCommandResult> {
+    const result =
       await this.service
-        .confirmAuctionCall(id);
+        .confirmAuctionCall(
+          id,
+          metadata
+        );
 
-    await this.synchronizeSafely({
-      type: "AUCTION_CALL_CONFIRMED",
-      aggregate
-    });
+    await this.synchronizeResult(
+      result,
+      {
+        type: "AUCTION_CALL_CONFIRMED",
+        aggregate: result.aggregate
+      }
+    );
 
-    return aggregate;
+    return result;
   }
 
   async cancelAuctionCall(
-    id: string
-  ): Promise<AuctionCallAggregate> {
-    const aggregate =
+    id: string,
+    metadata: RealtimeCommandMetadata
+  ): Promise<ExecuteAtomicAuctionCommandResult> {
+    const result =
       await this.service
-        .cancelAuctionCall(id);
+        .cancelAuctionCall(
+          id,
+          metadata
+        );
 
-    await this.synchronizeSafely({
-      type: "AUCTION_CALL_CANCELLED",
-      aggregate
-    });
+    await this.synchronizeResult(
+      result,
+      {
+        type: "AUCTION_CALL_CANCELLED",
+        aggregate: result.aggregate
+      }
+    );
 
-    return aggregate;
+    return result;
+  }
+
+  private async synchronizeResult(
+    result: ExecuteAtomicAuctionCommandResult,
+    input: AuctionRealtimeDispatchInput
+  ): Promise<void> {
+    if (result.idempotentReplay) {
+      return;
+    }
+
+    await this.synchronizeSafely(input);
   }
 
   private async synchronizeSafely(

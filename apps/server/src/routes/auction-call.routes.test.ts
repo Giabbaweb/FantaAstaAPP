@@ -221,6 +221,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
           payload: {
+            commandId: "cmd-open",
+            stateVersion: 0,
             openingBid: 1
           }
         });
@@ -300,6 +302,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
           payload: {
+            commandId: "cmd-invalid-open",
+            stateVersion: 0,
             openingBid: 0
           }
         });
@@ -324,7 +328,10 @@ describe("auction call read routes", () => {
           method: "POST",
           url:
             "/api/auction-calls/auction-call-1/commands/unknown",
-          payload: {}
+          payload: {
+            commandId: "cmd-unknown",
+            stateVersion: 0
+          }
         });
 
         expect(response.statusCode).toBe(400);
@@ -351,6 +358,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
           payload: {
+            commandId: "cmd-open-1",
+            stateVersion: 0,
             openingBid: 1
           }
         });
@@ -362,6 +371,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
           payload: {
+            commandId: "cmd-open-2",
+            stateVersion: 1,
             openingBid: 1
           }
         });
@@ -397,6 +408,8 @@ describe("auction call read routes", () => {
         url:
           `/api/auction-calls/${auctionCallId}/commands/open`,
         payload: {
+          commandId: "cmd-open",
+          stateVersion: 0,
           openingBid: 1
         }
       });
@@ -417,6 +430,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/bid`,
           payload: {
+            commandId: "cmd-bid",
+            stateVersion: 1,
             auctionSessionTeamId:
               fixture.auctionSessionTeam2Id,
             bid: 5
@@ -467,6 +482,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/bid`,
           payload: {
+            commandId: "cmd-invalid-turn-bid",
+            stateVersion: 1,
             auctionSessionTeamId:
               fixture.auctionSessionTeam3Id,
             bid: 5
@@ -497,6 +514,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
           payload: {
+            commandId: "cmd-pass",
+            stateVersion: 1,
             auctionSessionTeamId:
               fixture.auctionSessionTeam2Id
           }
@@ -540,6 +559,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/undo-pass`,
           payload: {
+            commandId: "cmd-undo-pass",
+            stateVersion: 2,
             auctionSessionTeamId:
               fixture.auctionSessionTeam2Id
           }
@@ -595,6 +616,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
           payload: {
+            commandId: "cmd-confirm-open",
+            stateVersion: 0,
             openingBid: 1
           }
         });
@@ -606,6 +629,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
           payload: {
+            commandId: "cmd-confirm-pass-1",
+            stateVersion: 1,
             auctionSessionTeamId:
               fixture.auctionSessionTeam2Id
           }
@@ -618,6 +643,8 @@ describe("auction call read routes", () => {
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
           payload: {
+            commandId: "cmd-confirm-pass-2",
+            stateVersion: 2,
             auctionSessionTeamId:
               fixture.auctionSessionTeam3Id
           }
@@ -646,7 +673,10 @@ describe("auction call read routes", () => {
           method: "POST",
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/confirm`,
-          payload: {}
+          payload: {
+            commandId: "cmd-confirm",
+            stateVersion: 3
+          }
         });
 
         expect(confirmResponse.statusCode).toBe(200);
@@ -686,7 +716,10 @@ describe("auction call read routes", () => {
           method: "POST",
           url:
             `/api/auction-calls/${fixture.auctionCallId}/commands/cancel`,
-          payload: {}
+          payload: {
+            commandId: "cmd-cancel",
+            stateVersion: 0
+          }
         });
 
         expect(response.statusCode).toBe(200);

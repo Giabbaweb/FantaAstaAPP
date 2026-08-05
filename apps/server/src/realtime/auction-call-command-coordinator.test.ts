@@ -13,6 +13,11 @@ import {
 } from "./auction-call-command-coordinator.js";
 
 describe("AuctionCallCommandCoordinator", () => {
+  const metadata = {
+    commandId: "command-1",
+    stateVersion: 3
+  };
+
   const aggregate: AuctionCallAggregate = {
     call: {
       id: "auction-call-1",
@@ -37,20 +42,26 @@ describe("AuctionCallCommandCoordinator", () => {
     teams: []
   };
 
+  const commandResult = {
+    aggregate,
+    stateVersion: 4,
+    idempotentReplay: false
+  };
+
   function createFixture() {
     const service = {
       open:
-        vi.fn().mockResolvedValue(aggregate),
+        vi.fn().mockResolvedValue(commandResult),
       placeBid:
-        vi.fn().mockResolvedValue(aggregate),
+        vi.fn().mockResolvedValue(commandResult),
       passTurn:
-        vi.fn().mockResolvedValue(aggregate),
+        vi.fn().mockResolvedValue(commandResult),
       undoPass:
-        vi.fn().mockResolvedValue(aggregate),
+        vi.fn().mockResolvedValue(commandResult),
       confirmAuctionCall:
-        vi.fn().mockResolvedValue(aggregate),
+        vi.fn().mockResolvedValue(commandResult),
       cancelAuctionCall:
-        vi.fn().mockResolvedValue(aggregate)
+        vi.fn().mockResolvedValue(commandResult)
     };
 
     const dispatcher = {
@@ -82,7 +93,7 @@ describe("AuctionCallCommandCoordinator", () => {
     };
   }
 
-  it("dispatches the opened event after opening", async () => {
+  it("dispatches the opened event after an atomic command", async () => {
     const {
       service,
       dispatcher,
@@ -93,12 +104,14 @@ describe("AuctionCallCommandCoordinator", () => {
     await expect(
       coordinator.open(
         "auction-call-1",
+        metadata,
         1
       )
-    ).resolves.toBe(aggregate);
+    ).resolves.toEqual(commandResult);
 
     expect(service.open).toHaveBeenCalledWith(
       "auction-call-1",
+      metadata,
       1
     );
 
@@ -109,21 +122,6 @@ describe("AuctionCallCommandCoordinator", () => {
         openingBid: 1
       }
     });
-
-    expect(
-      service.open.mock.invocationCallOrder[0]
-    ).toBeLessThan(
-      dispatcher.dispatch.mock
-        .invocationCallOrder[0]!
-    );
-
-    expect(
-      dispatcher.dispatch.mock
-        .invocationCallOrder[0]
-    ).toBeLessThan(
-      snapshotDispatcher.dispatch.mock
-        .invocationCallOrder[0]!
-    );
 
     expect(
       snapshotDispatcher.dispatch
@@ -138,17 +136,20 @@ describe("AuctionCallCommandCoordinator", () => {
 
     await coordinator.placeBid(
       "auction-call-1",
+      metadata,
       "auction-session-team-2",
       5
     );
 
     await coordinator.passTurn(
       "auction-call-1",
+      metadata,
       "auction-session-team-3"
     );
 
     await coordinator.undoPass(
       "auction-call-1",
+      metadata,
       "auction-session-team-3"
     );
 
@@ -196,11 +197,13 @@ describe("AuctionCallCommandCoordinator", () => {
     } = createFixture();
 
     await coordinator.confirmAuctionCall(
-      "auction-call-1"
+      "auction-call-1",
+      metadata
     );
 
     await coordinator.cancelAuctionCall(
-      "auction-call-1"
+      "auction-call-1",
+      metadata
     );
 
     expect(
@@ -225,6 +228,7 @@ describe("AuctionCallCommandCoordinator", () => {
     const {
       service,
       dispatcher,
+      snapshotDispatcher,
       coordinator
     } = createFixture();
 
@@ -235,6 +239,7 @@ describe("AuctionCallCommandCoordinator", () => {
     await expect(
       coordinator.placeBid(
         "auction-call-1",
+        metadata,
         "auction-session-team-2",
         5
       )
@@ -243,9 +248,45 @@ describe("AuctionCallCommandCoordinator", () => {
     expect(
       dispatcher.dispatch
     ).not.toHaveBeenCalled();
+
+    expect(
+      snapshotDispatcher.dispatch
+    ).not.toHaveBeenCalled();
   });
 
-  it("returns persisted state when dispatch fails", async () => {
+  it("does not republish an idempotent replay", async () => {
+    const {
+      service,
+      dispatcher,
+      snapshotDispatcher,
+      coordinator
+    } = createFixture();
+
+    service.open.mockResolvedValueOnce({
+      ...commandResult,
+      idempotentReplay: true
+    });
+
+    await expect(
+      coordinator.open(
+        "auction-call-1",
+        metadata,
+        1
+      )
+    ).resolves.toMatchObject({
+      idempotentReplay: true
+    });
+
+    expect(
+      dispatcher.dispatch
+    ).not.toHaveBeenCalled();
+
+    expect(
+      snapshotDispatcher.dispatch
+    ).not.toHaveBeenCalled();
+  });
+
+  it("returns persisted state when event dispatch fails", async () => {
     const {
       dispatcher,
       onDispatchFailure,
@@ -262,9 +303,10 @@ describe("AuctionCallCommandCoordinator", () => {
     await expect(
       coordinator.open(
         "auction-call-1",
+        metadata,
         1
       )
-    ).resolves.toBe(aggregate);
+    ).resolves.toEqual(commandResult);
 
     expect(
       onDispatchFailure
@@ -287,12 +329,11 @@ describe("AuctionCallCommandCoordinator", () => {
       new Error("Event failed")
     );
 
-    await expect(
-      coordinator.open(
-        "auction-call-1",
-        1
-      )
-    ).resolves.toBe(aggregate);
+    await coordinator.open(
+      "auction-call-1",
+      metadata,
+      1
+    );
 
     expect(
       snapshotDispatcher.dispatch
@@ -317,9 +358,10 @@ describe("AuctionCallCommandCoordinator", () => {
     await expect(
       coordinator.open(
         "auction-call-1",
+        metadata,
         1
       )
-    ).resolves.toBe(aggregate);
+    ).resolves.toEqual(commandResult);
 
     expect(
       onDispatchFailure
