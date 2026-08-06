@@ -14,6 +14,74 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.7.0] - 2026-08-06
+
+### Added
+
+* Socket.IO server bootstrap integrated with Fastify
+* Realtime connection identity and lifecycle model
+* Realtime connection manager
+* Session, team, operator and observer room conventions
+* Device registration workflow
+* Team authentication through access PINs
+* `OPERATOR` and `OBSERVER` realtime roles
+* Single active operator enforcement for each auction-session team
+* Socket.IO realtime publisher abstraction
+* Authoritative auction snapshot contracts and service
+* Automatic snapshot delivery after device registration
+* Auction event dispatcher
+* Auction snapshot dispatcher
+* Persistent auction-session `stateVersion`
+* Persistent command registry for idempotent commands
+* Atomic and idempotent auction command executor
+* Shared auction call command handler
+* Atomic auction call command service
+* Realtime auction command protocol
+* Socket command handler for team remotes
+* Socket.IO `auction:command` listener
+* Realtime commands for:
+
+  * `BID`
+  * `PASS`
+  * `UNDO_PASS`
+
+### Changed
+
+* Auction commands now carry `commandId` and `stateVersion`
+* HTTP auction commands now use the atomic command pipeline
+* Aggregate persistence, state-version increment and command registration now run in one transaction
+* Duplicate commands return the previously persisted result
+* Stale commands are rejected with `STALE_STATE`
+* Reused command IDs with different payloads are rejected with `COMMAND_ID_CONFLICT`
+* Realtime events and authoritative snapshots are published only after a successful commit
+* Idempotent command replays no longer republish events or snapshots
+* Team observers are explicitly read-only
+* Team operators can execute commands only for their registered team and session
+* Banditore-only commands remain restricted to the administrative HTTP workflow
+* Atomic command errors are mapped consistently to HTTP and Socket.IO responses
+
+### Tested
+
+* 27 automated server test files
+* 187 automated server tests
+* Realtime connection and registration workflows
+* PIN authentication
+* Operator exclusivity
+* Observer registration
+* Authoritative snapshot delivery
+* Realtime publisher and dispatcher behavior
+* Atomic command persistence and rollback
+* Optimistic concurrency through `stateVersion`
+* Command idempotency and command-ID conflicts
+* Socket command validation and authorization
+* HTTP auction command protocol
+* Server type checking
+* Server production build
+* Contracts type checking
+* Contracts production build
+
+---
+
 ## [0.6.0] - 2026-08-01
 
 ### Added

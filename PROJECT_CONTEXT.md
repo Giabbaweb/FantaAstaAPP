@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 6 completata
-- **Versione corrente:** v0.6.0
-- **Prossimo obiettivo:** Versione 0.7 – Telecomandi realtime
+- **Stato:** Milestone 7 completata
+- **Versione corrente:** v0.7.0
+- **Prossimo obiettivo:** Versione 0.8 – Conferma assegnazioni e transazioni
 
 ## Regole immutabili
 
@@ -138,60 +138,113 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 Nessuna intestazione. Terzo portiere escluso.
 
-## Stato implementativo della v0.6.0
+## Stato implementativo della v0.7.0
 
-Sono completati:
+Sono completati tutti gli elementi della v0.6.0 e inoltre:
 
-- dominio `AuctionCall`;
-- dominio `AuctionCallTeam`;
-- macchina a stati della chiamata;
-- calcolo del massimo rilancio sostenibile;
-- apertura della chiamata;
-- gestione dei rilanci;
-- gestione di PASS e annullamento del PASS;
-- aggiudicazione provvisoria;
-- conferma e annullamento della chiamata;
-- persistenza SQLite delle chiamate;
-- repository e application service;
-- route HTTP di lettura;
-- route HTTP di comando;
-- mapping degli errori;
-- migrazione Drizzle;
-- fixture condivise per i test;
-- 63 test server verdi.
+- bootstrap Socket.IO integrato con Fastify;
+- modello di identità delle connessioni realtime;
+- connection manager;
+- stanze per sessione, squadra, operatori e osservatori;
+- registrazione dei dispositivi;
+- autenticazione delle squadre tramite PIN;
+- ruoli `OPERATOR` e `OBSERVER`;
+- una sola connessione operativa per squadra;
+- publisher realtime astratto;
+- publisher Socket.IO;
+- contratti degli eventi d'asta;
+- snapshot autorevole dell'asta;
+- invio dello snapshot dopo la registrazione;
+- event dispatcher;
+- snapshot dispatcher;
+- sincronizzazione dopo ogni comando confermato;
+- `stateVersion` persistente sulla sessione;
+- command registry persistente;
+- esecuzione atomica dei comandi;
+- controllo ottimistico della concorrenza;
+- idempotenza tramite `commandId`;
+- rilevazione dei comandi obsoleti tramite `STALE_STATE`;
+- rilevazione del riuso incompatibile tramite `COMMAND_ID_CONFLICT`;
+- rollback transazionale verificato;
+- command handler di dominio condiviso;
+- atomic auction call command service;
+- protocollo HTTP atomico;
+- protocollo Socket.IO `auction:command`;
+- socket command handler;
+- autorizzazione per ruolo, squadra e sessione;
+- observer in sola lettura;
+- comandi telecomando `BID`, `PASS` e `UNDO_PASS`;
+- nessuna associazione tra disconnessione e PASS;
+- mapping uniforme degli errori atomici;
+- 27 file di test server;
+- 187 test server verdi.
 
-API principali:
+## Protocollo dei comandi
 
-```text
-GET  /api/auction-calls/:id
-GET  /api/auction-sessions/:auctionSessionId/auction-call
-POST /api/auction-calls/:id/commands/:command
-```
+Ogni comando di modifica contiene:
 
-Comandi HTTP disponibili:
+commandId
+stateVersion
 
-```text
-open
-bid
-pass
-undo-pass
-confirm
-cancel
-```
+Pipeline autoritativa:
+
+validazione
+→ controllo idempotenza
+→ controllo stateVersion
+→ applicazione dominio
+→ persistenza aggregate
+→ incremento stateVersion
+→ registrazione comando
+→ commit
+→ evento realtime
+→ snapshot autorevole
+
+Un retry identico restituisce il risultato persistito con:
+
+idempotentReplay: true
+
+senza ripubblicare evento o snapshot.
+
+## Realtime e telecomandi
+
+Eventi principali:
+
+realtime:connected
+realtime:register
+realtime:registered
+realtime:error
+auction:command
+auction:event
+auction:snapshot
+
+I telecomandi di squadra possono inviare:
+
+BID
+PASS
+UNDO_PASS
+
+I comandi amministrativi restano riservati al banditore:
+
+OPEN
+CONFIRM
+CANCEL
+
+La riconnessione richiede una nuova registrazione del dispositivo e produce un nuovo snapshot autorevole.
 
 ## Prossimo obiettivo
 
-Versione 0.7:
+Versione 0.8 — Conferma assegnazioni e transazioni:
 
-- Socket.IO;
-- telecomandi squadra;
-- ruoli `OPERATOR` e `OBSERVER`;
-- sincronizzazione realtime;
-- riconnessione e risincronizzazione;
-- comandi con `commandId` e `stateVersion`.
+- trasformare l'aggiudicazione provvisoria in assegnazione definitiva;
+- verificare leader, crediti e slot;
+- creare la voce di rosa;
+- sottrarre i crediti;
+- aggiornare la disponibilità del giocatore;
+- chiudere la chiamata;
+- registrare l'operazione;
+- garantire rollback completo;
+- creare il punto di backup dopo l'operazione critica.
 
 Fonte autoritativa completa:
 
-```text
 docs/FANTA_ASTA_APP_SPEC.md
-```

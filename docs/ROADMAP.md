@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.6.0
+v0.7.0
 ```
 
 Milestone completate:
@@ -57,12 +57,31 @@ Milestone completate:
 - conferma e annullamento delle chiamate;
 - persistenza SQLite delle chiamate d'asta;
 - repository, service e API del motore d'asta;
-- test di dominio e integrazione HTTP del motore d'asta.
+- test di dominio e integrazione HTTP del motore d'asta;
+- bootstrap Socket.IO;
+- connessioni e registrazione dei dispositivi;
+- autenticazione delle squadre tramite PIN;
+- ruoli realtime `OPERATOR` e `OBSERVER`;
+- una sola postazione operativa per squadra;
+- stanze realtime per sessione, squadra e ruolo;
+- publisher e dispatcher realtime;
+- snapshot autorevole alla registrazione;
+- sincronizzazione di eventi e snapshot dopo i comandi;
+- versione autoritativa dello stato tramite `stateVersion`;
+- registro persistente dei comandi;
+- idempotenza tramite `commandId`;
+- rifiuto dei comandi obsoleti tramite `STALE_STATE`;
+- esecuzione atomica dei comandi;
+- protocollo realtime `auction:command`;
+- comandi telecomando `BID`, `PASS` e `UNDO_PASS`;
+- autorizzazione dei telecomandi per squadra e sessione;
+- observer in sola lettura;
+- 187 test server verdi.
 
 Prossima milestone:
 
 ```text
-v0.7.0 — Telecomandi realtime
+v0.8.0 — Conferma assegnazioni e transazioni
 ```
 
 ---
@@ -384,7 +403,7 @@ Comandi HTTP supportati:
 
 # v0.7.0 — Telecomandi realtime
 
-**Stato:** `PLANNED`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -407,19 +426,47 @@ Comandi HTTP supportati:
 - gestione dei comandi obsoleti;
 - conferma del PASS.
 
+## Implementazione completata
+
+- Socket.IO integrato con Fastify;
+- registrazione e identità dei dispositivi;
+- autenticazione tramite PIN;
+- ruoli `OPERATOR` e `OBSERVER`;
+- una sola postazione `OPERATOR` per squadra;
+- stanze per sessione, squadra e ruolo;
+- snapshot autorevole inviato dopo la registrazione;
+- publisher di eventi e snapshot;
+- protocollo `auction:command`;
+- comandi remoti `BID`, `PASS` e `UNDO_PASS`;
+- autorizzazione per squadra e sessione;
+- observer in sola lettura;
+- `commandId` e `stateVersion`;
+- command registry persistente;
+- controllo ottimistico della concorrenza;
+- retry idempotenti;
+- transazioni atomiche con rollback;
+- nessun PASS automatico alla disconnessione;
+- errori HTTP e Socket.IO coerenti;
+- 187 test server superati.
+
 ## Criteri di completamento
 
 - stato aggiornato in tempo reale;
 - comandi validati lato server;
 - dispositivi observer in sola lettura;
-- riconnessione senza perdita di coerenza;
-- nessuna equivalenza tra disconnessione e PASS.
+- riconnessione basata su nuova registrazione e snapshot autorevole;
+- nessuna equivalenza tra disconnessione e PASS;
+- comandi duplicati non applicati due volte;
+- comandi obsoleti rifiutati;
+- persistenza atomica verificata;
+- typecheck e build superati;
+- documentazione aggiornata.
 
 ---
 
 # v0.8.0 — Conferma assegnazioni e transazioni
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 

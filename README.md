@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.6.0-blue" alt="Version v0.6.0">
+  <img src="https://img.shields.io/badge/version-v0.7.0-blue" alt="Version v0.7.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.6.0**
+**v0.7.0**
 
 Completed milestones
 
@@ -192,6 +192,16 @@ Completed milestones
 - ✅ Auction Call repository and application service
 - ✅ Auction Call REST and command APIs
 - ✅ Auction Engine integration test suite
+- ✅ Socket.IO realtime infrastructure
+- ✅ Device registration and team PIN authentication
+- ✅ OPERATOR and OBSERVER roles
+- ✅ Authoritative realtime auction snapshots
+- ✅ Auction event and snapshot broadcasting
+- ✅ Persistent stateVersion and command registry
+- ✅ Atomic and idempotent auction command pipeline
+- ✅ Socket.IO auction:command protocol
+- ✅ Team remote BID, PASS and UNDO_PASS commands
+- ✅ 187 backend tests passing
 
 Auction Session lifecycle
 
@@ -212,7 +222,7 @@ RUNNING
 
 Next milestone
 
-➡ **Realtime Controllers**
+➡ **v0.8.0 — Conferma assegnazioni e transazioni**
 
 ---
 
@@ -287,7 +297,7 @@ The `docs/` directory contains the complete project documentation.
 | v0.4 | ✅ League Configuration |
 | v0.5 | ✅ Player Import & Initial Rosters |
 | v0.6 | ✅ Auction Engine |
-| v0.7 | ⏳ Realtime Controllers |
+| v0.7 | ✅ Realtime Controllers |
 | v0.8 | ⏳ Public Display |
 | v0.9 | ⏳ Recovery, Manual Operations & FMS Integration |
 | v1.0 | 🎯 Stable Release |
