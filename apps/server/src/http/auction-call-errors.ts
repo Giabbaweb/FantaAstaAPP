@@ -7,6 +7,9 @@ import {
 } from "@fantaastaapp/domain";
 
 import {
+  AtomicAuctionCommandExecutorError
+} from "../realtime/atomic-auction-command.executor.js";
+import {
   AuctionCallServiceError
 } from "../services/auction-call.service.js";
 
@@ -35,6 +38,54 @@ export type AuctionCallErrorMapping = {
 export function mapAuctionCallError(
   error: unknown
 ): AuctionCallErrorMapping | null {
+  if (
+    error instanceof
+      AtomicAuctionCommandExecutorError
+  ) {
+    switch (error.code) {
+      case "AUCTION_CALL_NOT_FOUND":
+      case "AUCTION_SESSION_STATE_NOT_FOUND":
+        return {
+          statusCode: 404,
+          body: {
+            data: null,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          }
+        };
+
+      case "STALE_STATE":
+      case "COMMAND_ID_CONFLICT":
+        return {
+          statusCode: 409,
+          body: {
+            data: null,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          }
+        };
+
+      case "AUCTION_CALL_SAVE_FAILED":
+        return {
+          statusCode: 500,
+          body: {
+            data: null,
+            error: {
+              code: error.code,
+              message: error.message
+            }
+          }
+        };
+
+      default:
+        return null;
+    }
+  }
+
   if (error instanceof AuctionCallServiceError) {
     switch (error.code) {
       case "AUCTION_CALL_NOT_FOUND":
