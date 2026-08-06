@@ -12,6 +12,9 @@ import {
   sqlite
 } from "./db/client.js";
 import {
+  SqliteAuctionCallRepository
+} from "./repositories/auction-call.repository.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -38,11 +41,148 @@ import {
 import {
   teamRoutes
 } from "./routes/team.routes.js";
+import {
+  AtomicAuctionCallCommandService
+} from "./realtime/atomic-auction-call-command.service.js";
+import {
+  AtomicAuctionCommandExecutor
+} from "./realtime/atomic-auction-command.executor.js";
+import {
+  AuctionCallCommandCoordinator
+} from "./realtime/auction-call-command-coordinator.js";
+import {
+  AuctionCommandSocketHandler
+} from "./realtime/auction-command-socket.handler.js";
+import {
+  SqliteAuctionSessionStateRepository
+} from "./realtime/auction-session-state.repository.js";
+import {
+  SqliteCommandRegistryRepository
+} from "./realtime/command-registry.repository.js";
+import {
+  AuctionRealtimeDispatcher
+} from "./realtime/auction-realtime-dispatcher.js";
+import {
+  AuctionSnapshotDispatcher
+} from "./realtime/auction-snapshot-dispatcher.js";
+import {
+  SqliteRealtimeSnapshotSessionReader,
+  SqliteRealtimeSnapshotTeamReader
+} from "./realtime/realtime-snapshot.repository.js";
+import {
+  RealtimeSnapshotService
+} from "./realtime/realtime-snapshot.service.js";
+import {
+  createSocketServer,
+  registerAuctionCommandSocketHandler
+} from "./realtime/socket-server.js";
+import {
+  SocketIoRealtimePublisher
+} from "./realtime/socket-io-realtime-publisher.js";
+import {
+  AuctionCallCommandHandler
+} from "./services/auction-call-command-handler.js";
+import {
+  AuctionCallService
+} from "./services/auction-call.service.js";
 
 export async function buildApp() {
   const app = Fastify({
     logger: true
   });
+
+  const auctionCallRepository =
+    new SqliteAuctionCallRepository();
+
+  const realtimeSnapshotService =
+    new RealtimeSnapshotService(
+      new SqliteRealtimeSnapshotSessionReader(),
+      new SqliteRealtimeSnapshotTeamReader(),
+      auctionCallRepository
+    );
+
+  const {
+    io,
+    connectionManager
+  } = createSocketServer(
+    app,
+    realtimeSnapshotService
+  );
+
+  const realtimePublisher =
+    new SocketIoRealtimePublisher(io);
+
+  const auctionRealtimeDispatcher =
+    new AuctionRealtimeDispatcher(
+      realtimePublisher
+    );
+
+  const auctionSnapshotDispatcher =
+    new AuctionSnapshotDispatcher(
+      realtimeSnapshotService,
+      realtimePublisher
+    );
+
+  const auctionCallCommandHandler =
+    new AuctionCallCommandHandler();
+
+  const auctionCallService =
+    new AuctionCallService(
+      auctionCallRepository,
+      auctionCallCommandHandler
+    );
+
+  const atomicAuctionCommandExecutor =
+    new AtomicAuctionCommandExecutor(
+      auctionCallRepository,
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository()
+    );
+
+  const atomicAuctionCallCommandService =
+    new AtomicAuctionCallCommandService(
+      atomicAuctionCommandExecutor,
+      auctionCallCommandHandler
+    );
+
+  const auctionCallCommandCoordinator =
+    new AuctionCallCommandCoordinator(
+      atomicAuctionCallCommandService,
+      auctionRealtimeDispatcher,
+      auctionSnapshotDispatcher,
+      ({
+        stage,
+        type,
+        aggregate,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId:
+              aggregate.call.auctionSessionId,
+            auctionCallId:
+              aggregate.call.id,
+            dispatchStage: stage,
+            eventType: type,
+            error
+          },
+          "Failed to publish auction realtime event"
+        );
+      }
+    );
+
+  const auctionCommandSocketHandler =
+    new AuctionCommandSocketHandler(
+      connectionManager,
+      auctionCallService,
+      auctionCallCommandCoordinator
+    );
+
+  registerAuctionCommandSocketHandler(
+    io,
+    auctionCommandSocketHandler
+  );
 
   await app.register(cors, {
     origin: true
@@ -61,7 +201,12 @@ export async function buildApp() {
 
   await app.register(dbHealthRoutes);
   await app.register(auctionSessionRoutes);
-  await app.register(auctionCallRoutes);
+  await app.register(
+    auctionCallRoutes(
+      auctionCallService,
+      auctionCallCommandCoordinator
+    )
+  );
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
   await app.register(auctionSessionTeamRoutes);

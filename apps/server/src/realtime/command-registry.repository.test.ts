@@ -1,0 +1,182 @@
+import {
+  beforeEach,
+  describe,
+  expect,
+  it
+} from "vitest";
+
+import {
+  db
+} from "../db/client.js";
+import {
+  auctionCalls,
+  auctionSessions,
+  auctionSessionTeams,
+  leagues,
+  players,
+  teams
+} from "../db/schema/index.js";
+import type {
+  AuctionCallAggregate
+} from "../repositories/auction-call.repository.js";
+import {
+  SqliteCommandRegistryRepository
+} from "./command-registry.repository.js";
+
+describe("SqliteCommandRegistryRepository", () => {
+  const aggregate: AuctionCallAggregate = {
+    call: {
+      id: "auction-call-1",
+      auctionSessionId: "session-1",
+      playerId: "player-1",
+      callerAuctionSessionTeamId:
+        "session-team-1",
+      status: "OPEN",
+      openingBid: 1,
+      currentBid: 1,
+      currentLeaderAuctionSessionTeamId:
+        "session-team-1",
+      currentTurnAuctionSessionTeamId:
+        "session-team-1",
+      provisionalWinnerAuctionSessionTeamId:
+        null,
+      createdAt:
+        "2026-08-03T20:00:00.000Z",
+      updatedAt:
+        "2026-08-03T20:01:00.000Z"
+    },
+    teams: [
+      {
+        auctionCallId: "auction-call-1",
+        auctionSessionTeamId:
+          "session-team-1",
+        turnOrder: 1,
+        status: "ACTIVE",
+        maximumBid: 307,
+        exclusionReason: null
+      }
+    ]
+  };
+
+  let repository:
+    SqliteCommandRegistryRepository;
+
+  beforeEach(async () => {
+    repository =
+      new SqliteCommandRegistryRepository();
+
+    await db.insert(leagues).values({
+      id: "league-1",
+      name: "League 1",
+      normalizedName: "league 1"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-1",
+      leagueId: "league-1",
+      season: "2026/2027",
+      editionNumber: 1,
+      initialCredits: 330,
+      stateVersion: 1
+    });
+
+    await db.insert(teams).values({
+      id: "team-1",
+      leagueId: "league-1",
+      name: "Team 1"
+    });
+
+    await db.insert(auctionSessionTeams).values({
+      id: "session-team-1",
+      auctionSessionId: "session-1",
+      teamId: "team-1",
+      tableOrder: 1,
+      renewalCredits: 0,
+      remainingCredits: 330
+    });
+
+    await db.insert(players).values({
+      id: "player-1",
+      auctionSessionId: "session-1",
+      fmsCode: "001",
+      name: "Player 1",
+      normalizedName: "player 1",
+      role: "A"
+    });
+
+    await db.insert(auctionCalls).values({
+      id: "auction-call-1",
+      auctionSessionId: "session-1",
+      playerId: "player-1",
+      callerAuctionSessionTeamId:
+        "session-team-1",
+      status: "OPEN",
+      openingBid: 1,
+      currentBid: 1,
+      currentLeaderAuctionSessionTeamId:
+        "session-team-1",
+      currentTurnAuctionSessionTeamId:
+        "session-team-1"
+    });
+  });
+
+  it("stores and restores a command result", async () => {
+    const created = await repository.create({
+      auctionSessionId: "session-1",
+      auctionCallId: "auction-call-1",
+      commandId: "command-1",
+      commandType: "OPEN",
+      expectedStateVersion: 0,
+      resultStateVersion: 1,
+      requestFingerprint: "fingerprint-1",
+      result: aggregate
+    });
+
+    expect(created).toMatchObject({
+      auctionSessionId: "session-1",
+      auctionCallId: "auction-call-1",
+      commandId: "command-1",
+      commandType: "OPEN",
+      expectedStateVersion: 0,
+      resultStateVersion: 1,
+      requestFingerprint: "fingerprint-1",
+      result: aggregate
+    });
+
+    const found =
+      await repository.findByCommandId(
+        "session-1",
+        "command-1"
+      );
+
+    expect(found).toEqual(created);
+  });
+
+  it("returns null for an unknown command", async () => {
+    await expect(
+      repository.findByCommandId(
+        "session-1",
+        "missing-command"
+      )
+    ).resolves.toBeNull();
+  });
+
+  it("rejects a duplicate command within the same session", async () => {
+    const input = {
+      auctionSessionId: "session-1",
+      auctionCallId: "auction-call-1",
+      commandId: "command-1",
+      commandType: "OPEN" as const,
+      expectedStateVersion: 0,
+      resultStateVersion: 1,
+      requestFingerprint: "fingerprint-1",
+      result: aggregate
+    };
+
+    await repository.create(input);
+
+    await expect(
+      repository.create(input)
+    ).rejects.toThrow();
+  });
+});

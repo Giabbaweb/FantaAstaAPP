@@ -1,16 +1,10 @@
-import {
-  cancelAuctionCall as cancelAuctionCallDomain,
-  confirmAuctionCall as confirmAuctionCallDomain,
-  openAuctionCall,
-  passTurn,
-  placeBid,
-  undoPass
-} from "@fantaastaapp/domain";
-
 import type {
   AuctionCallAggregate,
   AuctionCallRepository
 } from "../repositories/auction-call.repository.js";
+import {
+  AuctionCallCommandHandler
+} from "./auction-call-command-handler.js";
 
 export type AuctionCallServiceErrorCode =
   | "AUCTION_CALL_NOT_FOUND"
@@ -32,7 +26,11 @@ export class AuctionCallServiceError extends Error {
 
 export class AuctionCallService {
   constructor(
-    private readonly repository: AuctionCallRepository
+    private readonly repository:
+      AuctionCallRepository,
+    private readonly commandHandler:
+      AuctionCallCommandHandler =
+        new AuctionCallCommandHandler()
   ) {}
 
   async getById(
@@ -44,27 +42,26 @@ export class AuctionCallService {
   async getOperationalByAuctionSessionId(
     auctionSessionId: string
   ): Promise<AuctionCallAggregate | null> {
-    return this.repository.findOperationalByAuctionSessionId(
-      auctionSessionId
-    );
+    return this.repository
+      .findOperationalByAuctionSessionId(
+        auctionSessionId
+      );
   }
 
   async open(
     id: string,
     openingBid: number
   ): Promise<AuctionCallAggregate> {
-    const aggregate = await this.requireAuctionCall(id);
+    const aggregate =
+      await this.requireAuctionCall(id);
 
-    const opened = openAuctionCall({
-      auctionCall: aggregate.call,
-      teams: aggregate.teams,
-      openingBid
-    });
-
-    return this.saveAuctionCall(id, {
-      call: opened.auctionCall,
-      teams: opened.teams
-    });
+    return this.saveAuctionCall(
+      id,
+      this.commandHandler.open(
+        aggregate,
+        openingBid
+      )
+    );
   }
 
   async placeBid(
@@ -72,85 +69,75 @@ export class AuctionCallService {
     auctionSessionTeamId: string,
     bid: number
   ): Promise<AuctionCallAggregate> {
-    const aggregate = await this.requireAuctionCall(id);
+    const aggregate =
+      await this.requireAuctionCall(id);
 
-    const updated = placeBid({
-      auctionCall: aggregate.call,
-      teams: aggregate.teams,
-      auctionSessionTeamId,
-      bid
-    });
-
-    return this.saveAuctionCall(id, {
-      call: updated.auctionCall,
-      teams: updated.teams
-    });
+    return this.saveAuctionCall(
+      id,
+      this.commandHandler.placeBid(
+        aggregate,
+        auctionSessionTeamId,
+        bid
+      )
+    );
   }
 
   async passTurn(
     id: string,
     auctionSessionTeamId: string
   ): Promise<AuctionCallAggregate> {
-    const aggregate = await this.requireAuctionCall(id);
+    const aggregate =
+      await this.requireAuctionCall(id);
 
-    const updated = passTurn({
-      auctionCall: aggregate.call,
-      teams: aggregate.teams,
-      auctionSessionTeamId
-    });
-
-    return this.saveAuctionCall(id, {
-      call: updated.auctionCall,
-      teams: updated.teams
-    });
+    return this.saveAuctionCall(
+      id,
+      this.commandHandler.passTurn(
+        aggregate,
+        auctionSessionTeamId
+      )
+    );
   }
 
   async undoPass(
     id: string,
     auctionSessionTeamId: string
   ): Promise<AuctionCallAggregate> {
-    const aggregate = await this.requireAuctionCall(id);
+    const aggregate =
+      await this.requireAuctionCall(id);
 
-    const updated = undoPass({
-      auctionCall: aggregate.call,
-      teams: aggregate.teams,
-      auctionSessionTeamId
-    });
-
-    return this.saveAuctionCall(id, {
-      call: updated.auctionCall,
-      teams: updated.teams
-    });
+    return this.saveAuctionCall(
+      id,
+      this.commandHandler.undoPass(
+        aggregate,
+        auctionSessionTeamId
+      )
+    );
   }
 
   async confirmAuctionCall(
     id: string
   ): Promise<AuctionCallAggregate> {
-    const aggregate = await this.requireAuctionCall(id);
+    const aggregate =
+      await this.requireAuctionCall(id);
 
-    const confirmed = confirmAuctionCallDomain({
-      auctionCall: aggregate.call
-    });
-
-    return this.saveAuctionCall(id, {
-      call: confirmed.auctionCall,
-      teams: aggregate.teams
-    });
+    return this.saveAuctionCall(
+      id,
+      this.commandHandler
+        .confirmAuctionCall(aggregate)
+    );
   }
 
   async cancelAuctionCall(
     id: string
   ): Promise<AuctionCallAggregate> {
-    const aggregate = await this.requireAuctionCall(id);
+    const aggregate =
+      await this.requireAuctionCall(id);
 
-    const cancelled = cancelAuctionCallDomain({
-      auctionCall: aggregate.call
-    });
-
-    return this.saveAuctionCall(id, {
-      call: cancelled.auctionCall,
-      teams: aggregate.teams
-    });
+    return this.saveAuctionCall(
+      id,
+      this.commandHandler
+        .cancelAuctionCall(aggregate)
+    );
   }
 
   private async saveAuctionCall(
@@ -158,7 +145,9 @@ export class AuctionCallService {
     aggregate: AuctionCallAggregate
   ): Promise<AuctionCallAggregate> {
     try {
-      return await this.repository.save(aggregate);
+      return await this.repository.save(
+        aggregate
+      );
     } catch (error) {
       throw new AuctionCallServiceError(
         "AUCTION_CALL_SAVE_FAILED",

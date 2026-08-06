@@ -11,6 +11,17 @@ import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { auctionSessions } from "../db/schema/index.js";
 
+const auctionSessionPublicSelection = {
+  id: auctionSessions.id,
+  leagueId: auctionSessions.leagueId,
+  season: auctionSessions.season,
+  editionNumber: auctionSessions.editionNumber,
+  status: auctionSessions.status,
+  initialCredits: auctionSessions.initialCredits,
+  createdAt: auctionSessions.createdAt,
+  updatedAt: auctionSessions.updatedAt
+};
+
 const activeStatuses = [
   "READY",
   "RUNNING",
@@ -46,14 +57,14 @@ export class SqliteAuctionSessionRepository
 {
   async findAll(): Promise<AuctionSession[]> {
     return db
-      .select()
+      .select(auctionSessionPublicSelection)
       .from(auctionSessions)
       .orderBy(desc(auctionSessions.createdAt));
   }
 
   async findById(id: string): Promise<AuctionSession | null> {
     const [session] = await db
-      .select()
+      .select(auctionSessionPublicSelection)
       .from(auctionSessions)
       .where(eq(auctionSessions.id, id))
       .limit(1);
@@ -63,7 +74,7 @@ export class SqliteAuctionSessionRepository
 
   async findActive(): Promise<AuctionSession | null> {
     const [session] = await db
-      .select()
+      .select(auctionSessionPublicSelection)
       .from(auctionSessions)
       .where(
         inArray(
@@ -88,7 +99,9 @@ export class SqliteAuctionSessionRepository
         editionNumber: input.editionNumber,
         initialCredits: input.initialCredits
       })
-      .returning();
+      .returning(
+        auctionSessionPublicSelection
+      );
 
     if (!session) {
       throw new Error("Failed to create auction session");
@@ -108,7 +121,9 @@ export class SqliteAuctionSessionRepository
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
       .where(eq(auctionSessions.id, id))
-      .returning();
+      .returning(
+        auctionSessionPublicSelection
+      );
 
     return session ?? null;
   }
@@ -124,7 +139,9 @@ export class SqliteAuctionSessionRepository
         updatedAt: sql`CURRENT_TIMESTAMP`
       })
       .where(eq(auctionSessions.id, id))
-      .returning();
+      .returning(
+        auctionSessionPublicSelection
+      );
 
     return session ?? null;
   }

@@ -349,3 +349,337 @@ export const createInitialRosterEntrySchema = z.object({
 export type CreateInitialRosterEntryInput = z.infer<
   typeof createInitialRosterEntrySchema
 >;
+
+export const realtimeRoleSchema = z.enum([
+  "OPERATOR",
+  "OBSERVER"
+]);
+
+export type RealtimeRole = z.infer<
+  typeof realtimeRoleSchema
+>;
+
+export const realtimeConnectionStatusSchema = z.enum([
+  "UNREGISTERED",
+  "REGISTERED",
+  "DISCONNECTED"
+]);
+
+export type RealtimeConnectionStatus = z.infer<
+  typeof realtimeConnectionStatusSchema
+>;
+
+export const realtimeCommandMetadataSchema = z.object({
+  commandId: z.string().trim().min(1).max(100),
+  stateVersion: z.number().int().nonnegative()
+});
+
+export type RealtimeCommandMetadata = z.infer<
+  typeof realtimeCommandMetadataSchema
+>;
+
+export const auctionCommandTypeSchema = z.enum([
+  "OPEN",
+  "BID",
+  "PASS",
+  "UNDO_PASS",
+  "CONFIRM",
+  "CANCEL"
+]);
+
+export type AuctionCommandType = z.infer<
+  typeof auctionCommandTypeSchema
+>;
+
+const auctionCommandBaseSchema = z.object({
+  auctionCallId:
+    z.string().trim().min(1).max(100),
+  metadata:
+    realtimeCommandMetadataSchema
+});
+
+export const auctionCommandRequestSchema =
+  z.discriminatedUnion(
+    "command",
+    [
+      auctionCommandBaseSchema.extend({
+        command: z.literal("OPEN"),
+        openingBid:
+          z.number().int().positive()
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("BID"),
+        auctionSessionTeamId:
+          z.string().trim().min(1).max(100),
+        bid:
+          z.number().int().positive()
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("PASS"),
+        auctionSessionTeamId:
+          z.string().trim().min(1).max(100)
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("UNDO_PASS"),
+        auctionSessionTeamId:
+          z.string().trim().min(1).max(100)
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("CONFIRM")
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("CANCEL")
+      })
+    ]
+  );
+
+export type AuctionCommandRequest = z.infer<
+  typeof auctionCommandRequestSchema
+>;
+
+const auctionCommandAckDataSchema = z.object({
+  stateVersion:
+    z.number().int().nonnegative(),
+  idempotentReplay:
+    z.boolean()
+});
+
+const auctionCommandAckErrorSchema = z.object({
+  code: z.string().trim().min(1),
+  message: z.string().trim().min(1)
+});
+
+export const auctionCommandAckSchema =
+  z.discriminatedUnion(
+    "success",
+    [
+      z.object({
+        success: z.literal(true),
+        data: auctionCommandAckDataSchema,
+        error: z.null()
+      }),
+
+      z.object({
+        success: z.literal(false),
+        data: z.null(),
+        error: auctionCommandAckErrorSchema
+      })
+    ]
+  );
+
+export type AuctionCommandAck = z.infer<
+  typeof auctionCommandAckSchema
+>;
+
+export const realtimeErrorCodeSchema = z.enum([
+  "VALIDATION_ERROR",
+  "UNAUTHORIZED",
+  "OPERATOR_ALREADY_CONNECTED",
+  "INTERNAL_ERROR"
+]);
+
+export type RealtimeErrorCode = z.infer<
+  typeof realtimeErrorCodeSchema
+>;
+
+export const realtimeErrorSchema = z.object({
+  code: realtimeErrorCodeSchema,
+  message: z.string().trim().min(1),
+  details: z.record(
+    z.string(),
+    z.unknown()
+  ).optional()
+});
+
+export type RealtimeError = z.infer<
+  typeof realtimeErrorSchema
+>;
+
+export const realtimeEventNameSchema = z.enum([
+  "realtime:connected",
+  "realtime:register",
+  "realtime:registered",
+  "realtime:error",
+  "auction:command",
+  "auction:event",
+  "auction:snapshot"
+]);
+
+export type RealtimeEventName = z.infer<
+  typeof realtimeEventNameSchema
+>;
+
+export const realtimeRegistrationRequestSchema = z.object({
+  deviceId: z.string().trim().min(1).max(100),
+  auctionSessionId: z.string().trim().min(1).max(100),
+  auctionSessionTeamId: z.string().trim().min(1).max(100),
+  role: realtimeRoleSchema,
+  pin: z.string().regex(/^\d{4,8}$/, {
+    message: "PIN must contain between 4 and 8 digits"
+  })
+});
+
+export type RealtimeRegistrationRequest = z.infer<
+  typeof realtimeRegistrationRequestSchema
+>;
+
+export const realtimeConnectedPayloadSchema = z.object({
+  socketId: z.string().min(1),
+  connectedAt: z.string().min(1)
+});
+
+export type RealtimeConnectedPayload = z.infer<
+  typeof realtimeConnectedPayloadSchema
+>;
+
+export const realtimeRegisteredPayloadSchema = z.object({
+  socketId: z.string().min(1),
+  deviceId: z.string().min(1),
+  auctionSessionId: z.string().min(1),
+  auctionSessionTeamId: z.string().min(1),
+  role: realtimeRoleSchema,
+  connectedAt: z.string().min(1),
+  registeredAt: z.string().min(1)
+});
+
+export type RealtimeRegisteredPayload = z.infer<
+  typeof realtimeRegisteredPayloadSchema
+>;
+
+export const realtimeAuctionEventTypeSchema = z.enum([
+  "AUCTION_CALL_OPENED",
+  "BID_PLACED",
+  "TEAM_PASSED",
+  "TEAM_PASS_UNDONE",
+  "AUCTION_CALL_CONFIRMED",
+  "AUCTION_CALL_CANCELLED"
+]);
+
+export type RealtimeAuctionEventType = z.infer<
+  typeof realtimeAuctionEventTypeSchema
+>;
+
+export const realtimeAuctionEventSchema = z.object({
+  type: realtimeAuctionEventTypeSchema,
+  auctionSessionId: z.string().trim().min(1),
+  auctionCallId: z.string().trim().min(1),
+  occurredAt: z.string().min(1),
+  payload: z.record(
+    z.string(),
+    z.unknown()
+  )
+});
+
+export type RealtimeAuctionEvent = z.infer<
+  typeof realtimeAuctionEventSchema
+>;
+
+export const auctionCallStatusSchema = z.enum([
+  "DRAFT",
+  "OPEN",
+  "PROVISIONAL_AWARD",
+  "SUSPENDED",
+  "CONFIRMED",
+  "CANCELLED",
+  "ROLLED_BACK"
+]);
+
+export type AuctionCallStatus = z.infer<
+  typeof auctionCallStatusSchema
+>;
+
+export const auctionCallSchema = z.object({
+  id: z.string().min(1),
+  auctionSessionId: z.string().min(1),
+  playerId: z.string().min(1),
+  callerAuctionSessionTeamId: z.string().min(1),
+  status: auctionCallStatusSchema,
+  openingBid: z.number().int().positive().nullable(),
+  currentBid: z.number().int().positive().nullable(),
+  currentLeaderAuctionSessionTeamId:
+    z.string().min(1).nullable(),
+  currentTurnAuctionSessionTeamId:
+    z.string().min(1).nullable(),
+  provisionalWinnerAuctionSessionTeamId:
+    z.string().min(1).nullable(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type AuctionCall = z.infer<
+  typeof auctionCallSchema
+>;
+
+export const auctionCallTeamStatusSchema = z.enum([
+  "ACTIVE",
+  "PASSED",
+  "EXCLUDED"
+]);
+
+export type AuctionCallTeamStatus = z.infer<
+  typeof auctionCallTeamStatusSchema
+>;
+
+export const auctionCallTeamExclusionReasonSchema =
+  z.enum([
+    "MAXIMUM_BID_TOO_LOW",
+    "ROSTER_FULL",
+    "ROLE_LIMIT_REACHED"
+  ]);
+
+export type AuctionCallTeamExclusionReason = z.infer<
+  typeof auctionCallTeamExclusionReasonSchema
+>;
+
+export const auctionCallTeamSchema = z.object({
+  auctionCallId: z.string().min(1),
+  auctionSessionTeamId: z.string().min(1),
+  turnOrder: z.number().int().positive(),
+  status: auctionCallTeamStatusSchema,
+  maximumBid: z.number().int().nonnegative(),
+  exclusionReason:
+    auctionCallTeamExclusionReasonSchema.nullable()
+});
+
+export type AuctionCallTeam = z.infer<
+  typeof auctionCallTeamSchema
+>;
+
+export const realtimeAuctionSessionTeamSchema =
+  auctionSessionTeamSchema.extend({
+    id: z.string().min(1)
+  });
+
+export type RealtimeAuctionSessionTeam = z.infer<
+  typeof realtimeAuctionSessionTeamSchema
+>;
+
+export const realtimeOperationalAuctionCallSchema =
+  z.object({
+    call: auctionCallSchema,
+    teams: z.array(auctionCallTeamSchema)
+  });
+
+export type RealtimeOperationalAuctionCall = z.infer<
+  typeof realtimeOperationalAuctionCallSchema
+>;
+
+export const realtimeAuctionSnapshotSchema = z.object({
+  stateVersion: z.number().int().nonnegative(),
+  generatedAt: z.string().min(1),
+  session: auctionSessionSchema,
+  sessionTeams: z.array(
+    realtimeAuctionSessionTeamSchema
+  ),
+  operationalAuctionCall:
+    realtimeOperationalAuctionCallSchema.nullable()
+});
+
+export type RealtimeAuctionSnapshot = z.infer<
+  typeof realtimeAuctionSnapshotSchema
+>;

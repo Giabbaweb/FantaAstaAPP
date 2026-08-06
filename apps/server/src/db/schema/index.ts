@@ -58,6 +58,10 @@ export const auctionSessions = sqliteTable(
       .notNull()
       .default(330),
 
+    stateVersion: integer("state_version")
+      .notNull()
+      .default(0),
+
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -177,7 +181,9 @@ export const auctionSessionTeams = sqliteTable(
       .notNull()
       .default(0),
 
-    remainingCredits: integer("remaining_credits").notNull()
+    remainingCredits: integer("remaining_credits").notNull(),
+
+    accessPinHash: text("access_pin_hash")
   },
   (table) => [
     uniqueIndex("auction_session_teams_session_team_unique").on(
@@ -449,6 +455,81 @@ export const auctionCallTeams = sqliteTable(
     check(
       "auction_call_teams_maximum_bid_nonnegative",
       sql`${table.maximumBid} >= 0`
+    )
+  ]
+);
+
+export const commandRegistry = sqliteTable(
+  "command_registry",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionId: text("auction_session_id")
+      .notNull()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    auctionCallId: text("auction_call_id")
+      .notNull()
+      .references(() => auctionCalls.id, {
+        onDelete: "cascade"
+      }),
+
+    commandId: text("command_id").notNull(),
+
+    commandType: text("command_type", {
+      enum: [
+        "OPEN",
+        "BID",
+        "PASS",
+        "UNDO_PASS",
+        "CONFIRM",
+        "CANCEL"
+      ]
+    }).notNull(),
+
+    expectedStateVersion: integer(
+      "expected_state_version"
+    ).notNull(),
+
+    resultStateVersion: integer(
+      "result_state_version"
+    ).notNull(),
+
+    requestFingerprint: text(
+      "request_fingerprint"
+    ).notNull(),
+
+    resultPayload: text(
+      "result_payload"
+    ).notNull(),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex(
+      "command_registry_session_command_unique"
+    ).on(
+      table.auctionSessionId,
+      table.commandId
+    ),
+
+    check(
+      "command_registry_expected_version_nonnegative",
+      sql`${table.expectedStateVersion} >= 0`
+    ),
+
+    check(
+      "command_registry_result_version_positive",
+      sql`${table.resultStateVersion} >= 1`
+    ),
+
+    check(
+      "command_registry_version_progression",
+      sql`${table.resultStateVersion} = ${table.expectedStateVersion} + 1`
     )
   ]
 );

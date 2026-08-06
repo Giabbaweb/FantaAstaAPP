@@ -13,7 +13,12 @@ import {
   sql
 } from "drizzle-orm";
 
-import { db } from "../db/client.js";
+import {
+  db
+} from "../db/client.js";
+import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
 import {
   auctionCalls,
   auctionCallTeams,
@@ -24,6 +29,9 @@ export type AuctionCallAggregate = {
   call: AuctionCall;
   teams: AuctionCallTeam[];
 };
+
+export type AuctionCallWriteExecutor =
+  DatabaseWriteExecutor;
 
 export interface AuctionCallReader {
   findById(
@@ -41,6 +49,16 @@ export interface AuctionCallRepository
     aggregate: AuctionCallAggregate
   ): Promise<AuctionCallAggregate>;
 
+  saveWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    aggregate: AuctionCallAggregate
+  ): string;
+
+  findByIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    id: string
+  ): AuctionCallAggregate | null;
+
   delete(id: string): Promise<boolean>;
 }
 
@@ -57,19 +75,32 @@ export class SqliteAuctionCallRepository
   async findById(
     id: string
   ): Promise<AuctionCallAggregate | null> {
-    const [call] = await db
+    return this.findByIdWithExecutor(
+      db,
+      id
+    );
+  }
+
+  findByIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    id: string
+  ): AuctionCallAggregate | null {
+    const [call] = executor
       .select()
       .from(auctionCalls)
       .where(eq(auctionCalls.id, id))
-      .limit(1);
+      .limit(1)
+      .all();
 
     if (!call) {
       return null;
     }
 
-    const teams = await this.findTeamsByAuctionCallId(
-      call.id
-    );
+    const teams =
+      this.findTeamsByAuctionCallIdWithExecutor(
+        executor,
+        call.id
+      );
 
     return {
       call,
@@ -118,122 +149,18 @@ export class SqliteAuctionCallRepository
   async save(
     aggregate: AuctionCallAggregate
   ): Promise<AuctionCallAggregate> {
-    const auctionCallId = db.transaction((tx) => {
-      const [existingCall] = tx
-        .select({
-          id: auctionCalls.id
-        })
-        .from(auctionCalls)
-        .where(
-          eq(
-            auctionCalls.id,
-            aggregate.call.id
-          )
+    const auctionCallId =
+      db.transaction((tx) =>
+        this.saveWithExecutor(
+          tx,
+          aggregate
         )
-        .limit(1)
-        .all();
+      );
 
-      if (existingCall) {
-        tx.update(auctionCalls)
-          .set({
-            auctionSessionId:
-              aggregate.call.auctionSessionId,
-            playerId:
-              aggregate.call.playerId,
-            callerAuctionSessionTeamId:
-              aggregate.call
-                .callerAuctionSessionTeamId,
-            status:
-              aggregate.call.status,
-            openingBid:
-              aggregate.call.openingBid,
-            currentBid:
-              aggregate.call.currentBid,
-            currentLeaderAuctionSessionTeamId:
-              aggregate.call
-                .currentLeaderAuctionSessionTeamId,
-            currentTurnAuctionSessionTeamId:
-              aggregate.call
-                .currentTurnAuctionSessionTeamId,
-            provisionalWinnerAuctionSessionTeamId:
-              aggregate.call
-                .provisionalWinnerAuctionSessionTeamId,
-            updatedAt: sql`CURRENT_TIMESTAMP`
-          })
-          .where(
-            eq(
-              auctionCalls.id,
-              aggregate.call.id
-            )
-          )
-          .run();
-
-        tx.delete(auctionCallTeams)
-          .where(
-            eq(
-              auctionCallTeams.auctionCallId,
-              aggregate.call.id
-            )
-          )
-          .run();
-      } else {
-        tx.insert(auctionCalls)
-          .values({
-            id: aggregate.call.id,
-            auctionSessionId:
-              aggregate.call.auctionSessionId,
-            playerId:
-              aggregate.call.playerId,
-            callerAuctionSessionTeamId:
-              aggregate.call
-                .callerAuctionSessionTeamId,
-            status:
-              aggregate.call.status,
-            openingBid:
-              aggregate.call.openingBid,
-            currentBid:
-              aggregate.call.currentBid,
-            currentLeaderAuctionSessionTeamId:
-              aggregate.call
-                .currentLeaderAuctionSessionTeamId,
-            currentTurnAuctionSessionTeamId:
-              aggregate.call
-                .currentTurnAuctionSessionTeamId,
-            provisionalWinnerAuctionSessionTeamId:
-              aggregate.call
-                .provisionalWinnerAuctionSessionTeamId,
-            createdAt:
-              aggregate.call.createdAt,
-            updatedAt:
-              aggregate.call.updatedAt
-          })
-          .run();
-      }
-
-      for (const team of aggregate.teams) {
-        tx.insert(auctionCallTeams)
-          .values({
-            id: randomUUID(),
-            auctionCallId:
-              aggregate.call.id,
-            auctionSessionTeamId:
-              team.auctionSessionTeamId,
-            status:
-              team.status,
-            maximumBid:
-              team.maximumBid,
-            exclusionReason:
-              team.exclusionReason
-          })
-          .run();
-      }
-
-      return aggregate.call.id;
-    });
-
-    const savedAggregate = await this.findById(
-      auctionCallId
-    );
+    const savedAggregate =
+      await this.findById(
+        auctionCallId
+      );
 
     if (!savedAggregate) {
       throw new Error(
@@ -242,6 +169,128 @@ export class SqliteAuctionCallRepository
     }
 
     return savedAggregate;
+  }
+
+  saveWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    aggregate: AuctionCallAggregate
+  ): string {
+    const [existingCall] = executor
+      .select({
+        id: auctionCalls.id
+      })
+      .from(auctionCalls)
+      .where(
+        eq(
+          auctionCalls.id,
+          aggregate.call.id
+        )
+      )
+      .limit(1)
+      .all();
+
+    if (existingCall) {
+      executor
+        .update(auctionCalls)
+        .set({
+          auctionSessionId:
+            aggregate.call.auctionSessionId,
+          playerId:
+            aggregate.call.playerId,
+          callerAuctionSessionTeamId:
+            aggregate.call
+              .callerAuctionSessionTeamId,
+          status:
+            aggregate.call.status,
+          openingBid:
+            aggregate.call.openingBid,
+          currentBid:
+            aggregate.call.currentBid,
+          currentLeaderAuctionSessionTeamId:
+            aggregate.call
+              .currentLeaderAuctionSessionTeamId,
+          currentTurnAuctionSessionTeamId:
+            aggregate.call
+              .currentTurnAuctionSessionTeamId,
+          provisionalWinnerAuctionSessionTeamId:
+            aggregate.call
+              .provisionalWinnerAuctionSessionTeamId,
+          updatedAt:
+            sql`CURRENT_TIMESTAMP`
+        })
+        .where(
+          eq(
+            auctionCalls.id,
+            aggregate.call.id
+          )
+        )
+        .run();
+
+      executor
+        .delete(auctionCallTeams)
+        .where(
+          eq(
+            auctionCallTeams.auctionCallId,
+            aggregate.call.id
+          )
+        )
+        .run();
+    } else {
+      executor
+        .insert(auctionCalls)
+        .values({
+          id:
+            aggregate.call.id,
+          auctionSessionId:
+            aggregate.call.auctionSessionId,
+          playerId:
+            aggregate.call.playerId,
+          callerAuctionSessionTeamId:
+            aggregate.call
+              .callerAuctionSessionTeamId,
+          status:
+            aggregate.call.status,
+          openingBid:
+            aggregate.call.openingBid,
+          currentBid:
+            aggregate.call.currentBid,
+          currentLeaderAuctionSessionTeamId:
+            aggregate.call
+              .currentLeaderAuctionSessionTeamId,
+          currentTurnAuctionSessionTeamId:
+            aggregate.call
+              .currentTurnAuctionSessionTeamId,
+          provisionalWinnerAuctionSessionTeamId:
+            aggregate.call
+              .provisionalWinnerAuctionSessionTeamId,
+          createdAt:
+            aggregate.call.createdAt,
+          updatedAt:
+            aggregate.call.updatedAt
+        })
+        .run();
+    }
+
+    for (const team of aggregate.teams) {
+      executor
+        .insert(auctionCallTeams)
+        .values({
+          id: randomUUID(),
+          auctionCallId:
+            aggregate.call.id,
+          auctionSessionTeamId:
+            team.auctionSessionTeamId,
+          status:
+            team.status,
+          maximumBid:
+            team.maximumBid,
+          exclusionReason:
+            team.exclusionReason
+        })
+        .run();
+    }
+
+    return aggregate.call.id;
   }
 
   async delete(id: string): Promise<boolean> {
@@ -258,7 +307,18 @@ export class SqliteAuctionCallRepository
   private async findTeamsByAuctionCallId(
     auctionCallId: string
   ): Promise<AuctionCallTeam[]> {
-    return db
+    return this
+      .findTeamsByAuctionCallIdWithExecutor(
+        db,
+        auctionCallId
+      );
+  }
+
+  private findTeamsByAuctionCallIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionCallId: string
+  ): AuctionCallTeam[] {
+    return executor
       .select({
         auctionCallId:
           auctionCallTeams.auctionCallId,
@@ -292,6 +352,7 @@ export class SqliteAuctionCallRepository
         asc(
           auctionCallTeams.auctionSessionTeamId
         )
-      );
+      )
+      .all();
   }
 }

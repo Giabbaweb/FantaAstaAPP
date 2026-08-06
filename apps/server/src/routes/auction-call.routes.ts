@@ -3,20 +3,24 @@ import type {
 } from "fastify";
 
 import {
+  realtimeCommandMetadataSchema
+} from "@fantaastaapp/contracts";
+
+import {
   mapAuctionCallError
 } from "../http/auction-call-errors.js";
 import type {
   AuctionCallNotFoundResponse
 } from "../http/auction-call-errors.js";
-import {
-  SqliteAuctionCallRepository
-} from "../repositories/auction-call.repository.js";
 import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import {
   AuctionCallService
 } from "../services/auction-call.service.js";
+import {
+  AuctionCallCommandCoordinator
+} from "../realtime/auction-call-command-coordinator.js";
 
 type AuctionCallParams = {
   id: string;
@@ -28,6 +32,8 @@ type AuctionCallCommandParams = {
 };
 
 type AuctionCallCommandBody = {
+  commandId?: unknown;
+  stateVersion?: unknown;
   openingBid?: unknown;
   auctionSessionTeamId?: unknown;
   bid?: unknown;
@@ -57,17 +63,17 @@ type OperationalAuctionCallResponse = {
 
 type AuctionCallCommandResponse = {
   data: AuctionCallAggregate;
+  stateVersion: number;
+  idempotentReplay: boolean;
   error: null;
 };
 
-const repository =
-  new SqliteAuctionCallRepository();
-
-const service =
-  new AuctionCallService(repository);
-
-export const auctionCallRoutes: FastifyPluginAsync =
-  async (fastify) => {
+export function auctionCallRoutes(
+  service: AuctionCallService,
+  commandCoordinator:
+    AuctionCallCommandCoordinator
+): FastifyPluginAsync {
+  return async (fastify) => {
     fastify.get<{
       Params: AuctionCallParams;
       Reply:
@@ -114,8 +120,27 @@ export const auctionCallRoutes: FastifyPluginAsync =
         const { id, command } = request.params;
         const body = request.body ?? {};
 
+        const metadataResult =
+          realtimeCommandMetadataSchema.safeParse({
+            commandId: body.commandId,
+            stateVersion: body.stateVersion
+          });
+
+        if (!metadataResult.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+
+        const metadata = metadataResult.data;
+
         try {
-          let aggregate: AuctionCallAggregate;
+          let result;
 
           switch (command) {
             case "open": {
@@ -136,8 +161,9 @@ export const auctionCallRoutes: FastifyPluginAsync =
                 });
               }
 
-              aggregate = await service.open(
+              result = await commandCoordinator.open(
                 id,
+                metadata,
                 openingBid
               );
 
@@ -179,8 +205,9 @@ export const auctionCallRoutes: FastifyPluginAsync =
                 });
               }
 
-              aggregate = await service.placeBid(
+              result = await commandCoordinator.placeBid(
                 id,
+                metadata,
                 auctionSessionTeamId,
                 bid
               );
@@ -207,8 +234,9 @@ export const auctionCallRoutes: FastifyPluginAsync =
                 });
               }
 
-              aggregate = await service.passTurn(
+              result = await commandCoordinator.passTurn(
                 id,
+                metadata,
                 auctionSessionTeamId
               );
 
@@ -234,8 +262,9 @@ export const auctionCallRoutes: FastifyPluginAsync =
                 });
               }
 
-              aggregate = await service.undoPass(
+              result = await commandCoordinator.undoPass(
                 id,
+                metadata,
                 auctionSessionTeamId
               );
 
@@ -243,15 +272,21 @@ export const auctionCallRoutes: FastifyPluginAsync =
             }
 
             case "confirm": {
-              aggregate =
-                await service.confirmAuctionCall(id);
+              result =
+                await commandCoordinator.confirmAuctionCall(
+                  id,
+                  metadata
+                );
 
               break;
             }
 
             case "cancel": {
-              aggregate =
-                await service.cancelAuctionCall(id);
+              result =
+                await commandCoordinator.cancelAuctionCall(
+                  id,
+                  metadata
+                );
 
               break;
             }
@@ -268,7 +303,11 @@ export const auctionCallRoutes: FastifyPluginAsync =
           }
 
           return reply.code(200).send({
-            data: aggregate,
+            data: result.aggregate,
+            stateVersion:
+              result.stateVersion,
+            idempotentReplay:
+              result.idempotentReplay,
             error: null
           });
         } catch (error) {
@@ -305,3 +344,4 @@ export const auctionCallRoutes: FastifyPluginAsync =
       }
     );
   };
+}

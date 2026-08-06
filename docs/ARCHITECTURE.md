@@ -600,113 +600,188 @@ I contratti condivisi vengono definiti nel package `packages/contracts`.
 
 ## 10. Realtime
 
-La comunicazione realtime sarà introdotta nelle milestone dedicate ai telecomandi.
+La comunicazione realtime è implementata tramite Socket.IO ed è integrata con il server Fastify.
 
-Tecnologia prevista:
-
-```text
-Socket.IO
-```
-
-Il server pubblicherà aggiornamenti verso:
-
-- console amministratore;
-- operatori delle squadre;
-- osservatori;
-- schermo pubblico.
+Il server è l'unica fonte autoritativa dello stato.
 
 I client non si scambiano direttamente informazioni tra loro.
 
-```text
+Il layer realtime comprende:
+
+- connessioni Socket.IO;
+- registrazione dei dispositivi;
+- autenticazione tramite PIN;
+- ruoli OPERATOR e OBSERVER;
+- una sola connessione OPERATOR per squadra;
+- room per sessione;
+- room per squadra;
+- room per operatori;
+- room per osservatori;
+- publisher realtime;
+- dispatcher degli eventi;
+- dispatcher degli snapshot;
+- snapshot autorevole alla registrazione;
+- socket command handler.
+
+Eventi principali:
+
+realtime:connected
+realtime:register
+realtime:registered
+realtime:error
+auction:command
+auction:event
+auction:snapshot
+
+Il flusso realtime operativo è:
+
 Client command
-      │
-      ▼
-Authoritative server
-      │
-      ├── validation
-      ├── persistence
-      ├── event creation
-      └── state update
-              │
-              ▼
-      Realtime broadcast
-```
+      |
+      v
+Socket command handler
+      |
+      v
+Command coordinator
+      |
+      v
+Atomic command service
+      |
+      v
+Atomic executor
+      |
+      v
+Database transaction
+      |
+      v
+Commit
+      |
+      +--> Auction event
+      |
+      +--> Authoritative snapshot
+
+Gli observer sono sempre read-only.
+
+I telecomandi OPERATOR possono inviare solo comandi relativi alla propria squadra e alla propria sessione.
+
+I comandi remoti disponibili nella v0.7.0 sono:
+
+BID
+PASS
+UNDO_PASS
+
+I comandi amministrativi restano riservati al banditore:
+
+OPEN
+CONFIRM
+CANCEL
+
+La disconnessione di un dispositivo non equivale mai a PASS.
+
+La riconnessione richiede una nuova registrazione e produce un nuovo snapshot autorevole.
 
 ---
 
 ## 11. Comandi ed eventi
 
-Il modello operativo previsto segue il principio:
-
-```text
-Command → Validation → Event → State update → Broadcast
-```
-
-### Comandi
-
 Un comando rappresenta una richiesta di modifica dello stato.
 
-Esempi:
+Ogni comando di modifica contiene almeno:
 
-```text
-OPEN_CALL
-PLACE_BID
-PASS_TEAM
-UNDO_PASS
-CONFIRM_AWARD
-SUSPEND_SESSION
-RESUME_SESSION
-```
-
-Ogni comando realtime dovrà contenere almeno:
-
-```text
 commandId
 stateVersion
-```
 
-### Eventi
+Il commandId identifica univocamente il comando.
 
-Un evento rappresenta un fatto già avvenuto e accettato dal server.
+stateVersion rappresenta la versione autoritativa dello stato sulla quale il comando è stato costruito.
 
-Esempi:
+La pipeline dei comandi è:
 
-```text
-CALL_OPENED
-BID_ACCEPTED
+Validation
+      |
+      v
+Idempotency check
+      |
+      v
+stateVersion check
+      |
+      v
+Domain command
+      |
+      v
+Aggregate persistence
+      |
+      v
+stateVersion increment
+      |
+      v
+Command registry
+      |
+      v
+Commit
+      |
+      v
+Realtime event
+      |
+      v
+Authoritative snapshot
+
+Gli eventi rappresentano fatti già avvenuti e accettati dal server.
+
+Eventi d'asta implementati:
+
+AUCTION_CALL_OPENED
+BID_PLACED
 TEAM_PASSED
-AWARD_CONFIRMED
-SESSION_SUSPENDED
-SESSION_RESUMED
-```
+TEAM_PASS_UNDONE
+AUCTION_CALL_CONFIRMED
+AUCTION_CALL_CANCELLED
 
-Gli eventi saranno utilizzati per:
+Gli eventi vengono pubblicati soltanto dopo il completamento della transazione.
 
-- aggiornare i client;
-- costruire l’audit trail;
-- supportare il recovery;
-- diagnosticare problemi.
+Un replay idempotente non genera una nuova pubblicazione di evento o snapshot.
 
 ---
 
 ## 12. Concorrenza e idempotenza
 
-Anche se l’applicazione opera su una rete locale, più dispositivi possono inviare comandi quasi simultaneamente.
+La consistenza è garantita tramite optimistic concurrency control.
 
-Per evitare inconsistenze:
+La tabella della sessione contiene uno stateVersion persistente.
 
-- i comandi vengono elaborati sequenzialmente;
-- ogni comando possiede un identificatore univoco;
-- un comando duplicato non viene applicato due volte;
-- ogni comando fa riferimento a una versione dello stato;
-- un comando basato su uno stato obsoleto viene rifiutato;
-- il database applica transazioni alle operazioni critiche.
+Ogni comando specifica:
 
-Errore previsto:
+commandId
+expected stateVersion
 
-```text
+L'esecuzione atomica comprende:
+
+- lettura dell'aggregate;
+- controllo del command registry;
+- verifica dello stateVersion;
+- applicazione delle regole di dominio;
+- persistenza dell'aggregate;
+- incremento dello stateVersion;
+- registrazione del comando;
+- commit.
+
+Se lo stateVersion ricevuto non coincide con quello corrente, il comando viene rifiutato con:
+
 STALE_STATE
-```
+
+Se lo stesso commandId viene ripresentato con gli stessi dati:
+
+- il comando non viene rieseguito;
+- viene restituito il risultato precedentemente persistito;
+- idempotentReplay è true;
+- evento e snapshot non vengono ripubblicati.
+
+Se lo stesso commandId viene riutilizzato con dati differenti, il comando viene rifiutato con:
+
+COMMAND_ID_CONFLICT
+
+Aggregate, stateVersion e command registry vengono aggiornati nella stessa transazione.
+
+In caso di errore la transazione viene interamente annullata.
 
 ---
 
@@ -906,65 +981,61 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 
 La versione corrente è:
 
-```text
-v0.5.0
-```
+v0.7.0
 
 Sono operative:
 
 - monorepo pnpm;
 - backend Fastify;
 - frontend React e Vite;
-- TypeScript;
-- SQLite;
-- Drizzle ORM;
-- migrazioni;
-- logging;
-- test;
-- health check applicativo;
-- health check del database;
-- gestione delle sessioni d'asta;
-- gestione delle squadre;
-- gestione dei presidenti;
-- associazione squadre-sessioni d'asta;
-- repository applicativi;
-- service applicativi;
-- API REST complete per la configurazione della lega;
-- gestione dei giocatori;
-- gestione delle rose iniziali;
-- import archivio giocatori FMS ReVo;
-- import transazionale delle rose iniziali;
-- repository e service dedicati ai giocatori;
-- API REST per l'importazione.
+- SQLite e Drizzle ORM;
+- configurazione della lega;
+- import giocatori e rose iniziali;
+- motore d'asta;
+- persistenza delle chiamate d'asta;
+- API REST del motore d'asta;
+- Socket.IO integrato con Fastify;
+- registrazione e autenticazione dei dispositivi realtime;
+- ruoli OPERATOR e OBSERVER;
+- stanze realtime per sessione e squadra;
+- snapshot autorevoli;
+- eventi realtime dell'asta;
+- stateVersion persistente;
+- command registry persistente;
+- controllo ottimistico della concorrenza;
+- idempotenza tramite commandId;
+- esecuzione atomica dei comandi;
+- protocollo HTTP atomico;
+- protocollo Socket.IO auction:command;
+- telecomandi BID, PASS e UNDO_PASS;
+- riconnessione con nuova sincronizzazione;
+- test automatici del backend.
 
-Il motore d'asta, il realtime, i telecomandi e lo schermo pubblico non sono ancora implementati.
+La v0.7.0 completa quindi il layer realtime necessario per collegare i futuri client operativi al server autoritativo.
 
 ---
 
 ## 20. Prossima evoluzione
 
-La prossima milestone funzionale è dedicata a:
+La prossima milestone funzionale è:
 
-```text
-Motore d'asta
-```
+v0.8.0 — Conferma assegnazioni e transazioni
 
-L'obiettivo sarà introdurre:
+L'obiettivo sarà rendere atomica l'assegnazione definitiva di un giocatore, comprendendo:
 
-- apertura delle chiamate;
-- gestione dei rilanci;
-- PASS;
-- undo PASS;
-- assegnazione provvisoria;
-- conferma del banditore;
+- verifica dell'aggiudicazione provvisoria;
+- verifica di squadra, crediti e slot disponibili;
+- creazione della voce di rosa;
 - aggiornamento dei crediti;
-- eventi di dominio dell'asta.
+- aggiornamento della disponibilità del giocatore;
+- chiusura della chiamata;
+- registrazione dell'operazione;
+- rollback completo in caso di errore;
+- punto di backup dopo l'operazione critica.
 
 Le decisioni architetturali significative verranno registrate in:
 
-```text
 docs/DECISIONS.md
-```
 
 ---
 
