@@ -378,6 +378,104 @@ export type RealtimeCommandMetadata = z.infer<
   typeof realtimeCommandMetadataSchema
 >;
 
+export const auctionCommandTypeSchema = z.enum([
+  "OPEN",
+  "BID",
+  "PASS",
+  "UNDO_PASS",
+  "CONFIRM",
+  "CANCEL"
+]);
+
+export type AuctionCommandType = z.infer<
+  typeof auctionCommandTypeSchema
+>;
+
+const auctionCommandBaseSchema = z.object({
+  auctionCallId:
+    z.string().trim().min(1).max(100),
+  metadata:
+    realtimeCommandMetadataSchema
+});
+
+export const auctionCommandRequestSchema =
+  z.discriminatedUnion(
+    "command",
+    [
+      auctionCommandBaseSchema.extend({
+        command: z.literal("OPEN"),
+        openingBid:
+          z.number().int().positive()
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("BID"),
+        auctionSessionTeamId:
+          z.string().trim().min(1).max(100),
+        bid:
+          z.number().int().positive()
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("PASS"),
+        auctionSessionTeamId:
+          z.string().trim().min(1).max(100)
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("UNDO_PASS"),
+        auctionSessionTeamId:
+          z.string().trim().min(1).max(100)
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("CONFIRM")
+      }),
+
+      auctionCommandBaseSchema.extend({
+        command: z.literal("CANCEL")
+      })
+    ]
+  );
+
+export type AuctionCommandRequest = z.infer<
+  typeof auctionCommandRequestSchema
+>;
+
+const auctionCommandAckDataSchema = z.object({
+  stateVersion:
+    z.number().int().nonnegative(),
+  idempotentReplay:
+    z.boolean()
+});
+
+const auctionCommandAckErrorSchema = z.object({
+  code: z.string().trim().min(1),
+  message: z.string().trim().min(1)
+});
+
+export const auctionCommandAckSchema =
+  z.discriminatedUnion(
+    "success",
+    [
+      z.object({
+        success: z.literal(true),
+        data: auctionCommandAckDataSchema,
+        error: z.null()
+      }),
+
+      z.object({
+        success: z.literal(false),
+        data: z.null(),
+        error: auctionCommandAckErrorSchema
+      })
+    ]
+  );
+
+export type AuctionCommandAck = z.infer<
+  typeof auctionCommandAckSchema
+>;
+
 export const realtimeErrorCodeSchema = z.enum([
   "VALIDATION_ERROR",
   "UNAUTHORIZED",
@@ -407,6 +505,7 @@ export const realtimeEventNameSchema = z.enum([
   "realtime:register",
   "realtime:registered",
   "realtime:error",
+  "auction:command",
   "auction:event",
   "auction:snapshot"
 ]);
