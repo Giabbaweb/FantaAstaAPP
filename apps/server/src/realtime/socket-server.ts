@@ -7,11 +7,15 @@ import {
 
 import {
   realtimeRegistrationRequestSchema,
+  type AuctionCommandAck,
   type RealtimeConnectedPayload,
   type RealtimeError,
   type RealtimeRegisteredPayload
 } from "@fantaastaapp/contracts";
 
+import type {
+  AuctionCommandSocketHandler
+} from "./auction-command-socket.handler.js";
 import {
   RealtimeConnectionManager
 } from "./realtime-connection-manager.js";
@@ -32,11 +36,17 @@ import {
   auctionSessionTeamRoom
 } from "./room-name.js";
 
+export type SocketServerContext = {
+  io: SocketIOServer;
+  connectionManager:
+    RealtimeConnectionManager;
+};
+
 export function createSocketServer(
   app: FastifyInstance,
   realtimeSnapshotService:
     RealtimeSnapshotService
-): SocketIOServer {
+): SocketServerContext {
   const io = new SocketIOServer(app.server, {
     cors: {
       origin: true
@@ -251,5 +261,37 @@ export function createSocketServer(
     await io.close();
   });
 
-  return io;
+  return {
+    io,
+    connectionManager
+  };
+}
+
+export function registerAuctionCommandSocketHandler(
+  io: SocketIOServer,
+  handler: AuctionCommandSocketHandler
+): void {
+  io.on("connection", (socket) => {
+    socket.on(
+      "auction:command",
+      async (
+        payload: unknown,
+        acknowledge?: (
+          response: AuctionCommandAck
+        ) => void
+      ) => {
+        const response =
+          await handler.handle(
+            socket.id,
+            payload
+          );
+
+        if (
+          typeof acknowledge === "function"
+        ) {
+          acknowledge(response);
+        }
+      }
+    );
+  });
 }

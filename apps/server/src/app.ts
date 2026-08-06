@@ -51,6 +51,9 @@ import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
+  AuctionCommandSocketHandler
+} from "./realtime/auction-command-socket.handler.js";
+import {
   SqliteAuctionSessionStateRepository
 } from "./realtime/auction-session-state.repository.js";
 import {
@@ -70,7 +73,8 @@ import {
   RealtimeSnapshotService
 } from "./realtime/realtime-snapshot.service.js";
 import {
-  createSocketServer
+  createSocketServer,
+  registerAuctionCommandSocketHandler
 } from "./realtime/socket-server.js";
 import {
   SocketIoRealtimePublisher
@@ -97,7 +101,10 @@ export async function buildApp() {
       auctionCallRepository
     );
 
-  const io = createSocketServer(
+  const {
+    io,
+    connectionManager
+  } = createSocketServer(
     app,
     realtimeSnapshotService
   );
@@ -164,6 +171,18 @@ export async function buildApp() {
         );
       }
     );
+
+  const auctionCommandSocketHandler =
+    new AuctionCommandSocketHandler(
+      connectionManager,
+      auctionCallService,
+      auctionCallCommandCoordinator
+    );
+
+  registerAuctionCommandSocketHandler(
+    io,
+    auctionCommandSocketHandler
+  );
 
   await app.register(cors, {
     origin: true
