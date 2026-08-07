@@ -8,7 +8,10 @@ import type {
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { db } from "../db/client.js";
+import type { DatabaseWriteExecutor } from "../db/client.js";
 import { players } from "../db/schema/index.js";
+
+export type PlayerWriteExecutor = DatabaseWriteExecutor;
 
 export type CreatePlayerPersistenceInput = {
   auctionSessionId: string;
@@ -34,6 +37,11 @@ export interface PlayerRepository {
 
   findById(id: string): Promise<Player | null>;
 
+  findByIdWithExecutor(
+    executor: PlayerWriteExecutor,
+    id: string
+  ): Player | null;
+
   findByFmsCode(
     auctionSessionId: string,
     fmsCode: string
@@ -52,6 +60,12 @@ export interface PlayerRepository {
     id: string,
     input: UpdatePlayerPersistenceInput
   ): Promise<Player | null>;
+
+  updateAvailabilityStatusWithExecutor(
+    executor: PlayerWriteExecutor,
+    id: string,
+    availabilityStatus: PlayerAvailabilityStatus
+  ): Player | null;
 
   delete(id: string): Promise<boolean>;
 }
@@ -77,12 +91,25 @@ export class SqlitePlayerRepository
       );
   }
 
-  async findById(id: string): Promise<Player | null> {
-    const [player] = await db
+  async findById(
+    id: string
+  ): Promise<Player | null> {
+    return this.findByIdWithExecutor(
+      db,
+      id
+    );
+  }
+
+  findByIdWithExecutor(
+    executor: PlayerWriteExecutor,
+    id: string
+  ): Player | null {
+    const [player] = executor
       .select()
       .from(players)
       .where(eq(players.id, id))
-      .limit(1);
+      .limit(1)
+      .all();
 
     return player ?? null;
   }
@@ -162,6 +189,24 @@ export class SqlitePlayerRepository
       })
       .where(eq(players.id, id))
       .returning();
+
+    return player ?? null;
+  }
+
+  updateAvailabilityStatusWithExecutor(
+    executor: PlayerWriteExecutor,
+    id: string,
+    availabilityStatus: PlayerAvailabilityStatus
+  ): Player | null {
+    const [player] = executor
+      .update(players)
+      .set({
+        availabilityStatus,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(players.id, id))
+      .returning()
+      .all();
 
     return player ?? null;
   }
