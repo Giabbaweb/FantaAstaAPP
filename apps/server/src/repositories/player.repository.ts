@@ -5,7 +5,13 @@ import type {
   PlayerAvailabilityStatus,
   PlayerRole
 } from "@fantaastaapp/contracts";
-import { and, asc, eq, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  sql
+} from "drizzle-orm";
 
 import { db } from "../db/client.js";
 import type { DatabaseWriteExecutor } from "../db/client.js";
@@ -41,6 +47,11 @@ export interface PlayerRepository {
     executor: PlayerWriteExecutor,
     id: string
   ): Player | null;
+
+  findByIdsWithExecutor(
+    executor: PlayerWriteExecutor,
+    ids: string[]
+  ): Player[];
 
   findByFmsCode(
     auctionSessionId: string,
@@ -112,6 +123,25 @@ export class SqlitePlayerRepository
       .all();
 
     return player ?? null;
+  }
+
+  findByIdsWithExecutor(
+    executor: PlayerWriteExecutor,
+    ids: string[]
+  ): Player[] {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return executor
+      .select()
+      .from(players)
+      .where(inArray(players.id, ids))
+      .orderBy(
+        asc(players.name),
+        asc(players.id)
+      )
+      .all();
   }
 
   async findByFmsCode(
