@@ -12,6 +12,7 @@ export {
   auctionCallTeamStatuses,
   CancelAuctionCallDomainError,
   ConfirmAuctionCallDomainError,
+  assertConfirmedAuctionAwardAllowed,
   cancelAuctionCall,
   confirmAuctionCall,
   calculateMaximumBid,
@@ -48,6 +49,7 @@ export type {
   ConfirmAuctionCallDomainErrorCode,
   ConfirmAuctionCallInput,
   ConfirmAuctionCallResult,
+  ConfirmedAuctionAwardInput,
   PlaceBidDomainErrorCode,
   PlaceBidInput,
   PlaceBidResult
