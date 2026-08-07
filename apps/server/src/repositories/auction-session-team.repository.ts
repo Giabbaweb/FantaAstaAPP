@@ -8,6 +8,7 @@ import type {
 import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "../db/client.js";
+import type { DatabaseWriteExecutor } from "../db/client.js";
 import {
   auctionSessionTeams
 } from "../db/schema/index.js";
@@ -22,6 +23,32 @@ const auctionSessionTeamPublicSelection = {
   remainingCredits:
     auctionSessionTeams.remainingCredits
 };
+
+const auctionSessionTeamPersistenceSelection = {
+  id: auctionSessionTeams.id,
+  ...auctionSessionTeamPublicSelection
+};
+
+export type AuctionSessionTeamWriteExecutor =
+  DatabaseWriteExecutor;
+
+export type AuctionSessionTeamPersistenceRecord =
+  AuctionSessionTeam & {
+    id: string;
+  };
+
+export interface AuctionSessionTeamTransactionalRepository {
+  findByIdWithExecutor(
+    executor: AuctionSessionTeamWriteExecutor,
+    id: string
+  ): AuctionSessionTeamPersistenceRecord | null;
+
+  updateRemainingCreditsWithExecutor(
+    executor: AuctionSessionTeamWriteExecutor,
+    id: string,
+    remainingCredits: number
+  ): AuctionSessionTeamPersistenceRecord | null;
+}
 
 export interface AuctionSessionTeamRepository {
   findByAuctionSessionId(
@@ -51,7 +78,9 @@ export interface AuctionSessionTeamRepository {
 }
 
 export class SqliteAuctionSessionTeamRepository
-  implements AuctionSessionTeamRepository
+    implements
+      AuctionSessionTeamRepository,
+      AuctionSessionTeamTransactionalRepository
 {
   async findByAuctionSessionId(
     auctionSessionId: string
@@ -139,6 +168,41 @@ export class SqliteAuctionSessionTeamRepository
       .returning(
         auctionSessionTeamPublicSelection
       );
+
+    return auctionSessionTeam ?? null;
+  }
+
+  findByIdWithExecutor(
+    executor: AuctionSessionTeamWriteExecutor,
+    id: string
+  ): AuctionSessionTeamPersistenceRecord | null {
+    const [auctionSessionTeam] = executor
+      .select(
+        auctionSessionTeamPersistenceSelection
+      )
+      .from(auctionSessionTeams)
+      .where(eq(auctionSessionTeams.id, id))
+      .limit(1)
+      .all();
+
+    return auctionSessionTeam ?? null;
+  }
+
+  updateRemainingCreditsWithExecutor(
+    executor: AuctionSessionTeamWriteExecutor,
+    id: string,
+    remainingCredits: number
+  ): AuctionSessionTeamPersistenceRecord | null {
+    const [auctionSessionTeam] = executor
+      .update(auctionSessionTeams)
+      .set({
+        remainingCredits
+      })
+      .where(eq(auctionSessionTeams.id, id))
+      .returning(
+        auctionSessionTeamPersistenceSelection
+      )
+      .all();
 
     return auctionSessionTeam ?? null;
   }
