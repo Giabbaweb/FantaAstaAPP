@@ -2,6 +2,9 @@ import {
   db
 } from "../db/client.js";
 import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
+import type {
   AuctionCallAggregate,
   AuctionCallRepository
 } from "../repositories/auction-call.repository.js";
@@ -45,7 +48,8 @@ export type ExecuteAtomicAuctionCommandInput = {
   expectedStateVersion: number;
   requestFingerprint: string;
   apply: (
-    aggregate: AuctionCallAggregate
+    aggregate: AuctionCallAggregate,
+    executor: DatabaseWriteExecutor
   ) => AuctionCallAggregate;
 };
 
@@ -134,7 +138,10 @@ export class AtomicAuctionCommandExecutor {
       }
 
       const updatedAggregate =
-        input.apply(currentAggregate);
+        input.apply(
+          currentAggregate,
+          tx
+        );
 
       const savedAuctionCallId =
         this.auctionCallRepository
