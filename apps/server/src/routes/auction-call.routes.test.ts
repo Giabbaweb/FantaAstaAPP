@@ -6,9 +6,20 @@ import {
   it
 } from "vitest";
 
+import { eq } from "drizzle-orm";
+
 import {
   buildApp
 } from "../app.js";
+import {
+  db
+} from "../db/client.js";
+import {
+  auctionSessions,
+  auctionSessionTeams,
+  players,
+  rosterEntries
+} from "../db/schema/index.js";
 import {
   createAuctionCallAggregate,
   createAuctionSession,
@@ -692,6 +703,7 @@ describe("auction call read routes", () => {
                   | null;
               };
             };
+            stateVersion: number;
             error: null;
           }>();
 
@@ -703,10 +715,257 @@ describe("auction call read routes", () => {
           provisionalWinnerAuctionSessionTeamId:
             fixture.auctionSessionTeam1Id
         });
+
+        expect(
+          confirmedCall.stateVersion
+        ).toBe(4);
+
+        const [storedRosterEntry] =
+          await db
+            .select()
+            .from(rosterEntries)
+            .where(
+              eq(
+                rosterEntries.playerId,
+                fixture.playerId
+              )
+            )
+            .limit(1);
+
+        expect(storedRosterEntry).toMatchObject({
+          auctionSessionTeamId:
+            fixture.auctionSessionTeam1Id,
+          playerId: fixture.playerId,
+          acquisitionCost: 1,
+          contractYear: 1,
+          source: "AUCTION"
+        });
+
+        const [storedPlayer] =
+          await db
+            .select()
+            .from(players)
+            .where(
+              eq(
+                players.id,
+                fixture.playerId
+              )
+            )
+            .limit(1);
+
+        expect(
+          storedPlayer?.availabilityStatus
+        ).toBe("ROSTERED");
+
+        const [storedSessionTeam] =
+          await db
+            .select()
+            .from(auctionSessionTeams)
+            .where(
+              eq(
+                auctionSessionTeams.id,
+                fixture.auctionSessionTeam1Id
+              )
+            )
+            .limit(1);
+
+        expect(
+          storedSessionTeam?.remainingCredits
+        ).toBe(329);
       }
     );
 
     it(
+  "rolls back confirm when the player is not available",
+  async () => {
+    const fixture =
+      await createAuctionCallAggregate();
+
+    const openResponse = await app.inject({
+      method: "POST",
+      url:
+        `/api/auction-calls/${fixture.auctionCallId}/commands/open`,
+      payload: {
+        commandId: "cmd-rollback-open",
+        stateVersion: 0,
+        openingBid: 1
+      }
+    });
+
+    expect(openResponse.statusCode).toBe(200);
+
+    const team2PassResponse = await app.inject({
+      method: "POST",
+      url:
+        `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
+      payload: {
+        commandId: "cmd-rollback-pass-1",
+        stateVersion: 1,
+        auctionSessionTeamId:
+          fixture.auctionSessionTeam2Id
+      }
+    });
+
+    expect(
+      team2PassResponse.statusCode
+    ).toBe(200);
+
+    const team3PassResponse = await app.inject({
+      method: "POST",
+      url:
+        `/api/auction-calls/${fixture.auctionCallId}/commands/pass`,
+      payload: {
+        commandId: "cmd-rollback-pass-2",
+        stateVersion: 2,
+        auctionSessionTeamId:
+          fixture.auctionSessionTeam3Id
+      }
+    });
+
+    expect(
+      team3PassResponse.statusCode
+    ).toBe(200);
+
+    await db
+      .update(players)
+      .set({
+        availabilityStatus: "UNAVAILABLE"
+      })
+      .where(
+        eq(
+          players.id,
+          fixture.playerId
+        )
+      );
+
+    const confirmResponse = await app.inject({
+      method: "POST",
+      url:
+        `/api/auction-calls/${fixture.auctionCallId}/commands/confirm`,
+      payload: {
+        commandId: "cmd-rollback-confirm",
+        stateVersion: 3
+      }
+    });
+
+    expect(
+      confirmResponse.statusCode
+    ).toBe(409);
+
+    expect(
+      confirmResponse.json<{
+        data: null;
+        error: {
+          code: string;
+          message: string;
+        };
+      }>()
+    ).toMatchObject({
+      data: null,
+      error: {
+        code: "PLAYER_NOT_AVAILABLE"
+      }
+    });
+
+    const storedCallResponse =
+      await app.inject({
+        method: "GET",
+        url:
+          `/api/auction-calls/${fixture.auctionCallId}`
+      });
+
+    expect(
+      storedCallResponse.statusCode
+    ).toBe(200);
+
+    expect(
+      storedCallResponse.json<{
+        data: {
+          call: {
+            status: string;
+            currentBid: number | null;
+            provisionalWinnerAuctionSessionTeamId:
+              | string
+              | null;
+          };
+        };
+      }>().data.call
+    ).toMatchObject({
+      status: "PROVISIONAL_AWARD",
+      currentBid: 1,
+      provisionalWinnerAuctionSessionTeamId:
+        fixture.auctionSessionTeam1Id
+    });
+
+    const storedRosterEntries =
+      await db
+        .select()
+        .from(rosterEntries)
+        .where(
+          eq(
+            rosterEntries.playerId,
+            fixture.playerId
+          )
+        );
+
+    expect(
+      storedRosterEntries
+    ).toHaveLength(0);
+
+    const [storedPlayer] =
+      await db
+        .select()
+        .from(players)
+        .where(
+          eq(
+            players.id,
+            fixture.playerId
+          )
+        )
+        .limit(1);
+
+    expect(
+      storedPlayer?.availabilityStatus
+    ).toBe("UNAVAILABLE");
+
+    const [storedSessionTeam] =
+      await db
+        .select()
+        .from(auctionSessionTeams)
+        .where(
+          eq(
+            auctionSessionTeams.id,
+            fixture.auctionSessionTeam1Id
+          )
+        )
+        .limit(1);
+
+    expect(
+      storedSessionTeam?.remainingCredits
+    ).toBe(330);
+
+    const [storedSession] =
+      await db
+        .select({
+          stateVersion:
+            auctionSessions.stateVersion
+        })
+        .from(auctionSessions)
+        .where(
+          eq(
+            auctionSessions.id,
+            fixture.auctionSessionId
+          )
+        )
+        .limit(1);
+
+    expect(
+      storedSession?.stateVersion
+    ).toBe(3);
+  }
+);
+
+it(
       "cancels a draft auction call",
       async () => {
         const fixture =
