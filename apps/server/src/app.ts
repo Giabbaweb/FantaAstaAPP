@@ -95,6 +95,9 @@ import {
   AuctionCallCommandHandler
 } from "./services/auction-call-command-handler.js";
 import {
+  NoopAuctionBackupRequester
+} from "./services/auction-backup-requester.js";
+import {
   AuctionCallService
 } from "./services/auction-call.service.js";
 import {
@@ -174,6 +177,7 @@ export async function buildApp() {
       atomicAuctionCallCommandService,
       auctionRealtimeDispatcher,
       auctionSnapshotDispatcher,
+      new NoopAuctionBackupRequester(),
       ({
         stage,
         type,
