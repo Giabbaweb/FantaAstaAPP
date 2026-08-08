@@ -1,8 +1,11 @@
 import {
   AuctionCallDomainError,
+  ConfirmAuctionCallDomainError,
+  MaximumBidDomainError,
   OpenAuctionCallDomainError,
   PassTurnDomainError,
   PlaceBidDomainError,
+  RosterEntryDomainError,
   UndoPassDomainError
 } from "@fantaastaapp/domain";
 
@@ -12,6 +15,9 @@ import {
 import {
   AuctionCallServiceError
 } from "../services/auction-call.service.js";
+import {
+  ConfirmedAuctionAwardServiceError
+} from "../services/confirmed-auction-award.service.js";
 
 type AuctionCallErrorBody = {
   data: null;
@@ -35,6 +41,25 @@ export type AuctionCallErrorMapping = {
   body: AuctionCallErrorBody;
 };
 
+function createMapping(
+  statusCode: AuctionCallErrorMapping["statusCode"],
+  error: {
+    code: string;
+    message: string;
+  }
+): AuctionCallErrorMapping {
+  return {
+    statusCode,
+    body: {
+      data: null,
+      error: {
+        code: error.code,
+        message: error.message
+      }
+    }
+  };
+}
+
 export function mapAuctionCallError(
   error: unknown
 ): AuctionCallErrorMapping | null {
@@ -45,41 +70,14 @@ export function mapAuctionCallError(
     switch (error.code) {
       case "AUCTION_CALL_NOT_FOUND":
       case "AUCTION_SESSION_STATE_NOT_FOUND":
-        return {
-          statusCode: 404,
-          body: {
-            data: null,
-            error: {
-              code: error.code,
-              message: error.message
-            }
-          }
-        };
+        return createMapping(404, error);
 
       case "STALE_STATE":
       case "COMMAND_ID_CONFLICT":
-        return {
-          statusCode: 409,
-          body: {
-            data: null,
-            error: {
-              code: error.code,
-              message: error.message
-            }
-          }
-        };
+        return createMapping(409, error);
 
       case "AUCTION_CALL_SAVE_FAILED":
-        return {
-          statusCode: 500,
-          body: {
-            data: null,
-            error: {
-              code: error.code,
-              message: error.message
-            }
-          }
-        };
+        return createMapping(500, error);
 
       default:
         return null;
@@ -89,28 +87,10 @@ export function mapAuctionCallError(
   if (error instanceof AuctionCallServiceError) {
     switch (error.code) {
       case "AUCTION_CALL_NOT_FOUND":
-        return {
-          statusCode: 404,
-          body: {
-            data: null,
-            error: {
-              code: error.code,
-              message: error.message
-            }
-          }
-        };
+        return createMapping(404, error);
 
       case "AUCTION_CALL_SAVE_FAILED":
-        return {
-          statusCode: 500,
-          body: {
-            data: null,
-            error: {
-              code: error.code,
-              message: error.message
-            }
-          }
-        };
+        return createMapping(500, error);
 
       default:
         return null;
@@ -118,68 +98,79 @@ export function mapAuctionCallError(
   }
 
   if (error instanceof AuctionCallDomainError) {
-    return {
-      statusCode: 409,
-      body: {
-        data: null,
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      }
-    };
+    return createMapping(409, error);
   }
 
   if (error instanceof OpenAuctionCallDomainError) {
-    const statusCode =
+    return createMapping(
       error.code === "INVALID_OPENING_BID"
         ? 400
-        : 409;
-
-    return {
-      statusCode,
-      body: {
-        data: null,
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      }
-    };
+        : 409,
+      error
+    );
   }
 
   if (error instanceof PlaceBidDomainError) {
-    const statusCode =
+    return createMapping(
       error.code === "INVALID_BID"
         ? 400
-        : 409;
-
-    return {
-      statusCode,
-      body: {
-        data: null,
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      }
-    };
+        : 409,
+      error
+    );
   }
 
   if (
     error instanceof PassTurnDomainError ||
-    error instanceof UndoPassDomainError
+    error instanceof UndoPassDomainError ||
+    error instanceof ConfirmAuctionCallDomainError
   ) {
-    return {
-      statusCode: 409,
-      body: {
-        data: null,
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      }
-    };
+    return createMapping(409, error);
+  }
+
+  if (error instanceof RosterEntryDomainError) {
+    return createMapping(
+      error.code === "INVALID_ACQUISITION_COST" ||
+        error.code === "INVALID_CONTRACT_YEAR"
+        ? 400
+        : 409,
+      error
+    );
+  }
+
+  if (error instanceof MaximumBidDomainError) {
+    return createMapping(
+      error.code === "INVALID_REMAINING_CREDITS" ||
+        error.code === "INVALID_REMAINING_ROSTER_SLOTS"
+        ? 400
+        : 409,
+      error
+    );
+  }
+
+  if (
+    error instanceof
+      ConfirmedAuctionAwardServiceError
+  ) {
+    switch (error.code) {
+      case "WINNER_NOT_FOUND":
+      case "PLAYER_NOT_FOUND":
+      case "PLAYER_SESSION_MISMATCH":
+        return createMapping(409, error);
+
+      case "PLAYER_NOT_AVAILABLE":
+      case "PLAYER_ALREADY_ROSTERED":
+        return createMapping(409, error);
+
+      case "ROSTER_PLAYER_NOT_FOUND":
+        return createMapping(409, error);
+
+      case "WINNER_UPDATE_FAILED":
+      case "PLAYER_UPDATE_FAILED":
+        return createMapping(500, error);
+
+      default:
+        return null;
+    }
   }
 
   return null;
