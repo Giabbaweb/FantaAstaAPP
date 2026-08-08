@@ -2779,3 +2779,131 @@ La persistenza di uno storico completo della presenza dei dispositivi non viene 
 * La presenza online deve essere ricostruita dopo il riavvio del server.
 * Un pannello amministrativo completo richiederà ulteriori eventi o viste di presenza.
 * Stato di rete e stato della chiamata devono essere combinati dalla UI quando necessario.
+
+---
+
+# ADR-045 — L’audit di dominio è persistito separatamente dal command registry
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Audit, persistenza e integrità delle operazioni d’asta
+
+## Contesto
+
+La pipeline autorevole dei comandi utilizza un `command_registry`
+persistente per garantire idempotenza, controllo dei duplicati e
+ricostruzione del risultato di un comando già applicato.
+
+Il `command_registry` registra informazioni tecniche quali:
+
+- `commandId`;
+- tipo di comando;
+- versione dello stato attesa;
+- versione dello stato risultante;
+- fingerprint della richiesta;
+- aggregate risultante.
+
+Queste informazioni sono necessarie all’infrastruttura dei comandi,
+ma non costituiscono da sole un audit trail di dominio esplicito.
+
+In particolare, una conferma di aggiudicazione deve poter essere
+ricostruita semanticamente come operazione economica e di rosa,
+senza dipendere dall’interpretazione del payload tecnico conservato
+nel command registry.
+
+La Milestone 8 richiede inoltre che la registrazione dell’operazione
+faccia parte della stessa unità atomica che assegna il giocatore,
+aggiorna i crediti, aggiorna la rosa e chiude la chiamata.
+
+## Decisione
+
+Introdurre un audit trail persistente di dominio separato dal
+`command_registry`.
+
+Gli eventi di dominio dell’asta vengono persistiti in una struttura
+dedicata:
+
+```text
+auction_events
+```
+
+Il primo evento richiesto dalla Milestone 8 rappresenta la conferma
+definitiva di un’aggiudicazione.
+
+L’evento deve contenere almeno:
+
+```text
+auctionSessionId
+auctionCallId
+eventType
+auctionSessionTeamId
+playerId
+amount
+createdAt
+```
+
+Quando utili alla ricostruzione dell’operazione possono essere
+persistiti anche dati economici direttamente collegati
+all’assegnazione, come:
+
+```text
+creditsBefore
+creditsAfter
+```
+
+La registrazione dell’evento di conferma deve avvenire nella stessa
+transazione SQLite che:
+
+1. verifica l’aggiudicazione;
+2. crea la voce di rosa;
+3. aggiorna i crediti residui;
+4. aggiorna la disponibilità del giocatore;
+5. persiste la chiamata confermata;
+6. incrementa `stateVersion`;
+7. registra il comando nel `command_registry`.
+
+Se una qualsiasi parte dell’operazione fallisce, anche l’evento di
+audit deve essere annullato dal rollback della stessa transazione.
+
+Il `command_registry` mantiene esclusivamente la propria
+responsabilità infrastrutturale e non viene utilizzato come
+sostituto dell’audit trail di dominio.
+
+Il logging Pino rimane separato sia dal `command_registry` sia
+dall’audit di dominio.
+
+## Conseguenze
+
+### Positive
+
+- Separazione esplicita tra idempotenza tecnica e storico di dominio.
+- Le aggiudicazioni possono essere ricostruite senza interpretare
+  payload tecnici.
+- L’audit partecipa alla stessa atomicità dell’operazione critica.
+- Nessun evento può descrivere un’assegnazione annullata dal rollback.
+- Base stabile per storico, diagnostica, esportazioni e recovery.
+- L’audit potrà essere esteso ad altre operazioni significative senza
+  sovraccaricare il command registry.
+
+### Negative
+
+- Viene introdotta una nuova struttura persistente.
+- Sono necessari schema, repository e migration dedicati.
+- Alcune informazioni possono essere presenti sia nel risultato del
+  command registry sia nell’evento di dominio.
+- Occorre definire quali operazioni future meritino un evento
+  persistente.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-015 per la separazione tra logging tecnico e audit;
+- ADR-042 per `stateVersion`, transazioni atomiche e command registry;
+- ADR-043 per la pipeline atomica dei comandi autorevoli.
+
+Il sottosistema completo di backup e recovery rimane separato ed è
+previsto dalla Milestone 13.
+
+La Milestone 8 predisporrà soltanto il punto applicativo necessario
+a richiedere un backup dopo il commit dell’operazione critica.
