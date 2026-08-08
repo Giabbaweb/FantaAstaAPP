@@ -15,6 +15,9 @@ import {
   SqliteAuctionCallRepository
 } from "./repositories/auction-call.repository.js";
 import {
+  SqliteAuctionEventRepository
+} from "./repositories/auction-event.repository.js";
+import {
   SqliteAuctionSessionTeamRepository
 } from "./repositories/auction-session-team.repository.js";
 import {
@@ -155,7 +158,8 @@ export async function buildApp() {
     new ConfirmedAuctionAwardService(
       new SqliteAuctionSessionTeamRepository(),
       new SqliteRosterEntryRepository(),
-      new SqlitePlayerRepository()
+      new SqlitePlayerRepository(),
+      new SqliteAuctionEventRepository()
     );
 
   const atomicAuctionCallCommandService =

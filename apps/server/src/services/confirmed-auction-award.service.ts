@@ -9,6 +9,9 @@ import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import type {
+  AuctionEventRepository
+} from "../repositories/auction-event.repository.js";
+import type {
   AuctionSessionTeamTransactionalRepository
 } from "../repositories/auction-session-team.repository.js";
 import type {
@@ -58,6 +61,11 @@ export class ConfirmedAuctionAwardService {
         | "findByIdWithExecutor"
         | "findByIdsWithExecutor"
         | "updateAvailabilityStatusWithExecutor"
+      >,
+    private readonly auctionEventRepository:
+      Pick<
+        AuctionEventRepository,
+        "createWithExecutor"
       >
   ) {}
 
@@ -235,5 +243,29 @@ export class ConfirmedAuctionAwardService {
         `Failed to update player "${player.id}"`
       );
     }
+
+    this.auctionEventRepository
+      .createWithExecutor(
+        executor,
+        {
+          auctionSessionId:
+            aggregate.call.auctionSessionId,
+          auctionCallId:
+            aggregate.call.id,
+          eventType:
+            "AUCTION_AWARD_CONFIRMED",
+          auctionSessionTeamId:
+            winner.id,
+          playerId:
+            player.id,
+          amount:
+            acquisitionCost,
+          creditsBefore:
+            winner.remainingCredits,
+          creditsAfter:
+            winner.remainingCredits -
+            acquisitionCost
+        }
+      );
   }
 }

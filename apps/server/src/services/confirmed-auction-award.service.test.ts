@@ -8,6 +8,8 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../db/client.js";
 import {
+  auctionCalls,
+  auctionEvents,
   auctionSessions,
   auctionSessionTeams,
   leagues,
@@ -15,6 +17,9 @@ import {
   rosterEntries,
   teams
 } from "../db/schema/index.js";
+import {
+  SqliteAuctionEventRepository
+} from "../repositories/auction-event.repository.js";
 import {
   SqliteAuctionSessionTeamRepository
 } from "../repositories/auction-session-team.repository.js";
@@ -44,6 +49,24 @@ const playerId =
 
 describe("ConfirmedAuctionAwardService", () => {
   afterEach(() => {
+    db.delete(auctionEvents)
+      .where(
+        eq(
+          auctionEvents.auctionSessionId,
+          auctionSessionId
+        )
+      )
+      .run();
+
+    db.delete(auctionCalls)
+      .where(
+        eq(
+          auctionCalls.auctionSessionId,
+          auctionSessionId
+        )
+      )
+      .run();
+
     db.delete(rosterEntries)
       .where(
         eq(
@@ -167,11 +190,18 @@ describe("ConfirmedAuctionAwardService", () => {
         teams: []
       };
 
+      db.insert(auctionCalls)
+        .values({
+          ...aggregate.call
+        })
+        .run();
+
       const service =
         new ConfirmedAuctionAwardService(
           new SqliteAuctionSessionTeamRepository(),
           new SqliteRosterEntryRepository(),
-          new SqlitePlayerRepository()
+          new SqlitePlayerRepository(),
+          new SqliteAuctionEventRepository()
         );
 
       db.transaction((tx) => {
@@ -224,6 +254,31 @@ describe("ConfirmedAuctionAwardService", () => {
       expect(
         storedSessionTeam?.remainingCredits
       ).toBe(75);
+      const storedEvents = db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionCallId,
+            aggregate.call.id
+          )
+        )
+        .all();
+
+      expect(storedEvents).toHaveLength(1);
+
+      expect(storedEvents[0]).toMatchObject({
+        auctionSessionId,
+        auctionCallId:
+          aggregate.call.id,
+        eventType:
+          "AUCTION_AWARD_CONFIRMED",
+        auctionSessionTeamId,
+        playerId,
+        amount: 25,
+        creditsBefore: 100,
+        creditsAfter: 75
+      });
     }
   );
 
@@ -305,11 +360,18 @@ describe("ConfirmedAuctionAwardService", () => {
         teams: []
       };
 
+      db.insert(auctionCalls)
+        .values({
+          ...aggregate.call
+        })
+        .run();
+
       const service =
         new ConfirmedAuctionAwardService(
           new SqliteAuctionSessionTeamRepository(),
           new SqliteRosterEntryRepository(),
-          new SqlitePlayerRepository()
+          new SqlitePlayerRepository(),
+          new SqliteAuctionEventRepository()
         );
 
       expect(() =>
@@ -362,6 +424,18 @@ describe("ConfirmedAuctionAwardService", () => {
       expect(
         storedSessionTeam?.remainingCredits
       ).toBe(100);
+      const storedEvents = db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionCallId,
+            aggregate.call.id
+          )
+        )
+        .all();
+
+      expect(storedEvents).toHaveLength(0);
     }
   );
 
@@ -475,11 +549,18 @@ describe("ConfirmedAuctionAwardService", () => {
         teams: []
       };
 
+      db.insert(auctionCalls)
+        .values({
+          ...aggregate.call
+        })
+        .run();
+
       const service =
         new ConfirmedAuctionAwardService(
           new SqliteAuctionSessionTeamRepository(),
           new SqliteRosterEntryRepository(),
-          new SqlitePlayerRepository()
+          new SqlitePlayerRepository(),
+          new SqliteAuctionEventRepository()
         );
 
       expect(() =>
@@ -533,6 +614,18 @@ describe("ConfirmedAuctionAwardService", () => {
       expect(
         storedSessionTeam?.remainingCredits
       ).toBe(20);
+      const storedEvents = db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionCallId,
+            aggregate.call.id
+          )
+        )
+        .all();
+
+      expect(storedEvents).toHaveLength(0);
     }
   );
 
