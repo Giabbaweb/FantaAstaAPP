@@ -34,15 +34,21 @@ describe("AtomicAuctionCallCommandService", () => {
       cancelAuctionCall: vi.fn()
     };
 
+    const confirmedAuctionAwardService = {
+      apply: vi.fn()
+    };
+
     const service =
       new AtomicAuctionCallCommandService(
         executor,
-        commandHandler
+        commandHandler,
+        confirmedAuctionAwardService
       );
 
     return {
       executor,
       commandHandler,
+      confirmedAuctionAwardService,
       service
     };
   }
@@ -103,6 +109,67 @@ describe("AtomicAuctionCallCommandService", () => {
     expect(result).toEqual({
       aggregate: updatedAggregate,
       stateVersion: 4,
+      idempotentReplay: false
+    });
+  });
+
+  it("applies the confirmed award inside the command transaction", async () => {
+    const {
+      executor,
+      commandHandler,
+      confirmedAuctionAwardService,
+      service
+    } = createFixture();
+
+    const confirmedAggregate = {
+      ...aggregate
+    } as AuctionCallAggregate;
+
+    const transactionExecutor = {
+      transaction: "executor"
+    };
+
+    commandHandler.confirmAuctionCall
+      .mockReturnValue(
+        confirmedAggregate
+      );
+
+    executor.execute.mockImplementation(
+      async (input) => ({
+        aggregate: input.apply(
+          aggregate,
+          transactionExecutor
+        ),
+        stateVersion: 2,
+        idempotentReplay: false
+      })
+    );
+
+    const result =
+      await service.confirmAuctionCall(
+        "auction-call-1",
+        {
+          commandId: "command-confirm",
+          stateVersion: 1
+        }
+      );
+
+    expect(
+      commandHandler.confirmAuctionCall
+    ).toHaveBeenCalledWith(
+      aggregate
+    );
+
+    expect(
+      confirmedAuctionAwardService.apply
+    ).toHaveBeenCalledWith(
+      transactionExecutor,
+      aggregate
+    );
+
+    expect(result).toEqual({
+      aggregate: confirmedAggregate,
+      stateVersion: 2,
       idempotentReplay: false
     });
   });

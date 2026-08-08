@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.7.0**
+**v0.8.0**
 
 Completed milestones
 
@@ -201,7 +201,15 @@ Completed milestones
 - ✅ Atomic and idempotent auction command pipeline
 - ✅ Socket.IO auction:command protocol
 - ✅ Team remote BID, PASS and UNDO_PASS commands
-- ✅ 187 backend tests passing
+- ✅ Confirmed auction award domain validation
+- ✅ Transactional confirmed-award persistence
+- ✅ Atomic roster, credits and player availability updates
+- ✅ Persistent auction_events domain audit trail
+- ✅ AUCTION_AWARD_CONFIRMED audit event
+- ✅ Complete rollback of confirmed awards and audit on failure
+- ✅ Post-commit backup requester boundary
+- ✅ Idempotent confirmation replay without duplicate backup requests
+- ✅ 217 backend tests passing
 
 Auction Session lifecycle
 
@@ -222,7 +230,7 @@ RUNNING
 
 Next milestone
 
-➡ **v0.8.0 — Conferma assegnazioni e transazioni**
+➡ **v0.9.0 — Schermo pubblico**
 
 ---
 
@@ -298,8 +306,13 @@ The `docs/` directory contains the complete project documentation.
 | v0.5 | ✅ Player Import & Initial Rosters |
 | v0.6 | ✅ Auction Engine |
 | v0.7 | ✅ Realtime Controllers |
-| v0.8 | ⏳ Public Display |
-| v0.9 | ⏳ Recovery, Manual Operations & FMS Integration |
+| v0.8 | ✅ Confirmed Awards & Transactions |
+| v0.9    | ⏭️ Public Display                  |
+| v0.10   | ⏳ Suspension & Resilience         |
+| v0.11   | ⏳ Manual Operations & Corrections |
+| v0.12   | ⏳ FMS Import/Export               |
+| v0.13   | ⏳ Backup & Recovery               |
+| v0.14   | ⏳ Operational Validation          |
 | v1.0 | 🎯 Stable Release |
 
 ---

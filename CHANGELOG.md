@@ -14,6 +14,51 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.8.0] - 2026-08-08
+
+### Added
+
+* Transactional repository operations required by confirmed auction awards
+* Domain validation for definitive auction award confirmation
+* Transactional confirmed-award application service
+* Persistent `auction_events` domain audit trail
+* Transactional Auction Event repository
+* `AUCTION_AWARD_CONFIRMED` audit event
+* Post-commit backup requester boundary for critical confirmed awards
+
+### Changed
+
+* Auction award confirmation now persists roster assignment, remaining credits and player availability atomically
+* Confirmed auction calls now participate in the same authoritative transaction as the definitive award
+* Confirmed-award validation enforces player availability, roster capacity, role limits, remaining credits and roster completability
+* Confirmed award domain audit events are persisted inside the same SQLite transaction
+* Confirmed award errors are mapped consistently through the HTTP command protocol
+* The atomic command pipeline now exposes its transaction executor to command application logic
+* Successful non-replayed confirmations request the post-commit backup boundary
+* Backup-request failures are isolated from an already committed auction command
+* Idempotent confirmation replays do not request duplicate backups
+
+### Tested
+
+* Complete rollback of confirmed awards on transactional failure
+* Confirmed roster-entry persistence
+* Player transition to `ROSTERED`
+* Remaining-credit update
+* Persistent confirmed-award audit events
+* Auction-event repository integration
+* No audit persistence after rollback
+* Post-commit backup request after confirmation
+* No duplicate backup request on idempotent replay
+* Backup-request failure isolation
+* 31 automated server test files
+* 217 automated server tests
+* 10 automated domain test files
+* 86 automated domain tests
+* Full monorepo type checking
+* Full monorepo production build
+
+---
+
 ## [0.7.0] - 2026-08-06
 
 ### Added

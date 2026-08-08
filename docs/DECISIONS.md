@@ -470,7 +470,8 @@ Utilizzare **Socket.IO** per la comunicazione realtime.
 
 # ADR-012 — Elaborazione sequenziale e idempotente dei comandi
 
-**Stato:** `ACCEPTED`  
+**Stato:** `SUPERSEDED`
+**Sostituita da:** ADR-042
 **Data:** 2026-07  
 **Ambito:** Concorrenza
 
@@ -2145,3 +2146,764 @@ Gli errori vengono convertiti in risposte HTTP uniformi utilizzando un mapping c
 * Le API non seguono un modello CRUD puro.
 * L'aggiunta di un nuovo comando richiede l'aggiornamento del dominio, del service e del mapping HTTP.
 * I client devono conoscere i comandi supportati dal server.
+
+---
+
+# ADR-036 — I contratti realtime sono condivisi e il protocollo utilizza comandi tipizzati
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Protocollo realtime e contratti condivisi
+
+## Contesto
+
+La comunicazione realtime introduce un ulteriore confine applicativo tra i client e il server.
+
+I payload ricevuti tramite Socket.IO provengono da un confine non affidabile e devono essere validati prima di raggiungere i casi d'uso applicativi.
+
+Definire eventi, acknowledgement e payload direttamente negli handler Socket.IO produrrebbe il rischio di:
+
+* divergenze tra server e client;
+* nomi degli eventi incoerenti;
+* payload non validati;
+* duplicazione dei metadati comuni ai comandi;
+* accoppiamento dei contratti condivisi all'implementazione Socket.IO.
+
+I comandi realtime devono inoltre conservare la stessa natura esplicita già adottata dalle API HTTP del motore d'asta.
+
+## Decisione
+
+I contratti del protocollo realtime vengono definiti in:
+
+```text
+packages/contracts
+```
+
+e validati tramite Zod.
+
+I contratti condivisi non espongono oggetti infrastrutturali di Socket.IO.
+
+Il protocollo distingue esplicitamente:
+
+* registrazione della connessione;
+* snapshot autorevole;
+* eventi applicativi;
+* comandi inviati dal client;
+* acknowledgement del comando;
+* errori realtime.
+
+I comandi d'asta realtime utilizzano un envelope comune:
+
+```text
+auction:command
+```
+
+contenente i metadati comuni:
+
+```text
+commandId
+stateVersion
+```
+
+e un comando appartenente a una union chiusa e tipizzata.
+
+Il protocollo non accetta aggiornamenti arbitrari dello stato.
+
+L'acknowledgement comunica al mittente l'esito del comando e rimane distinto dagli eventi e dagli snapshot che rappresentano lo stato autorevole stabilito dal server.
+
+## Conseguenze
+
+### Positive
+
+* Server e client condividono gli stessi contratti.
+* I payload vengono validati prima dell'esecuzione.
+* I nomi degli eventi rimangono centralizzati.
+* `commandId` e `stateVersion` hanno una semantica uniforme.
+* L'acknowledgement non viene confuso con lo stato autorevole.
+* Il protocollo può evolvere senza spostare regole di dominio nei transport.
+
+### Negative
+
+* Ogni modifica del protocollo richiede l'aggiornamento dei contratti condivisi.
+* L'aggiunta di nuovi comandi richiede l'estensione esplicita della union e dei relativi test.
+* Client e server devono utilizzare versioni compatibili dei contratti.
+
+---
+
+# ADR-037 — L'identità del dispositivo è distinta dalla connessione realtime
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Identità, registrazione e riconnessione realtime
+
+## Contesto
+
+Una connessione Socket.IO è temporanea.
+
+Refresh del browser, perdita della rete o riconnessione producono un nuovo socket anche quando il dispositivo logico rimane lo stesso.
+
+Il solo fatto che un client riesca a collegarsi al server locale non costituisce inoltre un'autorizzazione ad accedere allo stato operativo dell'asta o a inviare comandi.
+
+È quindi necessario distinguere:
+
+* identità della connessione;
+* identità del dispositivo;
+* partecipazione della squadra alla sessione;
+* ruolo autorizzato della connessione.
+
+## Decisione
+
+`socketId` identifica esclusivamente una singola connessione Socket.IO.
+
+`deviceId` identifica logicamente il dispositivo e può rimanere stabile tra connessioni successive.
+
+Ogni nuova connessione nasce nello stato:
+
+```text
+UNREGISTERED
+```
+
+Una connessione non registrata non può utilizzare i comandi operativi dell'asta.
+
+La registrazione richiede al server di validare le informazioni necessarie alla connessione, incluse:
+
+```text
+auctionSessionId
+auctionSessionTeamId
+deviceId
+requestedRole
+```
+
+e le credenziali previste dal protocollo.
+
+Solo dopo una registrazione valida la connessione assume lo stato:
+
+```text
+REGISTERED
+```
+
+e può essere associata alle room autorizzate.
+
+Una riconnessione viene trattata come una nuova connessione:
+
+* viene assegnato un nuovo `socketId`;
+* l'identità viene rivalidata;
+* l'autorizzazione viene rivalidata;
+* le room vengono riassegnate;
+* viene fornito nuovamente lo stato autorevole.
+
+Nessuna autorizzazione viene dedotta dal solo `socketId` o da una registrazione precedente.
+
+## Conseguenze
+
+### Positive
+
+* Le riconnessioni non riutilizzano autorizzazioni implicite.
+* Il dispositivo può mantenere un'identità stabile pur cambiando socket.
+* Una connessione non registrata non può accedere alle operazioni dell'asta.
+* Refresh e perdita temporanea della rete possono essere gestiti senza modificare lo stato di dominio.
+* Il server mantiene il controllo completo dell'autorizzazione.
+
+### Negative
+
+* Ogni riconnessione richiede una nuova registrazione applicativa.
+* Il client deve conservare un `deviceId` stabile.
+* La gestione della connessione richiede uno stato applicativo distinto dallo stato Socket.IO.
+
+---
+
+# ADR-038 — Il realtime è isolato per sessione tramite Socket.IO rooms
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Isolamento delle comunicazioni realtime
+
+## Contesto
+
+FantaAstaAPP può gestire sessioni operative appartenenti a leghe differenti.
+
+Un broadcast Socket.IO globale potrebbe quindi inviare informazioni di un'asta a dispositivi collegati a una sessione differente.
+
+Sono inoltre necessari canali che permettano di distinguere lo stato generale della sessione dalle comunicazioni destinate a una specifica partecipazione.
+
+L'appartenenza a una room, tuttavia, non può essere considerata una prova sufficiente dell'autorizzazione a eseguire un comando.
+
+## Decisione
+
+Le comunicazioni realtime operative vengono isolate tramite Socket.IO rooms.
+
+I nomi delle room vengono generati attraverso funzioni centralizzate e deterministiche.
+
+Il protocollo utilizza almeno:
+
+```text
+session:<auctionSessionId>
+team:<auctionSessionTeamId>
+```
+
+I broadcast relativi allo stato dell'asta vengono indirizzati alla sessione interessata e non vengono inviati globalmente a tutti i socket.
+
+Le comunicazioni specifiche di una squadra possono utilizzare la relativa team room.
+
+Gli handler non devono costruire autonomamente nomi di room quando esiste l'helper centralizzato.
+
+L'appartenenza a una room non sostituisce mai:
+
+* la registrazione;
+* l'identità della connessione;
+* il ruolo;
+* la verifica dell'autorizzazione del comando.
+
+## Conseguenze
+
+### Positive
+
+* Sessioni appartenenti a leghe differenti rimangono isolate.
+* I broadcast non espongono stato a dispositivi non interessati.
+* La convenzione dei nomi delle room rimane uniforme.
+* Le comunicazioni di squadra possono essere indirizzate separatamente.
+* Autorizzazione e routing rimangono responsabilità distinte.
+
+### Negative
+
+* Ogni registrazione valida deve gestire correttamente l'ingresso nelle room.
+* Eventuali nuove categorie di destinatari richiederanno l'estensione controllata della convenzione.
+* I test realtime devono verificare esplicitamente l'isolamento tra sessioni.
+
+---
+
+# ADR-039 — Il PIN operativo appartiene alla partecipazione della squadra alla sessione
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Autenticazione locale dei dispositivi
+
+## Contesto
+
+L'accesso operativo di un telecomando riguarda la partecipazione di una squadra a una specifica sessione d'asta.
+
+Associare il PIN alla squadra permanente renderebbe la credenziale valida implicitamente anche per sessioni future e confonderebbe l'identità organizzativa della squadra con l'autorizzazione operativa della singola asta.
+
+Il PIN attraversa inoltre un confine di autenticazione e non deve essere esposto nei log, negli snapshot o negli eventi realtime.
+
+## Decisione
+
+Il PIN operativo viene associato a:
+
+```text
+auction_session_teams
+```
+
+e quindi alla partecipazione della squadra a una specifica sessione d'asta.
+
+Il PIN viene utilizzato durante la registrazione realtime per verificare che il dispositivo possa operare per quella partecipazione.
+
+Il PIN:
+
+* non viene incluso negli snapshot;
+* non viene trasmesso nei broadcast;
+* non viene conservato nei dati della connessione dopo la validazione;
+* non viene scritto nei log applicativi;
+* non viene restituito nei messaggi di errore.
+
+La validazione del PIN non sostituisce le ulteriori verifiche di sessione, squadra e ruolo.
+
+## Conseguenze
+
+### Positive
+
+* La credenziale operativa rimane delimitata alla singola sessione.
+* Squadra permanente e accesso operativo rimangono concetti distinti.
+* Il PIN non viene propagato nello stato realtime.
+* La registrazione dei dispositivi può essere rivalidata a ogni connessione.
+* Le future sessioni possono utilizzare credenziali differenti.
+
+### Negative
+
+* Ogni nuova partecipazione deve disporre della propria configurazione di accesso.
+* Le procedure amministrative devono consentire la gestione del PIN della sessione.
+* La protezione della credenziale richiede attenzione nei log e negli errori.
+
+---
+
+# ADR-040 — Ogni partecipazione può avere un solo OPERATOR e più OBSERVER in sola lettura
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Ruoli e autorizzazioni realtime
+
+## Contesto
+
+Una squadra può collegare più dispositivi alla rete locale, ma soltanto uno deve poter inviare comandi operativi per evitare ambiguità e doppi interventi.
+
+Altri dispositivi possono essere utili come viste aggiuntive dello stato dell'asta, senza capacità di modifica.
+
+La sola appartenenza a una room o la presenza di pulsanti nella UI non costituiscono una protezione sufficiente.
+
+## Decisione
+
+Per ogni `auctionSessionTeamId` può esistere al massimo un dispositivo registrato con ruolo:
+
+```text
+OPERATOR
+```
+
+Possono esistere più dispositivi registrati con ruolo:
+
+```text
+OBSERVER
+```
+
+Gli `OBSERVER` sono sempre in sola lettura.
+
+L'autorizzazione viene verificata lato server per ogni comando e non viene dedotta dalla UI o dalla room di appartenenza.
+
+Un `OPERATOR` può inviare esclusivamente comandi compatibili con la propria partecipazione.
+
+Quando un nuovo socket con lo stesso `deviceId` sostituisce la connessione precedente, la registrazione può recuperare il ruolo operativo secondo le regole del connection manager.
+
+Un dispositivo differente che richiede `OPERATOR` mentre ne esiste già uno attivo viene rifiutato con un errore applicativo esplicito.
+
+La disconnessione di un `OPERATOR` non equivale mai a un comando `PASS`.
+
+## Conseguenze
+
+### Positive
+
+* Una sola fonte di comandi di squadra per volta.
+* Più dispositivi possono osservare la stessa asta.
+* Le autorizzazioni sono applicate dal server.
+* Refresh e riconnessioni dello stesso dispositivo possono essere gestiti senza duplicare operatori.
+* La perdita della connessione non modifica il dominio della chiamata.
+
+### Negative
+
+* Il server deve mantenere il registro delle connessioni attive.
+* La sostituzione dell'operatore richiede una politica esplicita.
+* I client devono gestire il rifiuto `OPERATOR_ALREADY_CONNECTED`.
+
+---
+
+# ADR-041 — Lo snapshot autorevole è la base della sincronizzazione realtime
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Sincronizzazione dello stato realtime
+
+## Contesto
+
+Gli eventi incrementali non sono sufficienti a ricostruire in modo affidabile lo stato dopo:
+
+* una riconnessione;
+* un refresh;
+* una perdita temporanea della rete;
+* un comando rifiutato per stato obsoleto;
+* l'apertura tardiva di un dispositivo.
+
+Il client non deve tentare di ricostruire autonomamente lo stato definitivo dell'asta.
+
+## Decisione
+
+Il server produce uno snapshot autorevole della sessione d'asta.
+
+Lo snapshot comprende lo stato operativo necessario ai client e include almeno:
+
+```text
+auctionSession
+currentAuctionCall
+auctionCallTeams
+stateVersion
+serverTime
+connectionContext
+```
+
+Lo snapshot non rappresenta una copia indiscriminata delle tabelle del database.
+
+Dopo una registrazione valida il client riceve lo stato autorevole della sessione.
+
+La risincronizzazione utilizza nuovamente lo snapshot completo.
+
+Gli eventi incrementali informano sui cambiamenti avvenuti, ma non sostituiscono lo snapshot come base di sincronizzazione.
+
+Il client deve considerare lo stato ricevuto dal server come autoritativo.
+
+## Conseguenze
+
+### Positive
+
+* Riconnessioni e refresh possono ricostruire lo stato senza dipendere dalla cronologia locale.
+* Il client rimane semplice e non duplica la logica dell'asta.
+* `stateVersion` permette di correlare snapshot e comandi.
+* Lo stato trasmesso può essere limitato ai dati realmente necessari.
+* La risincronizzazione dopo errori è deterministica.
+
+### Negative
+
+* La costruzione dello snapshot richiede query e mapping dedicati.
+* Lo snapshot deve essere mantenuto coerente con l'evoluzione del modello.
+* Payload completi sono più grandi dei singoli eventi incrementali.
+
+---
+
+# ADR-042 — La concorrenza dei comandi è gestita con stateVersion, transazioni atomiche e command registry persistente
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Concorrenza, idempotenza e consistenza dei comandi
+
+## Contesto
+
+ADR-012 prevedeva un'elaborazione sequenziale e idempotente dei comandi.
+
+Durante l'implementazione del realtime è emerso che una coda applicativa in memoria per sessione non sarebbe sufficiente, da sola, a garantire:
+
+* consistenza dopo un riavvio;
+* protezione dai retry dopo riconnessione;
+* deduplicazione persistente;
+* controllo dello stato obsoleto;
+* atomicità tra modifica dello stato e registrazione del comando.
+
+È quindi necessario spostare la garanzia di consistenza sul confine transazionale autorevole.
+
+## Decisione
+
+ADR-012 viene sostituita.
+
+La concorrenza dei comandi che modificano lo stato autorevole viene gestita mediante:
+
+```text
+commandId
+stateVersion
+transazione SQLite
+command registry persistente
+optimistic concurrency control
+```
+
+`stateVersion` appartiene alla sessione d'asta ed è memorizzata in:
+
+```text
+auction_sessions.state_version
+```
+
+Ogni comando autorevole deve dichiarare la versione dello stato sulla quale è stato costruito.
+
+Se la versione ricevuta non coincide con quella corrente, il comando viene rifiutato con:
+
+```text
+STALE_STATE
+```
+
+Un comando accettato incrementa `stateVersion` una sola volta e nella stessa transazione delle altre modifiche persistenti.
+
+Le connessioni, le disconnessioni e gli altri cambiamenti di sola presenza non incrementano `stateVersion`.
+
+Ogni comando viene identificato da un `commandId` e registrato in modo persistente in:
+
+```text
+command_registry
+```
+
+Un retry coerente dello stesso comando non viene rieseguito e restituisce il risultato già noto.
+
+Il riutilizzo dello stesso `commandId` con metadati o contenuto incompatibili viene rifiutato con:
+
+```text
+COMMAND_ID_CONFLICT
+```
+
+La v0.7.0 non introduce una coda applicativa dedicata per sessione.
+
+La consistenza è garantita dal controllo ottimistico della versione e dalla transazione atomica sul database autorevole.
+
+## Conseguenze
+
+### Positive
+
+* I comandi duplicati non vengono applicati due volte.
+* La protezione rimane valida anche dopo il riavvio del processo.
+* Uno stato obsoleto viene rilevato prima di applicare modifiche definitive.
+* `stateVersion`, comando e stato persistito evolvono in modo coerente.
+* Sessioni differenti non richiedono una coda globale condivisa.
+* La strategia è compatibile con l'estensione futura dei casi d'uso atomici.
+
+### Negative
+
+* I client devono gestire `STALE_STATE` e risincronizzarsi.
+* Il command registry introduce persistenza e logica aggiuntive.
+* Comandi concorrenti costruiti sulla stessa versione possono produrre un rifiuto e richiedere un retry su stato aggiornato.
+* Un'eventuale futura esigenza di ordinamento FIFO esplicito richiederà una decisione separata.
+
+---
+
+# ADR-043 — I comandi autorevoli condividono una pipeline atomica e pubblicano realtime solo dopo il commit
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Orchestrazione dei comandi e pubblicazione realtime
+
+## Contesto
+
+HTTP e Socket.IO rappresentano due transport differenti verso gli stessi casi d'uso applicativi.
+
+Se ciascun transport eseguisse autonomamente la persistenza e il broadcast si potrebbero creare:
+
+* regole duplicate;
+* differenze tra comandi HTTP e realtime;
+* eventi pubblicati prima della persistenza definitiva;
+* doppi broadcast;
+* aggiornamenti realtime relativi a transazioni poi fallite.
+
+Le garanzie di `stateVersion`, idempotenza e command registry devono inoltre appartenere allo stesso confine atomico del comando.
+
+## Decisione
+
+I comandi autorevoli vengono coordinati attraverso una pipeline applicativa condivisa.
+
+La pipeline segue concettualmente il flusso:
+
+```text
+transport
+↓
+command coordinator
+↓
+atomic command service
+↓
+atomic command executor
+↓
+SQLite transaction
+↓
+domain / repository writes
+↓
+stateVersion increment
+↓
+command registry
+↓
+COMMIT
+↓
+auction event
+↓
+authoritative snapshot
+```
+
+HTTP e Socket.IO non implementano copie indipendenti delle regole dell'asta.
+
+Il dominio non conosce Socket.IO e non pubblica direttamente eventi realtime.
+
+La pubblicazione di eventi e snapshot può avvenire esclusivamente dopo il completamento positivo della transazione.
+
+Se la transazione fallisce:
+
+```text
+ROLLBACK
+```
+
+nessun evento realtime relativo al comando deve essere pubblicato.
+
+Un retry idempotente che restituisce un risultato già registrato non deve generare una seconda pubblicazione dello stesso cambiamento.
+
+Le route HTTP non devono contenere chiamate dirette a `io.emit()`.
+
+## Conseguenze
+
+### Positive
+
+* HTTP e realtime condividono gli stessi casi d'uso.
+* Nessun client osserva uno stato che non sia stato prima committato.
+* Rollback e pubblicazione rimangono coerenti.
+* La logica del dominio resta indipendente dal transport.
+* La pipeline può essere estesa dalle milestone successive senza creare un percorso parallelo.
+* I replay idempotenti non producono eventi duplicati.
+
+### Negative
+
+* L'orchestrazione richiede più componenti applicativi.
+* I test devono distinguere chiaramente fase transazionale e fase post-commit.
+* Gli effetti post-commit che falliscono richiedono una propria strategia di gestione e recovery.
+
+---
+
+# ADR-044 — La presenza realtime è separata dallo stato di dominio della chiamata
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Presenza dei dispositivi e stato dell'asta
+
+## Contesto
+
+La presenza online di un dispositivo è uno stato effimero della rete.
+
+Lo stato di una squadra all'interno di una chiamata d'asta rappresenta invece una decisione di dominio persistente.
+
+Confondere questi due concetti potrebbe produrre effetti pericolosi, per esempio interpretando una perdita di connessione come un `PASS` o modificando il turno a causa di un problema Wi-Fi.
+
+La v0.6.0 rappresenta la partecipazione alla chiamata mediante stati come:
+
+```text
+ACTIVE
+PASSED
+EXCLUDED
+```
+
+mentre il realtime deve gestire separatamente connessioni e disconnessioni.
+
+## Decisione
+
+La presenza dei dispositivi viene mantenuta dal layer realtime e dal connection manager.
+
+La disconnessione di un dispositivo:
+
+* non produce `PASS`;
+* non modifica lo stato di `AuctionCallTeam`;
+* non modifica il leader;
+* non modifica il turno;
+* non incrementa `stateVersion`.
+
+La riconnessione ripristina l'accesso attraverso una nuova registrazione e una nuova sincronizzazione autorevole.
+
+Gli eventuali eventi di presenza destinati alle future interfacce amministrative rimangono distinti dagli eventi che rappresentano modifiche dello stato d'asta.
+
+La persistenza di uno storico completo della presenza dei dispositivi non viene introdotta nella v0.7.0.
+
+## Conseguenze
+
+### Positive
+
+* Problemi di rete non modificano il risultato dell'asta.
+* Il dominio rimane indipendente da Socket.IO.
+* `PASS` conserva esclusivamente il proprio significato applicativo.
+* Reconnect e refresh possono essere gestiti senza correzioni del dominio.
+* Le future UI amministrative possono mostrare la presenza come vista separata.
+
+### Negative
+
+* La presenza online deve essere ricostruita dopo il riavvio del server.
+* Un pannello amministrativo completo richiederà ulteriori eventi o viste di presenza.
+* Stato di rete e stato della chiamata devono essere combinati dalla UI quando necessario.
+
+---
+
+# ADR-045 — L’audit di dominio è persistito separatamente dal command registry
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Audit, persistenza e integrità delle operazioni d’asta
+
+## Contesto
+
+La pipeline autorevole dei comandi utilizza un `command_registry`
+persistente per garantire idempotenza, controllo dei duplicati e
+ricostruzione del risultato di un comando già applicato.
+
+Il `command_registry` registra informazioni tecniche quali:
+
+- `commandId`;
+- tipo di comando;
+- versione dello stato attesa;
+- versione dello stato risultante;
+- fingerprint della richiesta;
+- aggregate risultante.
+
+Queste informazioni sono necessarie all’infrastruttura dei comandi,
+ma non costituiscono da sole un audit trail di dominio esplicito.
+
+In particolare, una conferma di aggiudicazione deve poter essere
+ricostruita semanticamente come operazione economica e di rosa,
+senza dipendere dall’interpretazione del payload tecnico conservato
+nel command registry.
+
+La Milestone 8 richiede inoltre che la registrazione dell’operazione
+faccia parte della stessa unità atomica che assegna il giocatore,
+aggiorna i crediti, aggiorna la rosa e chiude la chiamata.
+
+## Decisione
+
+Introdurre un audit trail persistente di dominio separato dal
+`command_registry`.
+
+Gli eventi di dominio dell’asta vengono persistiti in una struttura
+dedicata:
+
+```text
+auction_events
+```
+
+Il primo evento richiesto dalla Milestone 8 rappresenta la conferma
+definitiva di un’aggiudicazione.
+
+L’evento deve contenere almeno:
+
+```text
+auctionSessionId
+auctionCallId
+eventType
+auctionSessionTeamId
+playerId
+amount
+createdAt
+```
+
+Quando utili alla ricostruzione dell’operazione possono essere
+persistiti anche dati economici direttamente collegati
+all’assegnazione, come:
+
+```text
+creditsBefore
+creditsAfter
+```
+
+La registrazione dell’evento di conferma deve avvenire nella stessa
+transazione SQLite che:
+
+1. verifica l’aggiudicazione;
+2. crea la voce di rosa;
+3. aggiorna i crediti residui;
+4. aggiorna la disponibilità del giocatore;
+5. persiste la chiamata confermata;
+6. incrementa `stateVersion`;
+7. registra il comando nel `command_registry`.
+
+Se una qualsiasi parte dell’operazione fallisce, anche l’evento di
+audit deve essere annullato dal rollback della stessa transazione.
+
+Il `command_registry` mantiene esclusivamente la propria
+responsabilità infrastrutturale e non viene utilizzato come
+sostituto dell’audit trail di dominio.
+
+Il logging Pino rimane separato sia dal `command_registry` sia
+dall’audit di dominio.
+
+## Conseguenze
+
+### Positive
+
+- Separazione esplicita tra idempotenza tecnica e storico di dominio.
+- Le aggiudicazioni possono essere ricostruite senza interpretare
+  payload tecnici.
+- L’audit partecipa alla stessa atomicità dell’operazione critica.
+- Nessun evento può descrivere un’assegnazione annullata dal rollback.
+- Base stabile per storico, diagnostica, esportazioni e recovery.
+- L’audit potrà essere esteso ad altre operazioni significative senza
+  sovraccaricare il command registry.
+
+### Negative
+
+- Viene introdotta una nuova struttura persistente.
+- Sono necessari schema, repository e migration dedicati.
+- Alcune informazioni possono essere presenti sia nel risultato del
+  command registry sia nell’evento di dominio.
+- Occorre definire quali operazioni future meritino un evento
+  persistente.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-015 per la separazione tra logging tecnico e audit;
+- ADR-042 per `stateVersion`, transazioni atomiche e command registry;
+- ADR-043 per la pipeline atomica dei comandi autorevoli.
+
+Il sottosistema completo di backup e recovery rimane separato ed è
+previsto dalla Milestone 13.
+
+La Milestone 8 predisporrà soltanto il punto applicativo necessario
+a richiedere un backup dopo il commit dell’operazione critica.

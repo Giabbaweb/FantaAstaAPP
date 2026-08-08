@@ -15,6 +15,18 @@ import {
   SqliteAuctionCallRepository
 } from "./repositories/auction-call.repository.js";
 import {
+  SqliteAuctionEventRepository
+} from "./repositories/auction-event.repository.js";
+import {
+  SqliteAuctionSessionTeamRepository
+} from "./repositories/auction-session-team.repository.js";
+import {
+  SqlitePlayerRepository
+} from "./repositories/player.repository.js";
+import {
+  SqliteRosterEntryRepository
+} from "./repositories/roster-entry.repository.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -83,8 +95,14 @@ import {
   AuctionCallCommandHandler
 } from "./services/auction-call-command-handler.js";
 import {
+  NoopAuctionBackupRequester
+} from "./services/auction-backup-requester.js";
+import {
   AuctionCallService
 } from "./services/auction-call.service.js";
+import {
+  ConfirmedAuctionAwardService
+} from "./services/confirmed-auction-award.service.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -139,10 +157,19 @@ export async function buildApp() {
       new SqliteCommandRegistryRepository()
     );
 
+  const confirmedAuctionAwardService =
+    new ConfirmedAuctionAwardService(
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository(),
+      new SqliteAuctionEventRepository()
+    );
+
   const atomicAuctionCallCommandService =
     new AtomicAuctionCallCommandService(
       atomicAuctionCommandExecutor,
-      auctionCallCommandHandler
+      auctionCallCommandHandler,
+      confirmedAuctionAwardService
     );
 
   const auctionCallCommandCoordinator =
@@ -150,6 +177,7 @@ export async function buildApp() {
       atomicAuctionCallCommandService,
       auctionRealtimeDispatcher,
       auctionSnapshotDispatcher,
+      new NoopAuctionBackupRequester(),
       ({
         stage,
         type,

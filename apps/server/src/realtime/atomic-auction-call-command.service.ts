@@ -6,6 +6,9 @@ import type {
   AuctionCallCommandHandler
 } from "../services/auction-call-command-handler.js";
 import type {
+  ConfirmedAuctionAwardService
+} from "../services/confirmed-auction-award.service.js";
+import type {
   AtomicAuctionCommandExecutor,
   ExecuteAtomicAuctionCommandResult
 } from "./atomic-auction-command.executor.js";
@@ -30,7 +33,9 @@ export class AtomicAuctionCallCommandService {
     private readonly executor:
       AtomicAuctionCommandExecutorPort,
     private readonly commandHandler:
-      AuctionCallCommandHandlerPort
+      AuctionCallCommandHandlerPort,
+    private readonly confirmedAuctionAwardService:
+      Pick<ConfirmedAuctionAwardService, "apply">
   ) {}
 
   async open(
@@ -146,9 +151,21 @@ export class AtomicAuctionCallCommandService {
         JSON.stringify({
           commandType: "CONFIRM"
         }),
-      apply: (aggregate) =>
-        this.commandHandler
-          .confirmAuctionCall(aggregate)
+      apply: (
+        aggregate,
+        transactionExecutor
+      ) => {
+        const confirmedAggregate =
+          this.commandHandler
+            .confirmAuctionCall(aggregate);
+
+        this.confirmedAuctionAwardService.apply(
+          transactionExecutor,
+          aggregate
+        );
+
+        return confirmedAggregate;
+      }
     });
   }
 

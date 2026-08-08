@@ -533,3 +533,84 @@ export const commandRegistry = sqliteTable(
     )
   ]
 );
+
+export const auctionEvents = sqliteTable(
+  "auction_events",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionId: text("auction_session_id")
+      .notNull()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    auctionCallId: text("auction_call_id")
+      .notNull()
+      .references(() => auctionCalls.id, {
+        onDelete: "cascade"
+      }),
+
+    eventType: text("event_type", {
+      enum: [
+        "AUCTION_AWARD_CONFIRMED"
+      ]
+    }).notNull(),
+
+    auctionSessionTeamId: text(
+      "auction_session_team_id"
+    )
+      .notNull()
+      .references(() => auctionSessionTeams.id, {
+        onDelete: "restrict"
+      }),
+
+    playerId: text("player_id")
+      .notNull()
+      .references(() => players.id, {
+        onDelete: "restrict"
+      }),
+
+    amount: integer("amount").notNull(),
+
+    creditsBefore: integer(
+      "credits_before"
+    ).notNull(),
+
+    creditsAfter: integer(
+      "credits_after"
+    ).notNull(),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex(
+      "auction_events_call_type_unique"
+    ).on(
+      table.auctionCallId,
+      table.eventType
+    ),
+
+    check(
+      "auction_events_amount_positive",
+      sql`${table.amount} > 0`
+    ),
+
+    check(
+      "auction_events_credits_before_nonnegative",
+      sql`${table.creditsBefore} >= 0`
+    ),
+
+    check(
+      "auction_events_credits_after_nonnegative",
+      sql`${table.creditsAfter} >= 0`
+    ),
+
+    check(
+      "auction_events_credit_balance",
+      sql`${table.creditsAfter} = ${table.creditsBefore} - ${table.amount}`
+    )
+  ]
+);

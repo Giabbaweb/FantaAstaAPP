@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 7 completata
-- **Versione corrente:** v0.7.0
-- **Prossimo obiettivo:** Versione 0.8 – Conferma assegnazioni e transazioni
+- **Stato:** Milestone 8 completata
+- **Versione corrente:** v0.8.0
+- **Prossimo obiettivo:** Versione 0.9 – Schermo pubblico
 
 ## Regole immutabili
 
@@ -138,46 +138,40 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 Nessuna intestazione. Terzo portiere escluso.
 
-## Stato implementativo della v0.7.0
+## Stato implementativo della v0.8.0
 
-Sono completati tutti gli elementi della v0.6.0 e inoltre:
+Sono completati tutti gli elementi della v0.7.0 e inoltre:
 
-- bootstrap Socket.IO integrato con Fastify;
-- modello di identità delle connessioni realtime;
-- connection manager;
-- stanze per sessione, squadra, operatori e osservatori;
-- registrazione dei dispositivi;
-- autenticazione delle squadre tramite PIN;
-- ruoli `OPERATOR` e `OBSERVER`;
-- una sola connessione operativa per squadra;
-- publisher realtime astratto;
-- publisher Socket.IO;
-- contratti degli eventi d'asta;
-- snapshot autorevole dell'asta;
-- invio dello snapshot dopo la registrazione;
-- event dispatcher;
-- snapshot dispatcher;
-- sincronizzazione dopo ogni comando confermato;
-- `stateVersion` persistente sulla sessione;
-- command registry persistente;
-- esecuzione atomica dei comandi;
-- controllo ottimistico della concorrenza;
-- idempotenza tramite `commandId`;
-- rilevazione dei comandi obsoleti tramite `STALE_STATE`;
-- rilevazione del riuso incompatibile tramite `COMMAND_ID_CONFLICT`;
-- rollback transazionale verificato;
-- command handler di dominio condiviso;
-- atomic auction call command service;
-- protocollo HTTP atomico;
-- protocollo Socket.IO `auction:command`;
-- socket command handler;
-- autorizzazione per ruolo, squadra e sessione;
-- observer in sola lettura;
-- comandi telecomando `BID`, `PASS` e `UNDO_PASS`;
-- nessuna associazione tra disconnessione e PASS;
-- mapping uniforme degli errori atomici;
-- 27 file di test server;
-- 187 test server verdi.
+- validazione di dominio dell'aggiudicazione definitiva;
+- repository transazionali necessari alla conferma;
+- servizio transazionale per l'assegnazione confermata;
+- creazione atomica della voce di rosa;
+- aggiornamento atomico dei crediti residui;
+- aggiornamento atomico del giocatore a `ROSTERED`;
+- verifica della disponibilità del giocatore;
+- verifica dei crediti;
+- verifica degli slot di rosa;
+- verifica dei limiti per ruolo;
+- verifica della completabilità della rosa;
+- rollback completo in caso di errore;
+- mapping HTTP degli errori di conferma;
+- tabella persistente `auction_events`;
+- repository transazionale degli eventi d'asta;
+- audit di dominio separato dal `command_registry`;
+- evento persistente `AUCTION_AWARD_CONFIRMED`;
+- audit incluso nella stessa transazione della conferma;
+- nessun audit residuo dopo rollback;
+- evento realtime e snapshot pubblicati solo dopo commit;
+- boundary post-commit `AuctionBackupRequester`;
+- implementazione `NoopAuctionBackupRequester`;
+- nessuna richiesta di backup duplicata sui replay idempotenti;
+- fallimento della richiesta di backup isolato dal comando committato;
+- 31 file di test server;
+- 217 test server verdi;
+- 10 file di test domain;
+- 86 test domain verdi;
+- typecheck completo del monorepo superato;
+- build completa del monorepo superata.
 
 ## Protocollo dei comandi
 
@@ -192,18 +186,22 @@ validazione
 → controllo idempotenza
 → controllo stateVersion
 → applicazione dominio
+→ assegnazione definitiva
+→ aggiornamento rosa, crediti e giocatore
+→ registrazione audit di dominio
 → persistenza aggregate
 → incremento stateVersion
 → registrazione comando
 → commit
 → evento realtime
 → snapshot autorevole
+→ boundary richiesta backup
 
 Un retry identico restituisce il risultato persistito con:
 
 idempotentReplay: true
 
-senza ripubblicare evento o snapshot.
+senza ripubblicare evento o snapshot e senza richiedere un nuovo backup.
 
 ## Realtime e telecomandi
 
@@ -233,17 +231,18 @@ La riconnessione richiede una nuova registrazione del dispositivo e produce un n
 
 ## Prossimo obiettivo
 
-Versione 0.8 — Conferma assegnazioni e transazioni:
+Versione 0.9 — Schermo pubblico:
 
-- trasformare l'aggiudicazione provvisoria in assegnazione definitiva;
-- verificare leader, crediti e slot;
-- creare la voce di rosa;
-- sottrarre i crediti;
-- aggiornare la disponibilità del giocatore;
-- chiudere la chiamata;
-- registrare l'operazione;
-- garantire rollback completo;
-- creare il punto di backup dopo l'operazione critica.
+- visualizzare lo stato dell'asta su uno schermo condiviso;
+- mostrare giocatore chiamato, prezzo, leader e turno;
+- mostrare crediti residui e posti liberi;
+- mostrare P/D/C/A acquistati;
+- mostrare lo stato della sessione;
+- supportare modalità `STANDARD`;
+- supportare modalità `HIGH_CONTRAST_OUTDOOR`;
+- supportare modalità `COMPACT`;
+- mantenere lo schermo pubblico in sola lettura;
+- alimentare la UI tramite stato autorevole e realtime esistenti.
 
 Fonte autoritativa completa:
 

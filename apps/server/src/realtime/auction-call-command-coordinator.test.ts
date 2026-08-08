@@ -74,6 +74,11 @@ describe("AuctionCallCommandCoordinator", () => {
         vi.fn().mockResolvedValue(undefined)
     };
 
+    const backupRequester = {
+      requestConfirmedAwardBackup:
+        vi.fn().mockResolvedValue(undefined)
+    };
+
     const onDispatchFailure = vi.fn();
 
     const coordinator =
@@ -81,6 +86,7 @@ describe("AuctionCallCommandCoordinator", () => {
         service,
         dispatcher,
         snapshotDispatcher,
+        backupRequester,
         onDispatchFailure
       );
 
@@ -88,6 +94,7 @@ describe("AuctionCallCommandCoordinator", () => {
       service,
       dispatcher,
       snapshotDispatcher,
+      backupRequester,
       onDispatchFailure,
       coordinator
     };
@@ -372,4 +379,89 @@ describe("AuctionCallCommandCoordinator", () => {
       error: snapshotError
     });
   });
+
+  it("requests a backup after a confirmed auction call", async () => {
+    const {
+      backupRequester,
+      coordinator
+    } = createFixture();
+
+    await coordinator.confirmAuctionCall(
+      "auction-call-1",
+      metadata
+    );
+
+    expect(
+      backupRequester.requestConfirmedAwardBackup
+    ).toHaveBeenCalledTimes(1);
+
+    expect(
+      backupRequester.requestConfirmedAwardBackup
+    ).toHaveBeenCalledWith({
+      auctionSessionId: "session-1",
+      auctionCallId: "auction-call-1",
+      aggregate
+    });
+  });
+
+  it("does not request a backup for an idempotent confirm replay", async () => {
+    const {
+      service,
+      backupRequester,
+      coordinator
+    } = createFixture();
+
+    service.confirmAuctionCall
+      .mockResolvedValueOnce({
+        ...commandResult,
+        idempotentReplay: true
+      });
+
+    await expect(
+      coordinator.confirmAuctionCall(
+        "auction-call-1",
+        metadata
+      )
+    ).resolves.toMatchObject({
+      idempotentReplay: true
+    });
+
+    expect(
+      backupRequester.requestConfirmedAwardBackup
+    ).not.toHaveBeenCalled();
+  });
+
+  it("reports backup failures without failing the confirmed command", async () => {
+    const {
+      backupRequester,
+      onDispatchFailure,
+      coordinator
+    } = createFixture();
+
+    const backupError =
+      new Error("Backup failed");
+
+    backupRequester
+      .requestConfirmedAwardBackup
+      .mockRejectedValueOnce(
+        backupError
+      );
+
+    await expect(
+      coordinator.confirmAuctionCall(
+        "auction-call-1",
+        metadata
+      )
+    ).resolves.toEqual(commandResult);
+
+    expect(
+      onDispatchFailure
+    ).toHaveBeenCalledWith({
+      stage: "BACKUP",
+      type: "AUCTION_CALL_CONFIRMED",
+      aggregate,
+      error: backupError
+    });
+  });
+
 });

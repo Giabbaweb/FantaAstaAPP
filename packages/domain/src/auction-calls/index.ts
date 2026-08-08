@@ -34,6 +34,14 @@ export type {
 } from "./maximum-bid.js";
 
 export {
+  assertConfirmedAuctionAwardAllowed
+} from "./confirmed-auction-award.js";
+
+export type {
+  ConfirmedAuctionAwardInput
+} from "./confirmed-auction-award.js";
+
+export {
   OpenAuctionCallDomainError,
   openAuctionCall
 } from "./open-auction-call.js";

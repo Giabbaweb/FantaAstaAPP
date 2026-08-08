@@ -7,6 +7,9 @@ import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import type {
+  AuctionBackupRequester
+} from "../services/auction-backup-requester.js";
+import type {
   AtomicAuctionCallCommandService
 } from "./atomic-auction-call-command.service.js";
 import type {
@@ -30,6 +33,11 @@ type AtomicAuctionCallCommandServicePort = Pick<
   | "cancelAuctionCall"
 >;
 
+type AuctionBackupRequesterPort = Pick<
+  AuctionBackupRequester,
+  "requestConfirmedAwardBackup"
+>;
+
 type AuctionRealtimeDispatcherPort = Pick<
   AuctionRealtimeDispatcher,
   "dispatch"
@@ -41,7 +49,7 @@ type AuctionSnapshotDispatcherPort = Pick<
 >;
 
 export type AuctionRealtimeDispatchFailure = {
-  stage: "EVENT" | "SNAPSHOT";
+  stage: "EVENT" | "SNAPSHOT" | "BACKUP";
   type: RealtimeAuctionEventType;
   aggregate: AuctionCallAggregate;
   error: unknown;
@@ -59,6 +67,8 @@ export class AuctionCallCommandCoordinator {
       AuctionRealtimeDispatcherPort,
     private readonly snapshotDispatcher:
       AuctionSnapshotDispatcherPort,
+    private readonly backupRequester:
+      AuctionBackupRequesterPort,
     private readonly onDispatchFailure:
       AuctionRealtimeDispatchFailureHandler =
         () => undefined
@@ -189,6 +199,27 @@ export class AuctionCallCommandCoordinator {
         aggregate: result.aggregate
       }
     );
+
+    if (!result.idempotentReplay) {
+      try {
+        await this.backupRequester
+          .requestConfirmedAwardBackup({
+            auctionSessionId:
+              result.aggregate.call.auctionSessionId,
+            auctionCallId:
+              result.aggregate.call.id,
+            aggregate:
+              result.aggregate
+          });
+      } catch (error) {
+        this.onDispatchFailure({
+          stage: "BACKUP",
+          type: "AUCTION_CALL_CONFIRMED",
+          aggregate: result.aggregate,
+          error
+        });
+      }
+    }
 
     return result;
   }

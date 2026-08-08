@@ -981,7 +981,7 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 
 La versione corrente è:
 
-v0.7.0
+v0.8.0
 
 Sono operative:
 
@@ -1009,9 +1009,24 @@ Sono operative:
 - protocollo Socket.IO auction:command;
 - telecomandi BID, PASS e UNDO_PASS;
 - riconnessione con nuova sincronizzazione;
-- test automatici del backend.
+- conferma definitiva atomica delle aggiudicazioni;
+- aggiornamento atomico di rosa, crediti e disponibilità del giocatore;
+- validazione di crediti, slot, ruoli e completabilità della rosa;
+- audit trail persistente tramite `auction_events`;
+- evento persistente `AUCTION_AWARD_CONFIRMED`;
+- separazione tra audit di dominio e `command_registry`;
+- rollback completo dell'assegnazione e dell'audit;
+- pubblicazione realtime esclusivamente dopo commit;
+- boundary post-commit `AuctionBackupRequester`;
+- implementazione `NoopAuctionBackupRequester`;
+- isolamento degli errori della richiesta backup dal comando già committato;
+- 31 file di test server e 217 test server verdi;
+- 10 file di test domain e 86 test domain verdi;
+- typecheck e build completi del monorepo superati.
 
-La v0.7.0 completa quindi il layer realtime necessario per collegare i futuri client operativi al server autoritativo.
+La v0.8.0 completa quindi la conferma transazionale delle assegnazioni,
+l'audit persistente delle aggiudicazioni e il boundary post-commit
+necessario al futuro sottosistema di backup.
 
 ---
 
@@ -1019,19 +1034,27 @@ La v0.7.0 completa quindi il layer realtime necessario per collegare i futuri cl
 
 La prossima milestone funzionale è:
 
-v0.8.0 — Conferma assegnazioni e transazioni
+v0.9.0 — Schermo pubblico
 
-L'obiettivo sarà rendere atomica l'assegnazione definitiva di un giocatore, comprendendo:
+L'obiettivo sarà realizzare una vista pubblica in sola lettura alimentata
+dallo stato autorevole e dal realtime già disponibili, comprendendo:
 
-- verifica dell'aggiudicazione provvisoria;
-- verifica di squadra, crediti e slot disponibili;
-- creazione della voce di rosa;
-- aggiornamento dei crediti;
-- aggiornamento della disponibilità del giocatore;
-- chiusura della chiamata;
-- registrazione dell'operazione;
-- rollback completo in caso di errore;
-- punto di backup dopo l'operazione critica.
+- giocatore chiamato;
+- prezzo corrente;
+- squadra leader;
+- turno;
+- squadre in PASS;
+- crediti residui;
+- posti liberi;
+- conteggi P/D/C/A acquistati;
+- stato della sessione;
+- messaggi di sospensione;
+- modalità `STANDARD`;
+- modalità `HIGH_CONTRAST_OUTDOOR`;
+- modalità `COMPACT`.
+
+Lo schermo pubblico non introdurrà un secondo stato applicativo:
+visualizzerà esclusivamente dati derivati dallo stato autoritativo del server.
 
 Le decisioni architetturali significative verranno registrate in:
 

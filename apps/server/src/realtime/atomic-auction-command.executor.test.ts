@@ -6,8 +6,13 @@ import {
   vi
 } from "vitest";
 
+import { eq } from "drizzle-orm";
+
 import {
   db
+} from "../db/client.js";
+import type {
+  DatabaseWriteExecutor
 } from "../db/client.js";
 import {
   auctionCalls,
@@ -21,6 +26,9 @@ import {
 } from "../db/schema/index.js";
 import {
   SqliteAuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import type {
+  AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import {
   SqliteAuctionSessionStateRepository
@@ -124,7 +132,10 @@ describe("AtomicAuctionCommandExecutor", () => {
       requestFingerprint:
         overrides.requestFingerprint ??
         "open:1",
-      apply: vi.fn((aggregate) => ({
+      apply: vi.fn((
+        aggregate: AuctionCallAggregate,
+        _executor: DatabaseWriteExecutor
+      ) => ({
         call: {
           ...aggregate.call,
           status: "OPEN" as const,
@@ -158,6 +169,50 @@ describe("AtomicAuctionCommandExecutor", () => {
         }
       }
     });
+
+    expect(input.apply).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes the transaction executor to command application", async () => {
+    const input = createInput();
+
+    input.apply.mockImplementationOnce(
+      (aggregate, transactionExecutor) => {
+        const [session] =
+          transactionExecutor
+            .select({
+              stateVersion:
+                auctionSessions.stateVersion
+            })
+            .from(auctionSessions)
+            .where(
+              eq(
+                auctionSessions.id,
+                auctionSessionId
+              )
+            )
+            .limit(1)
+            .all();
+
+        expect(session?.stateVersion).toBe(0);
+
+        return {
+          call: {
+            ...aggregate.call,
+            status: "OPEN" as const,
+            openingBid: 1,
+            currentBid: 1,
+            currentLeaderAuctionSessionTeamId:
+              "session-team-1",
+            currentTurnAuctionSessionTeamId:
+              "session-team-1"
+          },
+          teams: aggregate.teams
+        };
+      }
+    );
+
+    await executor.execute(input);
 
     expect(input.apply).toHaveBeenCalledTimes(1);
   });

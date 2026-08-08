@@ -1,0 +1,1313 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "1a41905f-9eea-440a-8aa6-267926468913",
+  "prevId": "dc6f92fe-a68d-4bcc-b2bf-aa4296999c5f",
+  "tables": {
+    "auction_call_teams": {
+      "name": "auction_call_teams",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_call_id": {
+          "name": "auction_call_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_team_id": {
+          "name": "auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ACTIVE'"
+        },
+        "maximum_bid": {
+          "name": "maximum_bid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "exclusion_reason": {
+          "name": "exclusion_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "auction_call_teams_call_team_unique": {
+          "name": "auction_call_teams_call_team_unique",
+          "columns": [
+            "auction_call_id",
+            "auction_session_team_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "auction_call_teams_auction_call_id_auction_calls_id_fk": {
+          "name": "auction_call_teams_auction_call_id_auction_calls_id_fk",
+          "tableFrom": "auction_call_teams",
+          "tableTo": "auction_calls",
+          "columnsFrom": [
+            "auction_call_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "auction_call_teams_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "auction_call_teams_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "auction_call_teams",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "auction_call_teams_maximum_bid_nonnegative": {
+          "name": "auction_call_teams_maximum_bid_nonnegative",
+          "value": "\"auction_call_teams\".\"maximum_bid\" >= 0"
+        }
+      }
+    },
+    "auction_calls": {
+      "name": "auction_calls",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_id": {
+          "name": "auction_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_id": {
+          "name": "player_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "caller_auction_session_team_id": {
+          "name": "caller_auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'DRAFT'"
+        },
+        "opening_bid": {
+          "name": "opening_bid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_bid": {
+          "name": "current_bid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_leader_auction_session_team_id": {
+          "name": "current_leader_auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_turn_auction_session_team_id": {
+          "name": "current_turn_auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provisional_winner_auction_session_team_id": {
+          "name": "provisional_winner_auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "auction_calls_auction_session_id_auction_sessions_id_fk": {
+          "name": "auction_calls_auction_session_id_auction_sessions_id_fk",
+          "tableFrom": "auction_calls",
+          "tableTo": "auction_sessions",
+          "columnsFrom": [
+            "auction_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "auction_calls_player_id_players_id_fk": {
+          "name": "auction_calls_player_id_players_id_fk",
+          "tableFrom": "auction_calls",
+          "tableTo": "players",
+          "columnsFrom": [
+            "player_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "auction_calls_caller_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "auction_calls_caller_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "auction_calls",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "caller_auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "auction_calls_current_leader_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "auction_calls_current_leader_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "auction_calls",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "current_leader_auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "auction_calls_current_turn_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "auction_calls_current_turn_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "auction_calls",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "current_turn_auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "auction_calls_provisional_winner_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "auction_calls_provisional_winner_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "auction_calls",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "provisional_winner_auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "auction_calls_opening_bid_positive": {
+          "name": "auction_calls_opening_bid_positive",
+          "value": "\"auction_calls\".\"opening_bid\" IS NULL OR \"auction_calls\".\"opening_bid\" >= 1"
+        },
+        "auction_calls_current_bid_positive": {
+          "name": "auction_calls_current_bid_positive",
+          "value": "\"auction_calls\".\"current_bid\" IS NULL OR \"auction_calls\".\"current_bid\" >= 1"
+        }
+      }
+    },
+    "auction_events": {
+      "name": "auction_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_id": {
+          "name": "auction_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_call_id": {
+          "name": "auction_call_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_team_id": {
+          "name": "auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_id": {
+          "name": "player_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "credits_before": {
+          "name": "credits_before",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "credits_after": {
+          "name": "credits_after",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "auction_events_call_type_unique": {
+          "name": "auction_events_call_type_unique",
+          "columns": [
+            "auction_call_id",
+            "event_type"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "auction_events_auction_session_id_auction_sessions_id_fk": {
+          "name": "auction_events_auction_session_id_auction_sessions_id_fk",
+          "tableFrom": "auction_events",
+          "tableTo": "auction_sessions",
+          "columnsFrom": [
+            "auction_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "auction_events_auction_call_id_auction_calls_id_fk": {
+          "name": "auction_events_auction_call_id_auction_calls_id_fk",
+          "tableFrom": "auction_events",
+          "tableTo": "auction_calls",
+          "columnsFrom": [
+            "auction_call_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "auction_events_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "auction_events_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "auction_events",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "auction_events_player_id_players_id_fk": {
+          "name": "auction_events_player_id_players_id_fk",
+          "tableFrom": "auction_events",
+          "tableTo": "players",
+          "columnsFrom": [
+            "player_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "auction_events_amount_positive": {
+          "name": "auction_events_amount_positive",
+          "value": "\"auction_events\".\"amount\" > 0"
+        },
+        "auction_events_credits_before_nonnegative": {
+          "name": "auction_events_credits_before_nonnegative",
+          "value": "\"auction_events\".\"credits_before\" >= 0"
+        },
+        "auction_events_credits_after_nonnegative": {
+          "name": "auction_events_credits_after_nonnegative",
+          "value": "\"auction_events\".\"credits_after\" >= 0"
+        },
+        "auction_events_credit_balance": {
+          "name": "auction_events_credit_balance",
+          "value": "\"auction_events\".\"credits_after\" = \"auction_events\".\"credits_before\" - \"auction_events\".\"amount\""
+        }
+      }
+    },
+    "auction_session_teams": {
+      "name": "auction_session_teams",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_id": {
+          "name": "auction_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "table_order": {
+          "name": "table_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "renewal_credits": {
+          "name": "renewal_credits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "remaining_credits": {
+          "name": "remaining_credits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "access_pin_hash": {
+          "name": "access_pin_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "auction_session_teams_session_team_unique": {
+          "name": "auction_session_teams_session_team_unique",
+          "columns": [
+            "auction_session_id",
+            "team_id"
+          ],
+          "isUnique": true
+        },
+        "auction_session_teams_table_order_unique": {
+          "name": "auction_session_teams_table_order_unique",
+          "columns": [
+            "auction_session_id",
+            "table_order"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "auction_session_teams_auction_session_id_auction_sessions_id_fk": {
+          "name": "auction_session_teams_auction_session_id_auction_sessions_id_fk",
+          "tableFrom": "auction_session_teams",
+          "tableTo": "auction_sessions",
+          "columnsFrom": [
+            "auction_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "auction_session_teams_team_id_teams_id_fk": {
+          "name": "auction_session_teams_team_id_teams_id_fk",
+          "tableFrom": "auction_session_teams",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "auction_session_teams_table_order_range": {
+          "name": "auction_session_teams_table_order_range",
+          "value": "\"auction_session_teams\".\"table_order\" BETWEEN 1 AND 8"
+        },
+        "auction_session_teams_renewal_credits_nonnegative": {
+          "name": "auction_session_teams_renewal_credits_nonnegative",
+          "value": "\"auction_session_teams\".\"renewal_credits\" >= 0"
+        },
+        "auction_session_teams_remaining_credits_nonnegative": {
+          "name": "auction_session_teams_remaining_credits_nonnegative",
+          "value": "\"auction_session_teams\".\"remaining_credits\" >= 0"
+        }
+      }
+    },
+    "auction_sessions": {
+      "name": "auction_sessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "league_id": {
+          "name": "league_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "season": {
+          "name": "season",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "edition_number": {
+          "name": "edition_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'SETUP'"
+        },
+        "initial_credits": {
+          "name": "initial_credits",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 330
+        },
+        "state_version": {
+          "name": "state_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "auction_sessions_league_season_unique": {
+          "name": "auction_sessions_league_season_unique",
+          "columns": [
+            "league_id",
+            "season"
+          ],
+          "isUnique": true
+        },
+        "auction_sessions_league_edition_unique": {
+          "name": "auction_sessions_league_edition_unique",
+          "columns": [
+            "league_id",
+            "edition_number"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "auction_sessions_league_id_leagues_id_fk": {
+          "name": "auction_sessions_league_id_leagues_id_fk",
+          "tableFrom": "auction_sessions",
+          "tableTo": "leagues",
+          "columnsFrom": [
+            "league_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "auction_sessions_initial_credits_nonnegative": {
+          "name": "auction_sessions_initial_credits_nonnegative",
+          "value": "\"auction_sessions\".\"initial_credits\" >= 0"
+        }
+      }
+    },
+    "command_registry": {
+      "name": "command_registry",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_id": {
+          "name": "auction_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_call_id": {
+          "name": "auction_call_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_type": {
+          "name": "command_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_state_version": {
+          "name": "expected_state_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_state_version": {
+          "name": "result_state_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_fingerprint": {
+          "name": "request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_payload": {
+          "name": "result_payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "command_registry_session_command_unique": {
+          "name": "command_registry_session_command_unique",
+          "columns": [
+            "auction_session_id",
+            "command_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "command_registry_auction_session_id_auction_sessions_id_fk": {
+          "name": "command_registry_auction_session_id_auction_sessions_id_fk",
+          "tableFrom": "command_registry",
+          "tableTo": "auction_sessions",
+          "columnsFrom": [
+            "auction_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "command_registry_auction_call_id_auction_calls_id_fk": {
+          "name": "command_registry_auction_call_id_auction_calls_id_fk",
+          "tableFrom": "command_registry",
+          "tableTo": "auction_calls",
+          "columnsFrom": [
+            "auction_call_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "command_registry_expected_version_nonnegative": {
+          "name": "command_registry_expected_version_nonnegative",
+          "value": "\"command_registry\".\"expected_state_version\" >= 0"
+        },
+        "command_registry_result_version_positive": {
+          "name": "command_registry_result_version_positive",
+          "value": "\"command_registry\".\"result_state_version\" >= 1"
+        },
+        "command_registry_version_progression": {
+          "name": "command_registry_version_progression",
+          "value": "\"command_registry\".\"result_state_version\" = \"command_registry\".\"expected_state_version\" + 1"
+        }
+      }
+    },
+    "leagues": {
+      "name": "leagues",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "leagues_normalized_name_unique": {
+          "name": "leagues_normalized_name_unique",
+          "columns": [
+            "normalized_name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "owners": {
+      "name": "owners",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "players": {
+      "name": "players",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_id": {
+          "name": "auction_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "fms_code": {
+          "name": "fms_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "availability_status": {
+          "name": "availability_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'AVAILABLE'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "players_session_fms_code_unique": {
+          "name": "players_session_fms_code_unique",
+          "columns": [
+            "auction_session_id",
+            "fms_code"
+          ],
+          "isUnique": true
+        },
+        "players_session_normalized_name_unique": {
+          "name": "players_session_normalized_name_unique",
+          "columns": [
+            "auction_session_id",
+            "normalized_name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "players_auction_session_id_auction_sessions_id_fk": {
+          "name": "players_auction_session_id_auction_sessions_id_fk",
+          "tableFrom": "players",
+          "tableTo": "auction_sessions",
+          "columnsFrom": [
+            "auction_session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "roster_entries": {
+      "name": "roster_entries",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auction_session_team_id": {
+          "name": "auction_session_team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "player_id": {
+          "name": "player_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acquisition_cost": {
+          "name": "acquisition_cost",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contract_year": {
+          "name": "contract_year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "roster_entries_player_unique": {
+          "name": "roster_entries_player_unique",
+          "columns": [
+            "player_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "roster_entries_auction_session_team_id_auction_session_teams_id_fk": {
+          "name": "roster_entries_auction_session_team_id_auction_session_teams_id_fk",
+          "tableFrom": "roster_entries",
+          "tableTo": "auction_session_teams",
+          "columnsFrom": [
+            "auction_session_team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "roster_entries_player_id_players_id_fk": {
+          "name": "roster_entries_player_id_players_id_fk",
+          "tableFrom": "roster_entries",
+          "tableTo": "players",
+          "columnsFrom": [
+            "player_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "roster_entries_acquisition_cost_positive": {
+          "name": "roster_entries_acquisition_cost_positive",
+          "value": "\"roster_entries\".\"acquisition_cost\" >= 1"
+        },
+        "roster_entries_contract_year_range": {
+          "name": "roster_entries_contract_year_range",
+          "value": "\"roster_entries\".\"contract_year\" BETWEEN 1 AND 3"
+        }
+      }
+    },
+    "team_owners": {
+      "name": "team_owners",
+      "columns": {
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "team_owners_team_id_teams_id_fk": {
+          "name": "team_owners_team_id_teams_id_fk",
+          "tableFrom": "team_owners",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "team_owners_owner_id_owners_id_fk": {
+          "name": "team_owners_owner_id_owners_id_fk",
+          "tableFrom": "team_owners",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "team_owners_team_id_owner_id_pk": {
+          "columns": [
+            "team_id",
+            "owner_id"
+          ],
+          "name": "team_owners_team_id_owner_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "teams": {
+      "name": "teams",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "league_id": {
+          "name": "league_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "short_name": {
+          "name": "short_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "primary_color": {
+          "name": "primary_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "secondary_color": {
+          "name": "secondary_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "logo_path": {
+          "name": "logo_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "teams_league_name_unique": {
+          "name": "teams_league_name_unique",
+          "columns": [
+            "league_id",
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "teams_league_id_leagues_id_fk": {
+          "name": "teams_league_id_leagues_id_fk",
+          "tableFrom": "teams",
+          "tableTo": "leagues",
+          "columnsFrom": [
+            "league_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
