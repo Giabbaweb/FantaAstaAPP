@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.7.0
+v0.8.0
 ```
 
 Milestone completate:
@@ -76,12 +76,18 @@ Milestone completate:
 - comandi telecomando `BID`, `PASS` e `UNDO_PASS`;
 - autorizzazione dei telecomandi per squadra e sessione;
 - observer in sola lettura;
-- 187 test server verdi.
+- conferma definitiva atomica delle aggiudicazioni;
+- aggiornamento atomico di crediti, rosa e disponibilità giocatore;
+- audit trail persistente tramite `auction_events`;
+- evento `AUCTION_AWARD_CONFIRMED`;
+- rollback completo dell'assegnazione e dell'audit;
+- boundary post-commit per il futuro backup;
+- 217 test server verdi.
 
 Prossima milestone:
 
 ```text
-v0.8.0 — Conferma assegnazioni e transazioni
+v0.9.0 — Schermo pubblico
 ```
 
 ---
@@ -466,30 +472,68 @@ Comandi HTTP supportati:
 
 # v0.8.0 — Conferma assegnazioni e transazioni
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
-- confermare le assegnazioni;
+- confermare definitivamente le assegnazioni;
 - aggiornare crediti e rosa;
-- registrare eventi;
-- garantire atomicità;
-- creare backup dopo operazioni critiche.
+- registrare un audit trail persistente;
+- garantire atomicità e rollback completo;
+- predisporre il punto post-commit per il futuro backup.
 
 ## Operazione transazionale
 
-La conferma deve comprendere:
+La conferma comprende:
 
 1. verifica dello stato;
-2. verifica del leader;
-3. verifica dei crediti;
-4. verifica degli slot;
-5. assegnazione del giocatore;
-6. aggiornamento crediti;
-7. aggiornamento rosa;
-8. chiusura della chiamata;
-9. registrazione evento;
-10. backup.
+2. verifica del vincitore provvisorio;
+3. verifica della disponibilità del giocatore;
+4. verifica dei crediti;
+5. verifica degli slot e dei limiti per ruolo;
+6. verifica della completabilità della rosa;
+7. creazione della voce di rosa;
+8. aggiornamento dei crediti residui;
+9. aggiornamento del giocatore a `ROSTERED`;
+10. chiusura della chiamata;
+11. registrazione dell'evento di audit;
+12. incremento di `stateVersion`;
+13. registrazione del comando nel `command_registry`;
+14. commit atomico.
+
+Dopo il commit:
+
+1. viene pubblicato l'evento realtime;
+2. viene pubblicato lo snapshot autorevole;
+3. viene invocato il boundary applicativo per la richiesta di backup.
+
+Il sottosistema completo di backup e recovery non appartiene alla
+v0.8.0 e rimane previsto dalla v0.13.0.
+
+## Implementazione completata
+
+- validazione di dominio dell'aggiudicazione definitiva;
+- repository transazionali per player, partecipazione della squadra e rosa;
+- servizio transazionale per l'assegnazione confermata;
+- aggiornamento atomico di rosa, crediti e disponibilità del giocatore;
+- errori della conferma mappati nel protocollo HTTP;
+- tabella persistente `auction_events`;
+- repository transazionale degli eventi d'asta;
+- evento di audit `AUCTION_AWARD_CONFIRMED`;
+- separazione tra audit di dominio e `command_registry`;
+- audit incluso nella stessa transazione dell'assegnazione;
+- nessun evento di audit persistito dopo rollback;
+- evento realtime e snapshot pubblicati esclusivamente dopo commit;
+- boundary post-commit `AuctionBackupRequester`;
+- implementazione `NoopAuctionBackupRequester` per la v0.8.0;
+- nessuna richiesta di backup duplicata sui replay idempotenti;
+- fallimento della richiesta di backup isolato dal comando già committato;
+- 31 file di test server superati;
+- 217 test server superati;
+- 10 file di test domain superati;
+- 86 test domain superati;
+- typecheck completo del monorepo superato;
+- build completa del monorepo superata.
 
 ## Criteri di completamento
 
@@ -498,13 +542,17 @@ La conferma deve comprendere:
 - giocatore assegnato a una sola squadra;
 - crediti mai negativi;
 - rosa sempre completabile;
-- audit trail aggiornato.
+- audit trail persistente aggiornato atomicamente;
+- nessun audit residuo dopo rollback;
+- nessun effetto post-commit duplicato sui replay idempotenti;
+- punto applicativo per il futuro backup disponibile;
+- typecheck, test e build completi superati.
 
 ---
 
 # v0.9.0 — Schermo pubblico
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 
