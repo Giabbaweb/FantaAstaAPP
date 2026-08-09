@@ -174,7 +174,10 @@ describe("Socket.IO server", () => {
 
     client.emit(
       "realtime:register",
-      input
+      {
+        kind: "TEAM",
+        ...input
+      }
     );
 
     return registeredPayloadPromise;
@@ -244,6 +247,7 @@ describe("Socket.IO server", () => {
         });
 
       expect(payload).toEqual({
+        kind: "TEAM",
         socketId: client.id,
         deviceId: "operator-device",
         auctionSessionId,
@@ -267,6 +271,7 @@ describe("Socket.IO server", () => {
         waitForRealtimeError(client);
 
       client.emit("realtime:register", {
+        kind: "TEAM",
         deviceId: "",
         auctionSessionId: "session-1",
         role: "OPERATOR",
@@ -307,6 +312,7 @@ describe("Socket.IO server", () => {
         waitForRealtimeError(client);
 
       client.emit("realtime:register", {
+        kind: "TEAM",
         deviceId: "operator-device",
         auctionSessionId,
         auctionSessionTeamId,
@@ -340,6 +346,7 @@ describe("Socket.IO server", () => {
         waitForRealtimeError(client);
 
       client.emit("realtime:register", {
+        kind: "TEAM",
         deviceId: "operator-device",
         auctionSessionId: "different-session",
         auctionSessionTeamId,
@@ -385,6 +392,7 @@ describe("Socket.IO server", () => {
         waitForRealtimeError(secondClient);
 
       secondClient.emit("realtime:register", {
+        kind: "TEAM",
         deviceId: "operator-device-2",
         auctionSessionId,
         auctionSessionTeamId,
@@ -437,9 +445,29 @@ describe("Socket.IO server", () => {
           pin: "1234"
         });
 
+      expect(firstRegistration.kind).toBe(
+        "TEAM"
+      );
+
+      if (firstRegistration.kind !== "TEAM") {
+        throw new Error(
+          "Expected a TEAM registration"
+        );
+      }
+
       expect(firstRegistration.role).toBe(
         "OBSERVER"
       );
+
+      expect(secondRegistration.kind).toBe(
+        "TEAM"
+      );
+
+      if (secondRegistration.kind !== "TEAM") {
+        throw new Error(
+          "Expected a TEAM registration"
+        );
+      }
 
       expect(secondRegistration.role).toBe(
         "OBSERVER"
@@ -453,6 +481,72 @@ describe("Socket.IO server", () => {
       secondClient.disconnect();
     }
   });
+
+  it("registers a public display and sends the authoritative snapshot", async () => {
+    const {
+      auctionSessionId
+    } = await seedTeamAccess({
+      stateVersion: 5
+    });
+
+    const client = createClient();
+
+    try {
+      await waitForConnection(client);
+
+      const registeredPromise =
+        new Promise<RealtimeRegisteredPayload>(
+          (resolve) => {
+            client.once(
+              "realtime:registered",
+              resolve
+            );
+          }
+        );
+
+      const snapshotPromise =
+        new Promise<RealtimeAuctionSnapshot>(
+          (resolve) => {
+            client.once(
+              "auction:snapshot",
+              resolve
+            );
+          }
+        );
+
+      client.emit("realtime:register", {
+        kind: "PUBLIC_DISPLAY",
+        deviceId: "public-display-1",
+        auctionSessionId
+      });
+
+      const [
+        registered,
+        snapshot
+      ] = await Promise.all([
+        registeredPromise,
+        snapshotPromise
+      ]);
+
+      expect(registered).toEqual({
+        kind: "PUBLIC_DISPLAY",
+        socketId: client.id,
+        deviceId: "public-display-1",
+        auctionSessionId,
+        connectedAt: expect.any(String),
+        registeredAt: expect.any(String)
+      });
+
+      expect(snapshot.stateVersion).toBe(5);
+
+      expect(snapshot.session.id).toBe(
+        auctionSessionId
+      );
+    } finally {
+      client.disconnect();
+    }
+  });
+
 
   it("sends the authoritative snapshot after registration", async () => {
     const {
@@ -502,6 +596,7 @@ describe("Socket.IO server", () => {
         );
 
       client.emit("realtime:register", {
+        kind: "TEAM",
         deviceId: "snapshot-device",
         auctionSessionId,
         auctionSessionTeamId,
@@ -516,6 +611,16 @@ describe("Socket.IO server", () => {
         registeredPromise,
         snapshotPromise
       ]);
+
+      expect(registered.kind).toBe(
+        "TEAM"
+      );
+
+      if (registered.kind !== "TEAM") {
+        throw new Error(
+          "Expected a TEAM registration"
+        );
+      }
 
       expect(registered.role).toBe(
         "OBSERVER"

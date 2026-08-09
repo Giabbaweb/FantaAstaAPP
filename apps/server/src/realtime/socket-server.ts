@@ -112,44 +112,59 @@ export function createSocketServer(
         }
 
         try {
-          const {
-            pin,
-            ...registration
-          } = parsedPayload.data;
+          const registration =
+            parsedPayload.data;
 
-          await teamAccessService
-            .authorizeRegistration(
-              registration.auctionSessionTeamId,
-              registration.auctionSessionId,
-              pin
-            );
+          if (registration.kind === "TEAM") {
+            await teamAccessService
+              .authorizeRegistration(
+                registration.auctionSessionTeamId,
+                registration.auctionSessionId,
+                registration.pin
+              );
 
-          if (
-            registration.role === "OPERATOR" &&
-            connectionManager
-              .findOperatorByAuctionSessionTeamId(
-                registration.auctionSessionTeamId
-              )
-          ) {
-            const errorPayload: RealtimeError = {
-              code:
-                "OPERATOR_ALREADY_CONNECTED",
-              message:
-                "An operator is already connected for this auction session team"
-            };
+            if (
+              registration.role === "OPERATOR" &&
+              connectionManager
+                .findOperatorByAuctionSessionTeamId(
+                  registration.auctionSessionTeamId
+                )
+            ) {
+              const errorPayload: RealtimeError = {
+                code:
+                  "OPERATOR_ALREADY_CONNECTED",
+                message:
+                  "An operator is already connected for this auction session team"
+              };
 
-            socket.emit(
-              "realtime:error",
-              errorPayload
-            );
+              socket.emit(
+                "realtime:error",
+                errorPayload
+              );
 
-            return;
+              return;
+            }
           }
 
           const registeredConnection =
             connectionManager.register(
               socket.id,
-              registration
+              registration.kind === "TEAM"
+                ? {
+                    kind: "TEAM",
+                    deviceId: registration.deviceId,
+                    auctionSessionId:
+                      registration.auctionSessionId,
+                    auctionSessionTeamId:
+                      registration.auctionSessionTeamId,
+                    role: registration.role
+                  }
+                : {
+                    kind: "PUBLIC_DISPLAY",
+                    deviceId: registration.deviceId,
+                    auctionSessionId:
+                      registration.auctionSessionId
+                  }
             );
 
           await socket.join(
@@ -158,36 +173,57 @@ export function createSocketServer(
             )
           );
 
-          await socket.join(
-            auctionSessionTeamRoom(
-              registeredConnection.auctionSessionTeamId
-            )
-          );
+          if (registeredConnection.kind === "TEAM") {
+            await socket.join(
+              auctionSessionTeamRoom(
+                registeredConnection.auctionSessionTeamId
+              )
+            );
 
-          await socket.join(
-            registeredConnection.role === "OPERATOR"
-              ? auctionSessionOperatorsRoom(
-                  registeredConnection.auctionSessionId
-                )
-              : auctionSessionObserversRoom(
-                  registeredConnection.auctionSessionId
-                )
-          );
+            await socket.join(
+              registeredConnection.role === "OPERATOR"
+                ? auctionSessionOperatorsRoom(
+                    registeredConnection.auctionSessionId
+                  )
+                : auctionSessionObserversRoom(
+                    registeredConnection.auctionSessionId
+                  )
+            );
+          }
 
           const registeredPayload:
-            RealtimeRegisteredPayload = {
-              socketId: registeredConnection.socketId,
-              deviceId: registeredConnection.deviceId,
-              auctionSessionId:
-                registeredConnection.auctionSessionId,
-              auctionSessionTeamId:
-                registeredConnection.auctionSessionTeamId,
-              role: registeredConnection.role,
-              connectedAt:
-                registeredConnection.connectedAt,
-              registeredAt:
-                registeredConnection.registeredAt
-            };
+            RealtimeRegisteredPayload =
+              registeredConnection.kind === "TEAM"
+                ? {
+                    kind: "TEAM",
+                    socketId:
+                      registeredConnection.socketId,
+                    deviceId:
+                      registeredConnection.deviceId,
+                    auctionSessionId:
+                      registeredConnection.auctionSessionId,
+                    auctionSessionTeamId:
+                      registeredConnection.auctionSessionTeamId,
+                    role:
+                      registeredConnection.role,
+                    connectedAt:
+                      registeredConnection.connectedAt,
+                    registeredAt:
+                      registeredConnection.registeredAt
+                  }
+                : {
+                    kind: "PUBLIC_DISPLAY",
+                    socketId:
+                      registeredConnection.socketId,
+                    deviceId:
+                      registeredConnection.deviceId,
+                    auctionSessionId:
+                      registeredConnection.auctionSessionId,
+                    connectedAt:
+                      registeredConnection.connectedAt,
+                    registeredAt:
+                      registeredConnection.registeredAt
+                  };
 
           socket.emit(
             "realtime:registered",
@@ -206,19 +242,34 @@ export function createSocketServer(
           );
 
           app.log.info(
-            {
-              module: "realtime",
-              socketId: socket.id,
-              deviceId:
-                registeredConnection.deviceId,
-              auctionSessionId:
-                registeredConnection.auctionSessionId,
-              auctionSessionTeamId:
-                registeredConnection.auctionSessionTeamId,
-              role: registeredConnection.role
-            },
+            registeredConnection.kind === "TEAM"
+              ? {
+                  module: "realtime",
+                  socketId: socket.id,
+                  deviceId:
+                    registeredConnection.deviceId,
+                  auctionSessionId:
+                    registeredConnection.auctionSessionId,
+                  auctionSessionTeamId:
+                    registeredConnection.auctionSessionTeamId,
+                  role:
+                    registeredConnection.role,
+                  kind:
+                    registeredConnection.kind
+                }
+              : {
+                  module: "realtime",
+                  socketId: socket.id,
+                  deviceId:
+                    registeredConnection.deviceId,
+                  auctionSessionId:
+                    registeredConnection.auctionSessionId,
+                  kind:
+                    registeredConnection.kind
+                },
             "Realtime client registered"
           );
+
         } catch (error) {
           const errorPayload: RealtimeError =
             error instanceof TeamAccessServiceError

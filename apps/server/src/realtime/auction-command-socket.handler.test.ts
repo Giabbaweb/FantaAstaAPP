@@ -45,6 +45,7 @@ describe("AuctionCommandSocketHandler", () => {
     connectionManager.register(
       "socket-1",
       {
+        kind: "TEAM",
         deviceId: "device-1",
         auctionSessionId: "session-1",
         auctionSessionTeamId:
@@ -251,6 +252,71 @@ describe("AuctionCommandSocketHandler", () => {
         code: "UNAUTHORIZED"
       }
     });
+  });
+
+  it("rejects public display connections", async () => {
+    const connectionManager =
+      new RealtimeConnectionManager();
+
+    connectionManager.connect({
+      socketId: "public-display-socket"
+    });
+
+    connectionManager.register(
+      "public-display-socket",
+      {
+        kind: "PUBLIC_DISPLAY",
+        deviceId: "public-display-1",
+        auctionSessionId: "session-1"
+      }
+    );
+
+    const auctionCallReader = {
+      getById:
+        vi.fn().mockResolvedValue(
+          aggregate
+        )
+    };
+
+    const coordinator = {
+      placeBid: vi.fn(),
+      passTurn: vi.fn(),
+      undoPass: vi.fn()
+    };
+
+    const handler =
+      new AuctionCommandSocketHandler(
+        connectionManager,
+        auctionCallReader,
+        coordinator
+      );
+
+    await expect(
+      handler.handle(
+        "public-display-socket",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "PASS",
+          metadata,
+          auctionSessionTeamId:
+            "session-team-1"
+        }
+      )
+    ).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED"
+      }
+    });
+
+    expect(
+      auctionCallReader.getById
+    ).not.toHaveBeenCalled();
+
+    expect(
+      coordinator.passTurn
+    ).not.toHaveBeenCalled();
   });
 
   it("rejects commands for another team", async () => {

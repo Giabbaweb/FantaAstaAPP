@@ -7,8 +7,25 @@ import {
   registerRealtimeConnection,
   type RealtimeConnection,
   type RegisteredRealtimeConnection,
+  type RegisteredTeamRealtimeConnection,
   type UnregisteredRealtimeConnection
 } from "./realtime-connection.js";
+
+type RegisterRealtimeConnectionInput =
+  | {
+      kind: "TEAM";
+      deviceId: string;
+      auctionSessionId: string;
+      auctionSessionTeamId: string;
+      role: RealtimeRole;
+      registeredAt?: string;
+    }
+  | {
+      kind: "PUBLIC_DISPLAY";
+      deviceId: string;
+      auctionSessionId: string;
+      registeredAt?: string;
+    };
 
 export class RealtimeConnectionManager {
   private readonly connections =
@@ -31,13 +48,7 @@ export class RealtimeConnectionManager {
 
   register(
     socketId: string,
-    input: {
-      deviceId: string;
-      auctionSessionId: string;
-      auctionSessionTeamId: string;
-      role: RealtimeRole;
-      registeredAt?: string;
-    }
+    input: RegisterRealtimeConnectionInput
   ): RegisteredRealtimeConnection {
     const connection =
       this.connections.get(socketId);
@@ -93,13 +104,14 @@ export class RealtimeConnectionManager {
 
   findOperatorByAuctionSessionTeamId(
     auctionSessionTeamId: string
-  ): RegisteredRealtimeConnection | null {
+  ): RegisteredTeamRealtimeConnection | null {
     return (
       this.listConnections().find(
         (
           connection
-        ): connection is RegisteredRealtimeConnection =>
+        ): connection is RegisteredTeamRealtimeConnection =>
           connection.status === "REGISTERED" &&
+          connection.kind === "TEAM" &&
           connection.role === "OPERATOR" &&
           connection.auctionSessionTeamId ===
             auctionSessionTeamId

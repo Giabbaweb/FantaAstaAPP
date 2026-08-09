@@ -514,15 +514,43 @@ export type RealtimeEventName = z.infer<
   typeof realtimeEventNameSchema
 >;
 
-export const realtimeRegistrationRequestSchema = z.object({
-  deviceId: z.string().trim().min(1).max(100),
-  auctionSessionId: z.string().trim().min(1).max(100),
-  auctionSessionTeamId: z.string().trim().min(1).max(100),
-  role: realtimeRoleSchema,
-  pin: z.string().regex(/^\d{4,8}$/, {
-    message: "PIN must contain between 4 and 8 digits"
-  })
-});
+export const realtimeRegistrationKindSchema = z.enum([
+  "TEAM",
+  "PUBLIC_DISPLAY"
+]);
+
+export type RealtimeRegistrationKind = z.infer<
+  typeof realtimeRegistrationKindSchema
+>;
+
+export const realtimeTeamRegistrationRequestSchema =
+  z.object({
+    kind: z.literal("TEAM"),
+    deviceId: z.string().trim().min(1).max(100),
+    auctionSessionId:
+      z.string().trim().min(1).max(100),
+    auctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    role: realtimeRoleSchema,
+    pin: z.string().regex(/^\d{4,8}$/, {
+      message:
+        "PIN must contain between 4 and 8 digits"
+    })
+  });
+
+export const realtimePublicDisplayRegistrationRequestSchema =
+  z.object({
+    kind: z.literal("PUBLIC_DISPLAY"),
+    deviceId: z.string().trim().min(1).max(100),
+    auctionSessionId:
+      z.string().trim().min(1).max(100)
+  });
+
+export const realtimeRegistrationRequestSchema =
+  z.discriminatedUnion("kind", [
+    realtimeTeamRegistrationRequestSchema,
+    realtimePublicDisplayRegistrationRequestSchema
+  ]);
 
 export type RealtimeRegistrationRequest = z.infer<
   typeof realtimeRegistrationRequestSchema
@@ -537,15 +565,33 @@ export type RealtimeConnectedPayload = z.infer<
   typeof realtimeConnectedPayloadSchema
 >;
 
-export const realtimeRegisteredPayloadSchema = z.object({
-  socketId: z.string().min(1),
-  deviceId: z.string().min(1),
-  auctionSessionId: z.string().min(1),
-  auctionSessionTeamId: z.string().min(1),
-  role: realtimeRoleSchema,
-  connectedAt: z.string().min(1),
-  registeredAt: z.string().min(1)
-});
+export const realtimeTeamRegisteredPayloadSchema =
+  z.object({
+    kind: z.literal("TEAM"),
+    socketId: z.string().min(1),
+    deviceId: z.string().min(1),
+    auctionSessionId: z.string().min(1),
+    auctionSessionTeamId: z.string().min(1),
+    role: realtimeRoleSchema,
+    connectedAt: z.string().min(1),
+    registeredAt: z.string().min(1)
+  });
+
+export const realtimePublicDisplayRegisteredPayloadSchema =
+  z.object({
+    kind: z.literal("PUBLIC_DISPLAY"),
+    socketId: z.string().min(1),
+    deviceId: z.string().min(1),
+    auctionSessionId: z.string().min(1),
+    connectedAt: z.string().min(1),
+    registeredAt: z.string().min(1)
+  });
+
+export const realtimeRegisteredPayloadSchema =
+  z.discriminatedUnion("kind", [
+    realtimeTeamRegisteredPayloadSchema,
+    realtimePublicDisplayRegisteredPayloadSchema
+  ]);
 
 export type RealtimeRegisteredPayload = z.infer<
   typeof realtimeRegisteredPayloadSchema
