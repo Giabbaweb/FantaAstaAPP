@@ -39,7 +39,6 @@ export function createPublicDisplayRealtimeClient(
   options: PublicDisplayRealtimeClientOptions
 ): PublicDisplayRealtimeClient {
   const socket = io({
-    transports: ["websocket"],
     autoConnect: false
   });
 
