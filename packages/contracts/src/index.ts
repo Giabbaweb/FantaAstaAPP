@@ -792,7 +792,9 @@ export const realtimeAuctionSnapshotSchema = z.object({
     realtimeAuctionSessionTeamSchema
   ),
   operationalAuctionCall:
-    realtimeOperationalAuctionCallSchema.nullable()
+    realtimeOperationalAuctionCallSchema.nullable(),
+  publicDisplay:
+    realtimePublicDisplayProjectionSchema
 });
 
 export type RealtimeAuctionSnapshot = z.infer<

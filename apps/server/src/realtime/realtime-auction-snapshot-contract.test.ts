@@ -86,6 +86,10 @@ describe("realtime auction snapshot contracts", () => {
         teams: [
           auctionCallTeam
         ]
+      },
+      publicDisplay: {
+        teams: [],
+        currentPlayer: null
       }
     };
 
@@ -115,7 +119,11 @@ describe("realtime auction snapshot contracts", () => {
             "2026-08-02T19:00:00.000Z"
         },
         sessionTeams: [],
-        operationalAuctionCall: null
+        operationalAuctionCall: null,
+        publicDisplay: {
+          teams: [],
+          currentPlayer: null
+        }
       });
 
     expect(result.success).toBe(true);
@@ -140,7 +148,11 @@ describe("realtime auction snapshot contracts", () => {
             "2026-08-02T20:01:00.000Z"
         },
         sessionTeams: [],
-        operationalAuctionCall: null
+        operationalAuctionCall: null,
+        publicDisplay: {
+          teams: [],
+          currentPlayer: null
+        }
       });
 
     expect(result.success).toBe(false);

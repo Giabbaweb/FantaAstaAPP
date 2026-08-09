@@ -78,6 +78,7 @@ import {
   AuctionSnapshotDispatcher
 } from "./realtime/auction-snapshot-dispatcher.js";
 import {
+  SqliteRealtimePublicDisplayReader,
   SqliteRealtimeSnapshotSessionReader,
   SqliteRealtimeSnapshotTeamReader
 } from "./realtime/realtime-snapshot.repository.js";
@@ -116,7 +117,8 @@ export async function buildApp() {
     new RealtimeSnapshotService(
       new SqliteRealtimeSnapshotSessionReader(),
       new SqliteRealtimeSnapshotTeamReader(),
-      auctionCallRepository
+      auctionCallRepository,
+      new SqliteRealtimePublicDisplayReader()
     );
 
   const {

@@ -54,8 +54,12 @@ describe("RealtimePublisher", () => {
         updatedAt:
           "2026-08-02T21:00:00.000Z"
       },
-      sessionTeams: [],
-      operationalAuctionCall: null
+    sessionTeams: [],
+    operationalAuctionCall: null,
+    publicDisplay: {
+      teams: [],
+      currentPlayer: null
+    }
     };
 
     await expect(

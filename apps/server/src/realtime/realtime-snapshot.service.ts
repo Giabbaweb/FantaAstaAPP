@@ -2,10 +2,17 @@ import type {
   RealtimeAuctionSnapshot
 } from "@fantaastaapp/contracts";
 
+import {
+  rosterRoleLimits,
+  rosterSizeLimit
+} from "@fantaastaapp/domain";
+
 import type {
   AuctionCallReader
 } from "../repositories/auction-call.repository.js";
+
 import type {
+  RealtimePublicDisplayReader,
   RealtimeSnapshotSessionReader,
   RealtimeSnapshotTeamReader
 } from "./realtime-snapshot.repository.js";
@@ -40,6 +47,8 @@ export class RealtimeSnapshotService {
       RealtimeSnapshotTeamReader,
     private readonly auctionCallReader:
       AuctionCallReader,
+    private readonly publicDisplayReader:
+      RealtimePublicDisplayReader,
     private readonly now:
       () => string = () =>
         new Date().toISOString()
@@ -62,7 +71,8 @@ export class RealtimeSnapshotService {
 
     const [
       sessionTeams,
-      operationalAuctionCall
+      operationalAuctionCall,
+      publicDisplayTeams
     ] = await Promise.all([
       this.sessionTeamReader
         .findByAuctionSessionId(
@@ -72,8 +82,68 @@ export class RealtimeSnapshotService {
       this.auctionCallReader
         .findOperationalByAuctionSessionId(
           auctionSessionId
+        ),
+
+      this.publicDisplayReader
+        .findTeamsByAuctionSessionId(
+          auctionSessionId
         )
     ]);
+
+    const currentPlayer =
+      operationalAuctionCall
+        ? await this.publicDisplayReader
+            .findPlayerById(
+              operationalAuctionCall.call.playerId
+            )
+        : null;
+
+    const publicDisplay = {
+      teams: publicDisplayTeams.map((team) => {
+        const rosterSize =
+          team.roleCounts.P +
+          team.roleCounts.D +
+          team.roleCounts.C +
+          team.roleCounts.A;
+
+        return {
+          auctionSessionTeamId:
+            team.auctionSessionTeamId,
+          teamId: team.teamId,
+          teamName: team.teamName,
+          shortName: team.shortName,
+          primaryColor: team.primaryColor,
+          secondaryColor: team.secondaryColor,
+          logoPath: team.logoPath,
+          tableOrder: team.tableOrder,
+          remainingCredits:
+            team.remainingCredits,
+          roster: {
+            P: {
+              count: team.roleCounts.P,
+              limit: rosterRoleLimits.P
+            },
+            D: {
+              count: team.roleCounts.D,
+              limit: rosterRoleLimits.D
+            },
+            C: {
+              count: team.roleCounts.C,
+              limit: rosterRoleLimits.C
+            },
+            A: {
+              count: team.roleCounts.A,
+              limit: rosterRoleLimits.A
+            },
+            rosterSize,
+            rosterSizeLimit,
+            remainingRosterSlots:
+              rosterSizeLimit - rosterSize
+          }
+        };
+      }),
+      currentPlayer
+    };
 
     return {
       stateVersion:
@@ -81,7 +151,8 @@ export class RealtimeSnapshotService {
       generatedAt: this.now(),
       session: sessionState.session,
       sessionTeams,
-      operationalAuctionCall
+      operationalAuctionCall,
+      publicDisplay
     };
   }
 }

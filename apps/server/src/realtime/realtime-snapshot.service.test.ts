@@ -97,6 +97,35 @@ describe("RealtimeSnapshotService", () => {
               operationalAuctionCall
             )
         },
+        {
+          findTeamsByAuctionSessionId:
+            vi.fn().mockResolvedValue([
+              {
+                auctionSessionTeamId:
+                  "auction-session-team-1",
+                teamId: "team-1",
+                teamName: "Team One",
+                shortName: "ONE",
+                primaryColor: "#112233",
+                secondaryColor: "#ffffff",
+                logoPath: "/logos/team-1.png",
+                tableOrder: 1,
+                remainingCredits: 310,
+                roleCounts: {
+                  P: 2,
+                  D: 5,
+                  C: 4,
+                  A: 3
+                }
+              }
+            ]),
+          findPlayerById:
+            vi.fn().mockResolvedValue({
+              id: "player-1",
+              name: "Player One",
+              role: "A"
+            })
+        },
         () =>
           "2026-08-02T20:02:00.000Z"
       );
@@ -118,44 +147,97 @@ describe("RealtimeSnapshotService", () => {
           remainingCredits: 310
         }
       ],
-      operationalAuctionCall
+      operationalAuctionCall,
+      publicDisplay: {
+        teams: [
+          {
+            auctionSessionTeamId:
+              "auction-session-team-1",
+            teamId: "team-1",
+            teamName: "Team One",
+            shortName: "ONE",
+            primaryColor: "#112233",
+            secondaryColor: "#ffffff",
+            logoPath: "/logos/team-1.png",
+            tableOrder: 1,
+            remainingCredits: 310,
+            roster: {
+              P: {
+                count: 2,
+                limit: 2
+              },
+              D: {
+                count: 5,
+                limit: 8
+              },
+              C: {
+                count: 4,
+                limit: 8
+              },
+              A: {
+                count: 3,
+                limit: 6
+              },
+              rosterSize: 14,
+              rosterSizeLimit: 24,
+              remainingRosterSlots: 10
+            }
+          }
+        ],
+        currentPlayer: {
+          id: "player-1",
+          name: "Player One",
+          role: "A"
+        }
+      }
     });
   });
 
   it("allows a snapshot without an operational call", async () => {
-    const service =
-      new RealtimeSnapshotService(
-        {
-          findById:
-            vi.fn().mockResolvedValue({
-              session,
-              stateVersion: 0
-            })
-        },
-        {
-          findByAuctionSessionId:
-            vi.fn().mockResolvedValue([])
-        },
-        {
-          findById: vi.fn(),
-          findOperationalByAuctionSessionId:
-            vi.fn().mockResolvedValue(null)
-        },
-        () =>
-          "2026-08-02T20:02:00.000Z"
-      );
+  const service =
+    new RealtimeSnapshotService(
+      {
+        findById:
+          vi.fn().mockResolvedValue({
+            session,
+            stateVersion: 0
+          })
+      },
+      {
+        findByAuctionSessionId:
+          vi.fn().mockResolvedValue([])
+      },
+      {
+        findById: vi.fn(),
+        findOperationalByAuctionSessionId:
+          vi.fn().mockResolvedValue(null)
+      },
+      {
+        findTeamsByAuctionSessionId:
+          vi.fn().mockResolvedValue([]),
+        findPlayerById:
+          vi.fn()
+      },
+      () =>
+        "2026-08-02T20:02:00.000Z"
+    );
 
-    const snapshot =
-      await service.buildSnapshot(
-        "session-1"
-      );
+  const snapshot =
+    await service.buildSnapshot(
+      "session-1"
+    );
 
-    expect(
-      snapshot.operationalAuctionCall
-    ).toBeNull();
+  expect(
+    snapshot.operationalAuctionCall
+  ).toBeNull();
 
-    expect(snapshot.stateVersion).toBe(0);
+  expect(snapshot.stateVersion).toBe(0);
+
+  expect(snapshot.publicDisplay).toEqual({
+    teams: [],
+    currentPlayer: null
   });
+});
 
   it("rejects a missing auction session", async () => {
     const service =
@@ -172,6 +254,12 @@ describe("RealtimeSnapshotService", () => {
           findById: vi.fn(),
           findOperationalByAuctionSessionId:
             vi.fn()
+        },
+        {
+          findTeamsByAuctionSessionId:
+            vi.fn(),
+          findPlayerById:
+            vi.fn()
         }
       );
 
@@ -184,4 +272,4 @@ describe("RealtimeSnapshotService", () => {
         "REALTIME_SNAPSHOT_SESSION_NOT_FOUND"
     });
   });
-});
+  });

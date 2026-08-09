@@ -92,8 +92,12 @@ describe("SocketIoRealtimePublisher", () => {
         updatedAt:
           "2026-08-02T21:00:00.000Z"
       },
-      sessionTeams: [],
-      operationalAuctionCall: null
+    sessionTeams: [],
+    operationalAuctionCall: null,
+    publicDisplay: {
+      teams: [],
+      currentPlayer: null
+    }
     };
 
     await publisher
@@ -150,8 +154,12 @@ describe("SocketIoRealtimePublisher", () => {
           updatedAt:
             "2026-08-02T21:00:00.000Z"
         },
-        sessionTeams: [],
-        operationalAuctionCall: null
+      sessionTeams: [],
+      operationalAuctionCall: null,
+      publicDisplay: {
+        teams: [],
+        currentPlayer: null
+      }
       })
     ).rejects.toThrow(
       "auctionSessionId must not be empty"
