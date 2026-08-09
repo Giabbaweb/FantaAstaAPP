@@ -715,6 +715,75 @@ export type RealtimeOperationalAuctionCall = z.infer<
   typeof realtimeOperationalAuctionCallSchema
 >;
 
+export const realtimePublicDisplayRosterRoleSchema =
+  z.object({
+    count: z.number().int().nonnegative(),
+    limit: z.number().int().positive()
+  });
+
+export type RealtimePublicDisplayRosterRole = z.infer<
+  typeof realtimePublicDisplayRosterRoleSchema
+>;
+
+export const realtimePublicDisplayRosterSchema =
+  z.object({
+    P: realtimePublicDisplayRosterRoleSchema,
+    D: realtimePublicDisplayRosterRoleSchema,
+    C: realtimePublicDisplayRosterRoleSchema,
+    A: realtimePublicDisplayRosterRoleSchema,
+    rosterSize: z.number().int().nonnegative(),
+    rosterSizeLimit: z.number().int().positive(),
+    remainingRosterSlots:
+      z.number().int().nonnegative()
+  });
+
+export type RealtimePublicDisplayRoster = z.infer<
+  typeof realtimePublicDisplayRosterSchema
+>;
+
+export const realtimePublicDisplayTeamSchema =
+  z.object({
+    auctionSessionTeamId: z.string().min(1),
+    teamId: z.string().min(1),
+    teamName: z.string().min(1),
+    shortName: z.string().nullable(),
+    primaryColor: z.string().nullable(),
+    secondaryColor: z.string().nullable(),
+    logoPath: z.string().nullable(),
+    tableOrder: z.number().int().positive(),
+    remainingCredits:
+      z.number().int().nonnegative(),
+    roster: realtimePublicDisplayRosterSchema
+  });
+
+export type RealtimePublicDisplayTeam = z.infer<
+  typeof realtimePublicDisplayTeamSchema
+>;
+
+export const realtimePublicDisplayPlayerSchema =
+  z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    role: playerRoleSchema
+  });
+
+export type RealtimePublicDisplayPlayer = z.infer<
+  typeof realtimePublicDisplayPlayerSchema
+>;
+
+export const realtimePublicDisplayProjectionSchema =
+  z.object({
+    teams: z.array(
+      realtimePublicDisplayTeamSchema
+    ),
+    currentPlayer:
+      realtimePublicDisplayPlayerSchema.nullable()
+  });
+
+export type RealtimePublicDisplayProjection = z.infer<
+  typeof realtimePublicDisplayProjectionSchema
+>;
+
 export const realtimeAuctionSnapshotSchema = z.object({
   stateVersion: z.number().int().nonnegative(),
   generatedAt: z.string().min(1),
