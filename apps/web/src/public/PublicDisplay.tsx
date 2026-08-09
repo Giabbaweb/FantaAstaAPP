@@ -366,82 +366,111 @@ export function PublicDisplay():
           </span>
         </div>
 
-        <div className="public-display__table-wrap">
-          <table className="public-display__table">
-            <thead>
-              <tr>
-                <th>Squadra</th>
-                <th>Crediti</th>
-                <th>Posti</th>
-                <th>P</th>
-                <th>D</th>
-                <th>C</th>
-                <th>A</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {
-                snapshot.publicDisplay
-                  .teams.map(
-                    (team) => (
-                      <tr
-                        key={
-                          team.auctionSessionTeamId
+        <div className="public-display__team-grid">
+          {
+            snapshot.publicDisplay
+              .teams.map(
+                (team) => (
+                  <article
+                    className="public-display__team-card"
+                    key={
+                      team.auctionSessionTeamId
+                    }
+                  >
+                    <header className="public-display__team-card-header">
+                      <div className="public-display__team-logo">
+                        {
+                          team.logoPath ? (
+                            <img
+                              src={team.logoPath}
+                              alt=""
+                            />
+                          ) : (
+                            <span>
+                              {
+                                team.shortName ??
+                                team.teamName
+                                  .slice(0, 3)
+                                  .toUpperCase()
+                              }
+                            </span>
+                          )
                         }
-                      >
-                        <td>
-                          <strong>
-                            {team.teamName}
-                          </strong>
+                      </div>
 
-                          {
-                            team.shortName && (
-                              <small>
-                                {team.shortName}
-                              </small>
-                            )
-                          }
-                        </td>
+                      <div className="public-display__team-identity">
+                        <h3>
+                          {team.teamName}
+                        </h3>
 
-                        <td className="public-display__number">
+                        {
+                          team.shortName && (
+                            <span>
+                              {team.shortName}
+                            </span>
+                          )
+                        }
+                      </div>
+                    </header>
+
+                    <div className="public-display__team-summary">
+                      <div>
+                        <span>
+                          Crediti
+                        </span>
+
+                        <strong>
                           {
                             team.remainingCredits
                           }
-                        </td>
+                        </strong>
+                      </div>
 
-                        <td className="public-display__number">
+                      <div>
+                        <span>
+                          Max offerta
+                        </span>
+
+                        <strong>
                           {
-                            team.roster
-                              .remainingRosterSlots
+                            team.maximumBid ?? "—"
                           }
-                        </td>
+                        </strong>
+                      </div>
+                    </div>
 
-                        <td>
-                          {team.roster.P.count}/
-                          {team.roster.P.limit}
-                        </td>
+                    <div className="public-display__team-roster">
+                      {
+                        (
+                          [
+                            ["P", team.roster.P],
+                            ["D", team.roster.D],
+                            ["C", team.roster.C],
+                            ["A", team.roster.A]
+                          ] as const
+                        ).map(
+                          ([role, data]) => (
+                            <div
+                              key={role}
+                              className="public-display__team-role"
+                            >
+                              <span>
+                                {role}
+                              </span>
 
-                        <td>
-                          {team.roster.D.count}/
-                          {team.roster.D.limit}
-                        </td>
-
-                        <td>
-                          {team.roster.C.count}/
-                          {team.roster.C.limit}
-                        </td>
-
-                        <td>
-                          {team.roster.A.count}/
-                          {team.roster.A.limit}
-                        </td>
-                      </tr>
-                    )
-                  )
-              }
-            </tbody>
-          </table>
+                              <strong>
+                                {data.count}/
+                                {data.limit}
+                              </strong>
+                            </div>
+                          )
+                        )
+                      }
+                    </div>
+                  </article>
+                )
+              )
+          }
         </div>
       </section>
     </main>

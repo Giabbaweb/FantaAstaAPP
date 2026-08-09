@@ -3,6 +3,7 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import {
+  calculateMaximumBid,
   rosterRoleLimits,
   rosterSizeLimit
 } from "@fantaastaapp/domain";
@@ -106,6 +107,18 @@ export class RealtimeSnapshotService {
           team.roleCounts.C +
           team.roleCounts.A;
 
+    const remainingRosterSlots =
+      rosterSizeLimit - rosterSize;
+
+    const maximumBid =
+      remainingRosterSlots > 0
+        ? calculateMaximumBid({
+            remainingCredits:
+              team.remainingCredits,
+            remainingRosterSlots
+          })
+        : null;
+
         return {
           auctionSessionTeamId:
             team.auctionSessionTeamId,
@@ -118,6 +131,7 @@ export class RealtimeSnapshotService {
           tableOrder: team.tableOrder,
           remainingCredits:
             team.remainingCredits,
+          maximumBid,
           roster: {
             P: {
               count: team.roleCounts.P,
@@ -137,8 +151,7 @@ export class RealtimeSnapshotService {
             },
             rosterSize,
             rosterSizeLimit,
-            remainingRosterSlots:
-              rosterSizeLimit - rosterSize
+            remainingRosterSlots
           }
         };
       }),

@@ -753,6 +753,8 @@ export const realtimePublicDisplayTeamSchema =
     tableOrder: z.number().int().positive(),
     remainingCredits:
       z.number().int().nonnegative(),
+    maximumBid:
+      z.number().int().nonnegative().nullable(),
     roster: realtimePublicDisplayRosterSchema
   });
 
