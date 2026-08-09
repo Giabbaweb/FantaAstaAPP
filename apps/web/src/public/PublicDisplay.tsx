@@ -17,6 +17,8 @@ import {
   createPublicDisplayRealtimeClient
 } from "./public-display-realtime.js";
 
+import "./public-display.css";
+
 type PublicDisplayStatus =
   | "LOADING"
   | "NO_ACTIVE_SESSION"
@@ -220,120 +222,227 @@ export function PublicDisplay():
   const currentPlayer =
     snapshot.publicDisplay.currentPlayer;
 
+  const findTeamName = (
+    auctionSessionTeamId: string | null
+  ): string => {
+    if (!auctionSessionTeamId) {
+      return "-";
+    }
+
+    return (
+      snapshot.publicDisplay.teams.find(
+        (team) =>
+          team.auctionSessionTeamId ===
+          auctionSessionTeamId
+      )?.teamName ?? "-"
+    );
+  };
+
+  const currentLeader =
+    operationalCall
+      ? findTeamName(
+          operationalCall.call
+            .currentLeaderAuctionSessionTeamId
+        )
+      : "-";
+
+  const currentTurn =
+    operationalCall
+      ? findTeamName(
+          operationalCall.call
+            .currentTurnAuctionSessionTeamId
+        )
+      : "-";
+
   return (
-    <main>
-      <header>
-        <h1>FantaAstaAPP — Schermo Pubblico</h1>
-        <p>
-          {session.season}
-          {" · "}
-          Sessione: {snapshot.session.status}
-          {" · "}
-          Versione stato: {snapshot.stateVersion}
-        </p>
+    <main className="public-display">
+      <header className="public-display__header">
+        <div>
+          <p className="public-display__eyebrow">
+            FantaAstaAPP
+          </p>
+
+          <h1 className="public-display__title">
+            Schermo Pubblico
+          </h1>
+        </div>
+
+        <div className="public-display__session">
+          <strong>
+            {session.season}
+          </strong>
+
+          <span
+            className="public-display__status"
+            data-status={
+              snapshot.session.status
+            }
+          >
+            {snapshot.session.status}
+          </span>
+
+          <small>
+            Stato #{snapshot.stateVersion}
+          </small>
+        </div>
       </header>
 
-      <section>
-        <h2>Giocatore chiamato</h2>
+      <section className="public-display__auction">
+        <p className="public-display__section-label">
+          Giocatore chiamato
+        </p>
 
-        {currentPlayer ? (
-          <>
+        <div className="public-display__player">
+          {currentPlayer ? (
+            <>
+              <h2 className="public-display__player-name">
+                {currentPlayer.name}
+              </h2>
+
+              <span className="public-display__player-role">
+                {currentPlayer.role}
+              </span>
+            </>
+          ) : (
+            <h2 className="public-display__player-empty">
+              Nessun giocatore in chiamata
+            </h2>
+          )}
+        </div>
+
+        <div className="public-display__auction-metrics">
+          <article className="public-display__metric">
+            <span>
+              Prezzo corrente
+            </span>
+
             <strong>
-              {currentPlayer.name}
+              {
+                operationalCall?.call
+                  .currentBid ?? "-"
+              }
             </strong>
-            <p>
-              Ruolo: {currentPlayer.role}
-            </p>
-          </>
-        ) : (
-          <p>
-            Nessun giocatore in chiamata.
-          </p>
-        )}
+          </article>
 
-        {operationalCall && (
-          <>
-            <p>
-              Prezzo corrente:{" "}
-              {operationalCall.call.currentBid ?? "-"}
-            </p>
+          <article className="public-display__metric">
+            <span>
+              Leader
+            </span>
 
-            <p>
-              Leader:{" "}
-              {
-                operationalCall.call
-                  .currentLeaderAuctionSessionTeamId ??
-                "-"
-              }
-            </p>
+            <strong>
+              {currentLeader}
+            </strong>
+          </article>
 
-            <p>
-              Turno:{" "}
-              {
-                operationalCall.call
-                  .currentTurnAuctionSessionTeamId ??
-                "-"
-              }
-            </p>
-          </>
-        )}
+          <article className="public-display__metric">
+            <span>
+              Turno
+            </span>
+
+            <strong>
+              {currentTurn}
+            </strong>
+          </article>
+        </div>
       </section>
 
-      <section>
-        <h2>Squadre</h2>
+      <section className="public-display__teams">
+        <div className="public-display__teams-heading">
+          <div>
+            <p className="public-display__section-label">
+              Situazione squadre
+            </p>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Squadra</th>
-              <th>Crediti</th>
-              <th>Posti</th>
-              <th>P</th>
-              <th>D</th>
-              <th>C</th>
-              <th>A</th>
-            </tr>
-          </thead>
+            <h2>
+              Crediti e composizione rose
+            </h2>
+          </div>
 
-          <tbody>
-            {snapshot.publicDisplay.teams.map(
-              (team) => (
-                <tr
-                  key={
-                    team.auctionSessionTeamId
-                  }
-                >
-                  <td>{team.teamName}</td>
-                  <td>
-                    {team.remainingCredits}
-                  </td>
-                  <td>
-                    {
-                      team.roster
-                        .remainingRosterSlots
-                    }
-                  </td>
-                  <td>
-                    {team.roster.P.count}/
-                    {team.roster.P.limit}
-                  </td>
-                  <td>
-                    {team.roster.D.count}/
-                    {team.roster.D.limit}
-                  </td>
-                  <td>
-                    {team.roster.C.count}/
-                    {team.roster.C.limit}
-                  </td>
-                  <td>
-                    {team.roster.A.count}/
-                    {team.roster.A.limit}
-                  </td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
+          <span>
+            {
+              snapshot.publicDisplay
+                .teams.length
+            } squadre
+          </span>
+        </div>
+
+        <div className="public-display__table-wrap">
+          <table className="public-display__table">
+            <thead>
+              <tr>
+                <th>Squadra</th>
+                <th>Crediti</th>
+                <th>Posti</th>
+                <th>P</th>
+                <th>D</th>
+                <th>C</th>
+                <th>A</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {
+                snapshot.publicDisplay
+                  .teams.map(
+                    (team) => (
+                      <tr
+                        key={
+                          team.auctionSessionTeamId
+                        }
+                      >
+                        <td>
+                          <strong>
+                            {team.teamName}
+                          </strong>
+
+                          {
+                            team.shortName && (
+                              <small>
+                                {team.shortName}
+                              </small>
+                            )
+                          }
+                        </td>
+
+                        <td className="public-display__number">
+                          {
+                            team.remainingCredits
+                          }
+                        </td>
+
+                        <td className="public-display__number">
+                          {
+                            team.roster
+                              .remainingRosterSlots
+                          }
+                        </td>
+
+                        <td>
+                          {team.roster.P.count}/
+                          {team.roster.P.limit}
+                        </td>
+
+                        <td>
+                          {team.roster.D.count}/
+                          {team.roster.D.limit}
+                        </td>
+
+                        <td>
+                          {team.roster.C.count}/
+                          {team.roster.C.limit}
+                        </td>
+
+                        <td>
+                          {team.roster.A.count}/
+                          {team.roster.A.limit}
+                        </td>
+                      </tr>
+                    )
+                  )
+              }
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );
