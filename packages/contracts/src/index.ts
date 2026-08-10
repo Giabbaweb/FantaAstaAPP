@@ -254,6 +254,8 @@ export const playerSchema = z.object({
   fmsCode: z.string().trim().min(1).max(50),
   name: z.string().trim().min(1).max(150),
   normalizedName: z.string().min(1),
+  realTeamName:
+    z.string().trim().min(1).max(100).nullable().optional(),
   role: playerRoleSchema,
   availabilityStatus: playerAvailabilityStatusSchema,
   createdAt: z.string().min(1),
@@ -268,6 +270,8 @@ export const createPlayerSchema = z.object({
   auctionSessionId: z.string().min(1),
   fmsCode: z.string().trim().min(1).max(50),
   name: z.string().trim().min(1).max(150),
+  realTeamName:
+    z.string().trim().min(1).max(100).nullable().optional(),
   role: playerRoleSchema,
   availabilityStatus: playerAvailabilityStatusSchema
     .default("AVAILABLE")
@@ -281,6 +285,8 @@ export const updatePlayerSchema = z
   .object({
     fmsCode: z.string().trim().min(1).max(50).optional(),
     name: z.string().trim().min(1).max(150).optional(),
+    realTeamName:
+      z.string().trim().min(1).max(100).nullable().optional(),
     role: playerRoleSchema.optional(),
     availabilityStatus:
       playerAvailabilityStatusSchema.optional()

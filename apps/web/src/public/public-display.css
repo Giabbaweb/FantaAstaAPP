@@ -164,18 +164,38 @@ body {
 }
 
 .public-display__player {
-  min-height: clamp(52px, 6vh, 78px);
+  min-height: clamp(104px, 10vh, 132px);
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  gap: clamp(16px, 1.4vw, 24px);
+  text-align: left;
+}
+
+.public-display__player-photo {
+  width: clamp(96px, 7vw, 120px);
+  height: clamp(96px, 7vw, 120px);
+  flex: 0 0 auto;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 14px;
+  background: #eef3f8;
+}
+
+.public-display__player-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  gap: 18px;
-  text-align: center;
+  gap: clamp(9px, 0.8vw, 13px);
+  text-align: left;
 }
 
 .public-display__player-name,
 .public-display__player-empty {
   margin: 0;
-  font-size: clamp(32px, 4.8vw, 78px);
+  font-size: clamp(38px, 4vw, 64px);
   line-height: 0.95;
 }
 
@@ -185,25 +205,42 @@ body {
 }
 
 .public-display__player-role {
-  min-width: 58px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  background: #152033;
+  min-width: 48px;
+  padding: 6px 12px;
+  border-radius: 11px;
   color: #ffffff;
-  font-size: clamp(22px, 2.5vw, 38px);
+  font-size: clamp(20px, 1.8vw, 28px);
   font-weight: 900;
+  line-height: 1;
+  text-align: center;
+}
+
+.public-display__player-role[data-role="P"] {
+  background: #1565c0;
+}
+
+.public-display__player-role[data-role="D"] {
+  background: #2e7d32;
+}
+
+.public-display__player-role[data-role="C"] {
+  background: #795548;
+}
+
+.public-display__player-role[data-role="A"] {
+  background: #d32f2f;
 }
 
 .public-display__auction-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: clamp(10px, 1.2vw, 18px);
-  margin-top: 9px;
+  gap: clamp(8px, 0.9vw, 14px);
+  margin-top: 8px;
 }
 
 .public-display__metric {
   min-width: 0;
-  padding: clamp(12px, 1.3vw, 20px);
+  padding: clamp(9px, 1vw, 14px);
   border-radius: 14px;
   background: #eef3f8;
   text-align: center;
@@ -211,7 +248,7 @@ body {
 
 .public-display__metric span {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-size: clamp(12px, 1vw, 16px);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -222,7 +259,7 @@ body {
 .public-display__metric strong {
   display: block;
   overflow: hidden;
-  font-size: clamp(24px, 2.7vw, 44px);
+  font-size: clamp(22px, 2.2vw, 36px);
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;

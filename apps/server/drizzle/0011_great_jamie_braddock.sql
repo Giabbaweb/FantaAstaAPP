@@ -1,0 +1,1 @@
+ALTER TABLE `players` ADD `real_team_name` text;

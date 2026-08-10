@@ -24,6 +24,7 @@ export type CreatePlayerPersistenceInput = {
   fmsCode: string;
   name: string;
   normalizedName: string;
+  realTeamName?: string | null;
   role: PlayerRole;
   availabilityStatus: PlayerAvailabilityStatus;
 };
@@ -32,6 +33,7 @@ export type UpdatePlayerPersistenceInput = {
   fmsCode?: string;
   name?: string;
   normalizedName?: string;
+  realTeamName?: string | null;
   role?: PlayerRole;
   availabilityStatus?: PlayerAvailabilityStatus;
 };

@@ -326,13 +326,29 @@ export function PublicDisplay():
         <div className="public-display__player">
           {currentPlayer ? (
             <>
-              <h2 className="public-display__player-name">
-                {currentPlayer.name}
-              </h2>
+              <img
+                className="public-display__player-photo"
+                src={`/player-photos/${currentPlayer.id}.png`}
+                alt=""
+                aria-hidden="true"
+                onError={(event) => {
+                  event.currentTarget.style.display =
+                    "none";
+                }}
+              />
 
-              <span className="public-display__player-role">
-                {currentPlayer.role}
-              </span>
+              <div className="public-display__player-info">
+                <h2 className="public-display__player-name">
+                  {currentPlayer.name}
+                </h2>
+
+                <span
+                  className="public-display__player-role"
+                  data-role={currentPlayer.role}
+                >
+                  {currentPlayer.role}
+                </span>
+              </div>
             </>
           ) : (
             <h2 className="public-display__player-empty">

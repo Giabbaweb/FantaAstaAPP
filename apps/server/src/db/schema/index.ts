@@ -230,6 +230,8 @@ export const players = sqliteTable(
 
     normalizedName: text("normalized_name").notNull(),
 
+    realTeamName: text("real_team_name"),
+
     role: text("role", {
       enum: ["P", "D", "C", "A"]
     }).notNull(),
