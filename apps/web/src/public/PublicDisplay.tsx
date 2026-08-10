@@ -257,21 +257,52 @@ export function PublicDisplay():
   return (
     <main className="public-display">
       <header className="public-display__header">
-        <div>
-          <p className="public-display__eyebrow">
-            FantaAstaAPP
-          </p>
+        <div className="public-display__app-brand">
+          <img
+            className="public-display__app-logo"
+            src="/branding/fantaastaapp-logo.png"
+            alt="FantaAstaAPP"
+          />
 
           <h1 className="public-display__title">
             Schermo Pubblico
           </h1>
         </div>
 
-        <div className="public-display__session">
-          <strong>
-            {session.season}
-          </strong>
+        <div className="public-display__league-brand">
+          <img
+            className="public-display__league-logo"
+            src={
+              `/league-logos/${snapshot.publicDisplay.league.id}.png`
+            }
+            alt=""
+            aria-hidden="true"
+            onError={(event) => {
+              event.currentTarget.style.display =
+                "none";
+            }}
+          />
 
+          <div className="public-display__league-copy">
+            <strong className="public-display__league-name">
+              {snapshot.publicDisplay.league.name}
+            </strong>
+
+            <div className="public-display__league-meta">
+              <span>{session.season}</span>
+
+              <span aria-hidden="true">
+                ·
+              </span>
+
+              <span>
+                {session.editionNumber}ª edizione
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="public-display__session-meta">
           <span
             className="public-display__status"
             data-status={
