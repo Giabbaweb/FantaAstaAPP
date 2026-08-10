@@ -73,6 +73,7 @@ export class RealtimeSnapshotService {
     const [
       sessionTeams,
       operationalAuctionCall,
+      publicDisplayLeague,
       publicDisplayTeams
     ] = await Promise.all([
       this.sessionTeamReader
@@ -84,6 +85,11 @@ export class RealtimeSnapshotService {
         .findOperationalByAuctionSessionId(
           auctionSessionId
         ),
+
+this.publicDisplayReader
+.findLeagueByAuctionSessionId(
+auctionSessionId
+),
 
       this.publicDisplayReader
         .findTeamsByAuctionSessionId(
@@ -99,7 +105,15 @@ export class RealtimeSnapshotService {
             )
         : null;
 
+if (!publicDisplayLeague) {
+throw new RealtimeSnapshotServiceError(
+"REALTIME_SNAPSHOT_SESSION_NOT_FOUND",
+`League for auction session "${auctionSessionId}" was not found`
+);
+}
+
     const publicDisplay = {
+league: publicDisplayLeague,
       teams: publicDisplayTeams.map((team) => {
         const rosterSize =
           team.roleCounts.P +

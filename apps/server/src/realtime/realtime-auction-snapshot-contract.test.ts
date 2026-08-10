@@ -88,6 +88,10 @@ describe("realtime auction snapshot contracts", () => {
         ]
       },
       publicDisplay: {
+        league: {
+          id: "league-1",
+          name: "SFL'92"
+        },
         teams: [],
         currentPlayer: null
       }
@@ -121,6 +125,10 @@ describe("realtime auction snapshot contracts", () => {
         sessionTeams: [],
         operationalAuctionCall: null,
         publicDisplay: {
+          league: {
+            id: "league-1",
+            name: "SFL'92"
+          },
           teams: [],
           currentPlayer: null
         }
@@ -150,6 +158,10 @@ describe("realtime auction snapshot contracts", () => {
         sessionTeams: [],
         operationalAuctionCall: null,
         publicDisplay: {
+          league: {
+            id: "league-1",
+            name: "SFL'92"
+          },
           teams: [],
           currentPlayer: null
         }

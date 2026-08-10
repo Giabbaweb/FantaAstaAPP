@@ -15,6 +15,7 @@ import {
 import {
   auctionSessions,
   auctionSessionTeams,
+  leagues,
   players,
   rosterEntries,
   teams
@@ -36,6 +37,11 @@ export interface RealtimeSnapshotTeamReader {
     auctionSessionId: string
   ): Promise<RealtimeAuctionSessionTeam[]>;
 }
+
+export type RealtimePublicDisplayLeagueData = {
+  id: string;
+  name: string;
+};
 
 export type RealtimePublicDisplayTeamData = {
   auctionSessionTeamId: string;
@@ -62,6 +68,10 @@ export type RealtimePublicDisplayPlayerData = {
 };
 
 export interface RealtimePublicDisplayReader {
+  findLeagueByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<RealtimePublicDisplayLeagueData | null>;
+
   findTeamsByAuctionSessionId(
     auctionSessionId: string
   ): Promise<RealtimePublicDisplayTeamData[]>;
@@ -152,6 +162,33 @@ export class SqliteRealtimeSnapshotTeamReader
 export class SqliteRealtimePublicDisplayReader
   implements RealtimePublicDisplayReader
 {
+  async findLeagueByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<RealtimePublicDisplayLeagueData | null> {
+    const [record] = await db
+      .select({
+        id: leagues.id,
+        name: leagues.name
+      })
+      .from(auctionSessions)
+      .innerJoin(
+        leagues,
+        eq(
+          auctionSessions.leagueId,
+          leagues.id
+        )
+      )
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      )
+      .limit(1);
+
+    return record ?? null;
+  }
+
   async findTeamsByAuctionSessionId(
     auctionSessionId: string
   ): Promise<RealtimePublicDisplayTeamData[]> {

@@ -95,6 +95,10 @@ describe("SocketIoRealtimePublisher", () => {
     sessionTeams: [],
     operationalAuctionCall: null,
     publicDisplay: {
+      league: {
+        id: "league-1",
+        name: "SFL'92"
+      },
       teams: [],
       currentPlayer: null
     }
@@ -156,10 +160,14 @@ describe("SocketIoRealtimePublisher", () => {
         },
       sessionTeams: [],
       operationalAuctionCall: null,
-      publicDisplay: {
-        teams: [],
-        currentPlayer: null
-      }
+        publicDisplay: {
+          league: {
+            id: "league-1",
+            name: "SFL'92"
+          },
+          teams: [],
+          currentPlayer: null
+        }
       })
     ).rejects.toThrow(
       "auctionSessionId must not be empty"

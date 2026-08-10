@@ -98,6 +98,11 @@ describe("RealtimeSnapshotService", () => {
             )
         },
         {
+          findLeagueByAuctionSessionId:
+            vi.fn().mockResolvedValue({
+              id: "league-1",
+              name: "SFL'92"
+            }),
           findTeamsByAuctionSessionId:
             vi.fn().mockResolvedValue([
               {
@@ -149,6 +154,10 @@ describe("RealtimeSnapshotService", () => {
       ],
       operationalAuctionCall,
       publicDisplay: {
+        league: {
+          id: "league-1",
+          name: "SFL'92"
+        },
         teams: [
           {
             auctionSessionTeamId:
@@ -161,6 +170,7 @@ describe("RealtimeSnapshotService", () => {
             logoPath: "/logos/team-1.png",
             tableOrder: 1,
             remainingCredits: 310,
+            maximumBid: 301,
             roster: {
               P: {
                 count: 2,
@@ -213,11 +223,16 @@ describe("RealtimeSnapshotService", () => {
           vi.fn().mockResolvedValue(null)
       },
       {
-        findTeamsByAuctionSessionId:
-          vi.fn().mockResolvedValue([]),
-        findPlayerById:
-          vi.fn()
-      },
+          findLeagueByAuctionSessionId:
+            vi.fn().mockResolvedValue({
+              id: "league-1",
+              name: "SFL'92"
+            }),
+          findTeamsByAuctionSessionId:
+            vi.fn().mockResolvedValue([]),
+          findPlayerById:
+            vi.fn()
+        },
       () =>
         "2026-08-02T20:02:00.000Z"
     );
@@ -234,6 +249,10 @@ describe("RealtimeSnapshotService", () => {
   expect(snapshot.stateVersion).toBe(0);
 
   expect(snapshot.publicDisplay).toEqual({
+    league: {
+      id: "league-1",
+      name: "SFL'92"
+    },
     teams: [],
     currentPlayer: null
   });
@@ -256,6 +275,11 @@ describe("RealtimeSnapshotService", () => {
             vi.fn()
         },
         {
+          findLeagueByAuctionSessionId:
+            vi.fn().mockResolvedValue({
+              id: "league-1",
+              name: "SFL'92"
+            }),
           findTeamsByAuctionSessionId:
             vi.fn(),
           findPlayerById:

@@ -20,6 +20,7 @@ describe("realtime public display contracts", () => {
     logoPath: "/logos/team-1.png",
     tableOrder: 1,
     remainingCredits: 310,
+    maximumBid: 301,
     roster: {
       P: {
         count: 2,
@@ -45,6 +46,10 @@ describe("realtime public display contracts", () => {
 
   it("accepts a public display projection", () => {
     const projection = {
+      league: {
+        id: "league-1",
+        name: "SFL'92"
+      },
       teams: [team],
       currentPlayer: {
         id: "player-1",
@@ -62,6 +67,10 @@ describe("realtime public display contracts", () => {
 
   it("allows no current player", () => {
     const projection = {
+      league: {
+        id: "league-1",
+        name: "SFL'92"
+      },
       teams: [team],
       currentPlayer: null
     };
@@ -76,6 +85,10 @@ describe("realtime public display contracts", () => {
   it("rejects invalid roster counts", () => {
     expect(
       realtimePublicDisplayProjectionSchema.safeParse({
+        league: {
+          id: "league-1",
+          name: "SFL'92"
+        },
         teams: [
           {
             ...team,

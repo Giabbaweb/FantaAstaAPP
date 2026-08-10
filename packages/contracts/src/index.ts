@@ -773,8 +773,19 @@ export type RealtimePublicDisplayPlayer = z.infer<
   typeof realtimePublicDisplayPlayerSchema
 >;
 
+export const realtimePublicDisplayLeagueSchema =
+z.object({
+id: z.string().min(1),
+name: z.string().min(1)
+});
+
+export type RealtimePublicDisplayLeague = z.infer<
+typeof realtimePublicDisplayLeagueSchema
+>;
+
 export const realtimePublicDisplayProjectionSchema =
   z.object({
+league: realtimePublicDisplayLeagueSchema,
     teams: z.array(
       realtimePublicDisplayTeamSchema
     ),

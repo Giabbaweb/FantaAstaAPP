@@ -33,6 +33,10 @@ describe("AuctionSnapshotDispatcher", () => {
   sessionTeams: [],
   operationalAuctionCall: null,
   publicDisplay: {
+    league: {
+      id: "league-1",
+      name: "SFL'92"
+    },
     teams: [],
     currentPlayer: null
   }
