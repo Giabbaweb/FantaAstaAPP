@@ -26,6 +26,12 @@ type PublicDisplayStatus =
   | "LIVE"
   | "ERROR";
 
+type PublicDisplayMode =
+  | "STANDARD"
+  | "HIGH_CONTRAST_OUTDOOR"
+  | "COMPACT"
+  | "DARK";
+
 function createPublicDisplayDeviceId(): string {
   const storageKey =
     "fantaastaapp.publicDisplay.deviceId";
@@ -254,8 +260,23 @@ export function PublicDisplay():
         )
       : "-";
 
-    return (
-    <main className="public-display">
+  const displayMode: PublicDisplayMode =
+    "STANDARD";
+
+  const displayModeLabel: Record<
+    PublicDisplayMode,
+    string
+  > = {
+    STANDARD: "Standard",
+    HIGH_CONTRAST_OUTDOOR: "Outdoor",
+    COMPACT: "Compact",
+    DARK: "Dark"
+  };
+
+  return (
+    <main
+      className={`public-display public-display--${displayMode.toLowerCase()}`}
+    >
       <header className="public-display__header">
         <div className="public-display__app-brand">
           <img
@@ -267,6 +288,10 @@ export function PublicDisplay():
           <h1 className="public-display__title">
             Schermo Pubblico
           </h1>
+
+          <span className="public-display__mode-label">
+            Mod. {displayModeLabel[displayMode]}
+          </span>
         </div>
 
         <div className="public-display__league-brand">

@@ -1090,3 +1090,1016 @@ body {
   margin-bottom: -0.12em;
   line-height: 1.15;
 }
+
+/* HIGH_CONTRAST_OUTDOOR
+   Bright outdoor mode: stronger edges, darker typography,
+   more saturated functional accents, unchanged layout. */
+
+.public-display--high_contrast_outdoor {
+  color: #07111f;
+}
+
+/* Main surfaces */
+.public-display--high_contrast_outdoor .public-display__auction,
+.public-display--high_contrast_outdoor .public-display__recent-awards,
+.public-display--high_contrast_outdoor .public-display__teams {
+  border-color: #8797aa;
+  background: #ffffff;
+  box-shadow:
+    0 8px 22px rgba(7, 17, 31, 0.12);
+}
+
+/* Header separator and secondary typography */
+.public-display--high_contrast_outdoor .public-display__header {
+  border-color: #8e9cad;
+}
+
+.public-display--high_contrast_outdoor .public-display__section-label,
+.public-display--high_contrast_outdoor .public-display__team-identity > span {
+  color: #425166;
+}
+
+/* Current player */
+.public-display--high_contrast_outdoor .public-display__player-name {
+  color: #07111f;
+}
+
+.public-display--high_contrast_outdoor .public-display__player-real-team {
+  border-color: #a7b4c3;
+  background: #ffffff;
+  color: #253448;
+}
+
+/* Auction metrics: general edge strength */
+.public-display--high_contrast_outdoor .public-display__metric {
+  border-width: 2px;
+}
+
+/* Current price */
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(1) {
+  border-color: #1263b5;
+  background: #e5f2ff;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(1) span {
+  color: #104f8d;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(1) strong {
+  color: #062e59;
+}
+
+/* Current provisional leader */
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(2) {
+  border-color: #318346;
+  background: #e3f5e7;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(2) span {
+  color: #246a37;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(2) strong {
+  color: #123d20;
+}
+
+/* Current turn */
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(3) {
+  border-color: #d38a13;
+  background: #fff0ca;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(3) span {
+  color: #945a00;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(3) strong {
+  color: #5d3500;
+}
+
+/* Recent awards */
+.public-display--high_contrast_outdoor .public-display__recent-award {
+  border-color: #a7b4c3;
+  background: #f8fafc;
+}
+
+.public-display--high_contrast_outdoor .public-display__recent-award-copy strong,
+.public-display--high_contrast_outdoor .public-display__recent-award-amount {
+  color: #07111f;
+}
+
+.public-display--high_contrast_outdoor .public-display__recent-award-copy span {
+  color: #48586d;
+}
+
+/* Team cards */
+.public-display--high_contrast_outdoor .public-display__team-card {
+  border: 2px solid #8999ad;
+  box-shadow:
+    0 4px 12px rgba(7, 17, 31, 0.08);
+}
+
+.public-display--high_contrast_outdoor .public-display__team-card-header {
+  border-bottom-color: #aeb9c7;
+  background: #ffffff;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-card h3 {
+  color: #07111f;
+}
+
+/* Credits */
+.public-display--high_contrast_outdoor .public-display__team-summary > div:first-child {
+  background: #edf2f7;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:first-child span {
+  color: #47566a;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:first-child strong {
+  color: #07111f;
+}
+
+/* Maximum bid: stronger attention signal */
+.public-display--high_contrast_outdoor .public-display__team-summary > div:last-child {
+  background: #ffe3ad;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:last-child span {
+  color: #8a4b00;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:last-child strong {
+  color: #5c3000;
+}
+
+/* Roster grid */
+.public-display--high_contrast_outdoor .public-display__team-roster {
+  border-top-color: #aeb9c7;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role +
+.public-display__team-role {
+  border-left-color: #aeb9c7;
+}
+
+/* Stronger role colours for daylight */
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="P"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="P"] strong {
+  color: #005bbb;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="D"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="D"] strong {
+  color: #18752c;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="C"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="C"] strong {
+  color: #6a402e;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="A"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="A"] strong {
+  color: #c82020;
+}
+
+/* HIGH_CONTRAST_OUTDOOR — B1.3B stronger daylight contrast */
+
+/* Separate the white information surfaces from the page */
+.public-display--high_contrast_outdoor {
+  background: #e7edf4;
+}
+
+/* Main information panels */
+.public-display--high_contrast_outdoor .public-display__auction,
+.public-display--high_contrast_outdoor .public-display__recent-awards,
+.public-display--high_contrast_outdoor .public-display__teams {
+  border-color: #607287;
+  background: #ffffff;
+  box-shadow:
+    0 6px 16px rgba(7, 17, 31, 0.16);
+}
+
+/* Header becomes a clearly separated band */
+.public-display--high_contrast_outdoor .public-display__header {
+  border-bottom-color: #65778b;
+}
+
+/* Stronger section labels */
+.public-display--high_contrast_outdoor .public-display__section-label {
+  color: #26384d;
+}
+
+/* AUCTION METRICS */
+
+/* Current price */
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(1) {
+  border-color: #0066c8;
+  background: #dceeff;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(1) span {
+  color: #004e9c;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(1) strong {
+  color: #002f61;
+}
+
+/* Provisional leader */
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(2) {
+  border-color: #23823b;
+  background: #d9f2df;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(2) span {
+  color: #17642c;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(2) strong {
+  color: #0c3d1b;
+}
+
+/* Current turn */
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(3) {
+  border-color: #d27a00;
+  background: #ffe9b6;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(3) span {
+  color: #915000;
+}
+
+.public-display--high_contrast_outdoor .public-display__metric:nth-child(3) strong {
+  color: #603300;
+}
+
+/* RECENT AWARDS */
+
+.public-display--high_contrast_outdoor .public-display__recent-award {
+  border-color: #8798aa;
+  background: #f1f5f9;
+}
+
+.public-display--high_contrast_outdoor .public-display__recent-award-copy strong {
+  color: #07111f;
+}
+
+.public-display--high_contrast_outdoor .public-display__recent-award-copy span {
+  color: #38495d;
+}
+
+.public-display--high_contrast_outdoor .public-display__recent-award-amount {
+  color: #07111f;
+}
+
+/* TEAM CARDS */
+
+.public-display--high_contrast_outdoor .public-display__team-card {
+  border-color: #65778c;
+  background: #ffffff;
+  box-shadow:
+    0 3px 8px rgba(7, 17, 31, 0.13);
+}
+
+/* Make the upper identity/economic band more distinct */
+.public-display--high_contrast_outdoor .public-display__team-card-header {
+  border-bottom-color: #8b9aad;
+  background: #f8fafc;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-card h3 {
+  color: #06101e;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-identity > span {
+  color: #38495d;
+}
+
+/* Credits */
+.public-display--high_contrast_outdoor .public-display__team-summary > div:first-child {
+  background: #e8eef5;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:first-child span {
+  color: #35465a;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:first-child strong {
+  color: #07111f;
+}
+
+/* Maximum bid — deliberately much more visible */
+.public-display--high_contrast_outdoor .public-display__team-summary > div:last-child {
+  background: #ffd58f;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:last-child span {
+  color: #814300;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-summary > div:last-child strong {
+  color: #552900;
+}
+
+/* Roster cells */
+.public-display--high_contrast_outdoor .public-display__team-roster {
+  border-top-color: #8b9aad;
+  background: #ffffff;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role +
+.public-display__team-role {
+  border-left-color: #a2afbd;
+}
+
+/* Strong daylight role colours */
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="P"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="P"] strong {
+  color: #005fc4;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="D"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="D"] strong {
+  color: #14752a;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="C"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="C"] strong {
+  color: #70432f;
+}
+
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="A"] span,
+.public-display--high_contrast_outdoor .public-display__team-role[data-role="A"] strong {
+  color: #cf1919;
+}
+
+/* COMPACT
+   Focus on the live auction. Team cards retain only identity,
+   remaining credits and maximum bid. Roster slot detail is
+   delegated to the dedicated ROSTER_OVERVIEW view. */
+
+.public-display--compact {
+  background: #f3f6fa;
+}
+
+/* Keep the upper auction area dominant */
+.public-display--compact .public-display__auction {
+  min-height: 0;
+}
+
+/* Slightly tighten the teams section without changing information hierarchy */
+.public-display--compact .public-display__teams {
+  padding:
+    clamp(7px, 0.65vw, 11px)
+    clamp(9px, 0.8vw, 14px);
+}
+
+/* The section no longer represents roster composition in this mode */
+.public-display--compact .public-display__teams-heading h2 {
+  font-size: clamp(20px, 1.65vw, 28px);
+}
+
+/* Denser team grid */
+.public-display--compact .public-display__team-grid {
+  gap: clamp(8px, 0.7vw, 11px);
+}
+
+/* Compact cards */
+.public-display--compact .public-display__team-card {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.55fr)
+    minmax(150px, 0.95fr);
+  min-height: 0;
+  border: 1px solid #a8b5c5;
+  border-radius: 11px;
+  box-shadow:
+    0 3px 8px rgba(20, 35, 55, 0.06);
+}
+
+/* Identity occupies the left side */
+.public-display--compact .public-display__team-card-header {
+  min-width: 0;
+  border-bottom: 0;
+  border-right: 1px solid #d3dce7;
+  padding:
+    clamp(5px, 0.45vw, 7px)
+    clamp(6px, 0.55vw, 9px);
+}
+
+/* Slightly smaller logos */
+.public-display--compact .public-display__team-logo {
+  width: clamp(40px, 3.2vw, 52px);
+  height: clamp(40px, 3.2vw, 52px);
+}
+
+/* Keep team names readable */
+.public-display--compact .public-display__team-card h3 {
+  font-size: clamp(15px, 1.08vw, 19px);
+}
+
+/* Economic data becomes the complete right side */
+.public-display--compact .public-display__team-summary {
+  grid-template-columns: repeat(2, 1fr);
+  border-left: 0;
+  background: #d7e0ea;
+}
+
+.public-display--compact .public-display__team-summary > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding:
+    clamp(4px, 0.35vw, 6px)
+    clamp(3px, 0.3vw, 5px);
+}
+
+.public-display--compact .public-display__team-summary span {
+  font-size: clamp(8px, 0.55vw, 10px);
+}
+
+.public-display--compact .public-display__team-summary strong {
+  font-size: clamp(20px, 1.55vw, 27px);
+}
+
+/* Maximum bid remains the visual warning / attention field */
+.public-display--compact .public-display__team-summary > div:last-child {
+  background: #ffe8bf;
+}
+
+/* Slot details are intentionally removed from COMPACT */
+.public-display--compact .public-display__team-roster {
+  display: none;
+}
+
+/* COMPACT v2 — content-height team section */
+
+/* Do not force the teams section to consume the remaining viewport height */
+.public-display--compact {
+  grid-template-rows:
+    auto
+    auto
+    auto;
+  align-content: start;
+}
+
+/* Teams section must be only as tall as its content */
+.public-display--compact .public-display__teams {
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+/* Two compact rows, no vertical stretching */
+.public-display--compact .public-display__team-grid {
+  min-height: 0;
+  flex: 0 0 auto;
+  grid-template-rows:
+    repeat(2, auto);
+  align-content: start;
+}
+
+/* Each card consists only of one horizontal information band */
+.public-display--compact .public-display__team-card {
+  grid-template-rows: auto;
+  align-self: start;
+}
+
+/* Identity and economic summary occupy the same single row */
+.public-display--compact .public-display__team-card-header {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.public-display--compact .public-display__team-summary {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+}
+
+/* Keep the compact cards genuinely low */
+.public-display--compact .public-display__team-card-header,
+.public-display--compact .public-display__team-summary {
+  min-height: clamp(52px, 4vw, 64px);
+}
+
+/* COMPACT v3 — whole-interface compression */
+
+/* Page */
+.public-display--compact {
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: clamp(6px, 0.55vw, 9px);
+  padding: clamp(7px, 0.7vw, 12px);
+  background: #f3f6fa;
+}
+
+/* HEADER */
+.public-display--compact .public-display__header {
+  min-height: 52px;
+  padding: 2px 3px 6px;
+  gap: clamp(10px, 1.2vw, 18px);
+}
+
+.public-display--compact .public-display__app-logo,
+.public-display--compact .public-display__league-logo {
+  width: clamp(42px, 3.6vw, 58px);
+  height: clamp(42px, 3.6vw, 58px);
+}
+
+.public-display--compact .public-display__title {
+  font-size: clamp(16px, 1.3vw, 22px);
+}
+
+.public-display--compact .public-display__league-name {
+  font-size: clamp(18px, 1.55vw, 25px);
+}
+
+.public-display--compact .public-display__league-meta {
+  margin-top: 2px;
+  font-size: clamp(10px, 0.72vw, 13px);
+}
+
+.public-display--compact .public-display__status {
+  padding: 3px 7px;
+  font-size: clamp(9px, 0.65vw, 11px);
+}
+
+.public-display--compact .public-display__session-meta small {
+  font-size: clamp(9px, 0.65vw, 11px);
+}
+
+/* UPPER AUCTION ROW */
+.public-display--compact .public-display__auction-row {
+  min-height: 0;
+}
+
+.public-display--compact .public-display__auction {
+  width: calc(70% - 6px);
+  padding: clamp(7px, 0.6vw, 10px);
+  border-radius: 14px;
+}
+
+.public-display--compact .public-display__recent-awards {
+  width: calc(30% - 6px);
+  padding: 8px 9px;
+  border-radius: 14px;
+}
+
+/* PLAYER */
+.public-display--compact .public-display__player {
+  min-height: 76px;
+  gap: clamp(9px, 0.8vw, 13px);
+}
+
+.public-display--compact .public-display__player-photo {
+  width: clamp(70px, 5vw, 82px);
+  height: clamp(70px, 5vw, 82px);
+  border-radius: 10px;
+}
+
+.public-display--compact .public-display__player-info {
+  gap: 5px;
+}
+
+.public-display--compact .public-display__player-name {
+  font-size: clamp(30px, 3vw, 46px);
+  line-height: 1;
+}
+
+.public-display--compact .public-display__player-role {
+  min-width: 38px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: clamp(17px, 1.35vw, 22px);
+}
+
+.public-display--compact .public-display__player-real-team {
+  min-height: 26px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: clamp(14px, 1.05vw, 18px);
+}
+
+/* METRICS — one compact operational strip */
+.public-display--compact .public-display__auction-metrics {
+  margin-top: 5px;
+  gap: clamp(6px, 0.55vw, 9px);
+  grid-template-columns:
+    minmax(125px, 0.62fr)
+    minmax(0, 1.19fr)
+    minmax(0, 1.19fr);
+}
+
+.public-display--compact .public-display__metric {
+  min-height: 55px;
+  padding: 5px 8px;
+  border-radius: 10px;
+}
+
+.public-display--compact .public-display__metric span {
+  margin-bottom: 1px;
+  font-size: clamp(10px, 0.72vw, 12px);
+}
+
+.public-display--compact .public-display__metric strong {
+  font-size: clamp(20px, 1.75vw, 28px);
+}
+
+.public-display--compact .public-display__metric:nth-child(1) strong {
+  font-size: clamp(24px, 2vw, 32px);
+}
+
+/* RECENT AWARDS — three immediately visible, older ones scroll */
+.public-display--compact .public-display__recent-awards .public-display__section-label {
+  margin-bottom: 2px;
+  font-size: clamp(10px, 0.72vw, 12px);
+}
+
+.public-display--compact .public-display__recent-awards-list {
+  flex: 0 0 auto;
+  height: 112px;
+  margin-top: 3px;
+  gap: 4px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.public-display--compact .public-display__recent-award {
+  min-height: 34px;
+  padding: 3px 6px;
+  gap: 6px;
+  border-radius: 8px;
+}
+
+.public-display--compact .public-display__recent-award-role {
+  width: 25px;
+  height: 25px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.public-display--compact .public-display__recent-award-copy strong {
+  font-size: clamp(11px, 0.78vw, 14px);
+}
+
+.public-display--compact .public-display__recent-award-copy span {
+  font-size: clamp(9px, 0.64vw, 11px);
+}
+
+.public-display--compact .public-display__recent-award-amount {
+  min-width: 30px;
+  font-size: clamp(15px, 1vw, 18px);
+}
+
+/* TEAMS SECTION */
+.public-display--compact .public-display__teams {
+  min-height: 0;
+  flex: 0 0 auto;
+  padding: 6px 8px 8px;
+  border-radius: 14px;
+}
+
+.public-display--compact .public-display__teams-heading {
+  margin-bottom: 4px;
+}
+
+.public-display--compact .public-display__section-label {
+  margin-bottom: 2px;
+  font-size: clamp(10px, 0.72vw, 12px);
+}
+
+.public-display--compact .public-display__teams-heading h2 {
+  font-size: clamp(17px, 1.35vw, 22px);
+}
+
+.public-display--compact .public-display__teams-heading > span {
+  font-size: clamp(10px, 0.72vw, 12px);
+}
+
+/* Four columns x two very low rows */
+.public-display--compact .public-display__team-grid {
+  min-height: 0;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, auto);
+  gap: 6px;
+  align-content: start;
+}
+
+/* One horizontal band per team */
+.public-display--compact .public-display__team-card {
+  grid-template-columns:
+    minmax(0, 1.55fr)
+    minmax(140px, 0.95fr);
+  grid-template-rows: 54px;
+  min-height: 54px;
+  height: 54px;
+  align-self: start;
+  border-radius: 9px;
+}
+
+.public-display--compact .public-display__team-card-header {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+  height: 54px;
+  padding: 4px 6px;
+}
+
+.public-display--compact .public-display__team-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+}
+
+.public-display--compact .public-display__team-card h3 {
+  font-size: clamp(13px, 0.95vw, 16px);
+}
+
+.public-display--compact .public-display__team-identity > span {
+  margin-top: 1px;
+  font-size: clamp(8px, 0.55vw, 10px);
+}
+
+/* Credits / Maximum bid */
+.public-display--compact .public-display__team-summary {
+  grid-column: 2;
+  grid-row: 1;
+  height: 54px;
+  align-self: stretch;
+}
+
+.public-display--compact .public-display__team-summary > div {
+  min-height: 0;
+  height: 54px;
+  padding: 2px 3px;
+}
+
+.public-display--compact .public-display__team-summary span {
+  margin-bottom: 1px;
+  font-size: clamp(7px, 0.5vw, 9px);
+}
+
+.public-display--compact .public-display__team-summary strong,
+.public-display--compact .public-display__team-summary > div:last-child strong {
+  font-size: clamp(19px, 1.35vw, 23px);
+}
+
+/* No roster slots in COMPACT */
+.public-display--compact .public-display__team-roster {
+  display: none;
+}
+
+/* DARK
+   Night / low-light public display mode.
+   Same geometry as the full display, with dark layered surfaces
+   and high-contrast functional accents. */
+
+.public-display--dark {
+  color: #f4f7fb;
+  background: #0d1117;
+}
+
+/* Header */
+.public-display--dark .public-display__header {
+  border-bottom-color: #3a4655;
+}
+
+.public-display--dark .public-display__title,
+.public-display--dark .public-display__league-name {
+  color: #f7f9fc;
+}
+
+.public-display--dark .public-display__league-meta,
+.public-display--dark .public-display__session-meta small,
+.public-display--dark .public-display__section-label {
+  color: #aeb8c5;
+}
+
+.public-display--dark .public-display__status {
+  color: #eaf0f7;
+}
+
+/* Main surfaces */
+.public-display--dark .public-display__auction,
+.public-display--dark .public-display__recent-awards,
+.public-display--dark .public-display__teams {
+  border-color: #465363;
+  background: #161c24;
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
+/* Player */
+.public-display--dark .public-display__player-name {
+  color: #ffffff;
+}
+
+.public-display--dark .public-display__player-photo {
+  background: #222a35;
+}
+
+.public-display--dark .public-display__player-real-team {
+  border-color: #536171;
+  background: #242d38;
+  color: #d6dee8;
+}
+
+/* AUCTION METRICS */
+
+/* Current price */
+.public-display--dark .public-display__metric:nth-child(1) {
+  border-color: #388fe8;
+  background: #102a45;
+}
+
+.public-display--dark .public-display__metric:nth-child(1) span {
+  color: #8bc5ff;
+}
+
+.public-display--dark .public-display__metric:nth-child(1) strong {
+  color: #d8ecff;
+}
+
+/* Leader */
+.public-display--dark .public-display__metric:nth-child(2) {
+  border-color: #3c9b59;
+  background: #163320;
+}
+
+.public-display--dark .public-display__metric:nth-child(2) span {
+  color: #86d49c;
+}
+
+.public-display--dark .public-display__metric:nth-child(2) strong {
+  color: #ddf6e4;
+}
+
+/* Turn */
+.public-display--dark .public-display__metric:nth-child(3) {
+  border-color: #d99a33;
+  background: #3b2a11;
+}
+
+.public-display--dark .public-display__metric:nth-child(3) span {
+  color: #ffc96f;
+}
+
+.public-display--dark .public-display__metric:nth-child(3) strong {
+  color: #fff0ce;
+}
+
+/* Recent awards */
+.public-display--dark .public-display__recent-award {
+  border-color: #3e4a59;
+  background: #202731;
+}
+
+.public-display--dark .public-display__recent-award-copy strong,
+.public-display--dark .public-display__recent-award-amount {
+  color: #f7f9fc;
+}
+
+.public-display--dark .public-display__recent-award-copy span {
+  color: #aeb8c5;
+}
+
+/* Team cards */
+.public-display--dark .public-display__team-card {
+  border-color: #526071;
+  background: #171e27;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.26);
+}
+
+.public-display--dark .public-display__team-card-header {
+  background: #1b232d;
+}
+
+.public-display--dark .public-display__team-card h3 {
+  color: #ffffff;
+}
+
+.public-display--dark .public-display__team-identity > span {
+  color: #aeb8c5;
+}
+
+.public-display--dark .public-display__team-logo {
+  background: #252e39;
+}
+
+/* Credits */
+.public-display--dark .public-display__team-summary > div:first-child {
+  background: #222b36;
+}
+
+.public-display--dark .public-display__team-summary > div:first-child span {
+  color: #aab6c4;
+}
+
+.public-display--dark .public-display__team-summary > div:first-child strong {
+  color: #f7f9fc;
+}
+
+/* Maximum bid */
+.public-display--dark .public-display__team-summary > div:last-child {
+  background: #4a2d0d;
+}
+
+.public-display--dark .public-display__team-summary > div:last-child span {
+  color: #ffc168;
+}
+
+.public-display--dark .public-display__team-summary > div:last-child strong {
+  color: #ffe2b2;
+}
+
+/* Roster */
+.public-display--dark .public-display__team-roster {
+  border-top-color: #445161;
+  background: #171e27;
+}
+
+.public-display--dark .public-display__team-role +
+.public-display__team-role {
+  border-left-color: #3d4957;
+}
+
+/* Role colours tuned for dark backgrounds */
+.public-display--dark .public-display__team-role[data-role="P"] span,
+.public-display--dark .public-display__team-role[data-role="P"] strong {
+  color: #58a8ff;
+}
+
+.public-display--dark .public-display__team-role[data-role="D"] span,
+.public-display--dark .public-display__team-role[data-role="D"] strong {
+  color: #62c978;
+}
+
+.public-display--dark .public-display__team-role[data-role="C"] span,
+.public-display--dark .public-display__team-role[data-role="C"] strong {
+  color: #d79b7a;
+}
+
+.public-display--dark .public-display__team-role[data-role="A"] span,
+.public-display--dark .public-display__team-role[data-role="A"] strong {
+  color: #ff6464;
+}
+
+/* Public Display active visual mode label */
+.public-display__mode-label {
+  flex: 0 0 auto;
+  margin-left: -4px;
+  padding-top: 3px;
+  color: #758296;
+  font-size: clamp(9px, 0.65vw, 12px);
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.public-display--dark .public-display__mode-label {
+  color: #8f9aaa;
+}
+
+.public-display--compact .public-display__mode-label {
+  font-size: clamp(8px, 0.58vw, 10px);
+}
+
+/* Fullscreen complete modes: prevent team roster rows from stretching vertically */
+.public-display--standard .public-display__teams,
+.public-display--high_contrast_outdoor .public-display__teams,
+.public-display--dark .public-display__teams {
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+.public-display--standard .public-display__team-grid,
+.public-display--high_contrast_outdoor .public-display__team-grid,
+.public-display--dark .public-display__team-grid {
+  min-height: 0;
+  flex: 0 0 auto;
+  grid-template-rows: repeat(2, auto);
+  align-content: start;
+}
+
+.public-display--standard .public-display__team-card,
+.public-display--high_contrast_outdoor .public-display__team-card,
+.public-display--dark .public-display__team-card {
+  grid-template-rows:
+    minmax(58px, auto)
+    64px;
+  align-self: start;
+}
+
+.public-display--standard .public-display__team-roster,
+.public-display--high_contrast_outdoor .public-display__team-roster,
+.public-display--dark .public-display__team-roster {
+  min-height: 64px;
+  height: 64px;
+}
