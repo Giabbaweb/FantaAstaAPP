@@ -100,7 +100,8 @@ describe("SocketIoRealtimePublisher", () => {
         name: "SFL'92"
       },
       teams: [],
-      currentPlayer: null
+      currentPlayer: null,
+      recentAwards: []
     }
     };
 
@@ -166,7 +167,8 @@ describe("SocketIoRealtimePublisher", () => {
             name: "SFL'92"
           },
           teams: [],
-          currentPlayer: null
+          currentPlayer: null,
+          recentAwards: []
         }
       })
     ).rejects.toThrow(

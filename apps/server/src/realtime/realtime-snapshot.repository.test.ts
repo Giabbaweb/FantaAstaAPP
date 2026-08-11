@@ -337,6 +337,7 @@ describe("realtime snapshot SQLite readers", () => {
     ).resolves.toEqual({
       id: "player-1",
       name: "Attaccante One",
+      realTeamName: null,
       role: "A"
     });
   });

@@ -255,7 +255,7 @@ export const playerSchema = z.object({
   name: z.string().trim().min(1).max(150),
   normalizedName: z.string().min(1),
   realTeamName:
-    z.string().trim().min(1).max(100).nullable().optional(),
+    z.string().trim().min(1).max(100).nullable(),
   role: playerRoleSchema,
   availabilityStatus: playerAvailabilityStatusSchema,
   createdAt: z.string().min(1),
@@ -772,11 +772,28 @@ export const realtimePublicDisplayPlayerSchema =
   z.object({
     id: z.string().min(1),
     name: z.string().min(1),
+    realTeamName: z.string().min(1).nullable(),
     role: playerRoleSchema
   });
 
 export type RealtimePublicDisplayPlayer = z.infer<
   typeof realtimePublicDisplayPlayerSchema
+>;
+
+export const realtimePublicDisplayRecentAwardSchema =
+  z.object({
+    eventId: z.string().min(1),
+    playerId: z.string().min(1),
+    playerName: z.string().min(1),
+    role: playerRoleSchema,
+    auctionSessionTeamId: z.string().min(1),
+    teamName: z.string().min(1),
+    amount: z.number().int().positive(),
+    confirmedAt: z.string().min(1)
+  });
+
+export type RealtimePublicDisplayRecentAward = z.infer<
+  typeof realtimePublicDisplayRecentAwardSchema
 >;
 
 export const realtimePublicDisplayLeagueSchema =
@@ -796,7 +813,10 @@ league: realtimePublicDisplayLeagueSchema,
       realtimePublicDisplayTeamSchema
     ),
     currentPlayer:
-      realtimePublicDisplayPlayerSchema.nullable()
+      realtimePublicDisplayPlayerSchema.nullable(),
+    recentAwards: z.array(
+      realtimePublicDisplayRecentAwardSchema
+    )
   });
 
 export type RealtimePublicDisplayProjection = z.infer<

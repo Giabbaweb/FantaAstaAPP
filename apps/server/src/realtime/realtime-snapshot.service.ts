@@ -74,7 +74,8 @@ export class RealtimeSnapshotService {
       sessionTeams,
       operationalAuctionCall,
       publicDisplayLeague,
-      publicDisplayTeams
+      publicDisplayTeams,
+      recentAwards
     ] = await Promise.all([
       this.sessionTeamReader
         .findByAuctionSessionId(
@@ -93,6 +94,11 @@ auctionSessionId
 
       this.publicDisplayReader
         .findTeamsByAuctionSessionId(
+          auctionSessionId
+        ),
+
+      this.publicDisplayReader
+        .findRecentAwardsByAuctionSessionId(
           auctionSessionId
         )
     ]);
@@ -169,7 +175,8 @@ league: publicDisplayLeague,
           }
         };
       }),
-      currentPlayer
+      currentPlayer,
+      recentAwards
     };
 
     return {

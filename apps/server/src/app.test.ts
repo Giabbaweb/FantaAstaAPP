@@ -1341,6 +1341,7 @@ describe("GET /api/auction-sessions", () => {
           fmsCode: "1001",
           name: "SOMMER Yann",
           normalizedName: "sommer yann",
+          realTeamName: "Inter",
           role: "P",
           availabilityStatus: "AVAILABLE",
           createdAt: expect.any(String),

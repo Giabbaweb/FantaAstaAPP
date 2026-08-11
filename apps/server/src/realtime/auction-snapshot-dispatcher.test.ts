@@ -38,7 +38,8 @@ describe("AuctionSnapshotDispatcher", () => {
       name: "SFL'92"
     },
     teams: [],
-    currentPlayer: null
+    currentPlayer: null,
+    recentAwards: []
   }
   };
 

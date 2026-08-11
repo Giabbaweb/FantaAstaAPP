@@ -129,7 +129,8 @@ describe("RealtimeSnapshotService", () => {
               id: "player-1",
               name: "Player One",
               role: "A"
-            })
+            }),
+            findRecentAwardsByAuctionSessionId: vi.fn().mockResolvedValue([]),
         },
         () =>
           "2026-08-02T20:02:00.000Z"
@@ -198,7 +199,8 @@ describe("RealtimeSnapshotService", () => {
           id: "player-1",
           name: "Player One",
           role: "A"
-        }
+        },
+        recentAwards: []
       }
     });
   });
@@ -231,7 +233,8 @@ describe("RealtimeSnapshotService", () => {
           findTeamsByAuctionSessionId:
             vi.fn().mockResolvedValue([]),
           findPlayerById:
-            vi.fn()
+            vi.fn(),
+            findRecentAwardsByAuctionSessionId: vi.fn().mockResolvedValue([]),
         },
       () =>
         "2026-08-02T20:02:00.000Z"
@@ -254,7 +257,8 @@ describe("RealtimeSnapshotService", () => {
       name: "SFL'92"
     },
     teams: [],
-    currentPlayer: null
+    currentPlayer: null,
+      recentAwards: []
   });
 });
 
@@ -282,8 +286,9 @@ describe("RealtimeSnapshotService", () => {
             }),
           findTeamsByAuctionSessionId:
             vi.fn(),
-          findPlayerById:
-            vi.fn()
+            findPlayerById:
+              vi.fn(),
+            findRecentAwardsByAuctionSessionId: vi.fn().mockResolvedValue([])
         }
       );
 

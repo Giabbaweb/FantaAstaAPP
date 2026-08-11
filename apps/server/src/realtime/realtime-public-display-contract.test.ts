@@ -54,8 +54,10 @@ describe("realtime public display contracts", () => {
       currentPlayer: {
         id: "player-1",
         name: "Player One",
+        realTeamName: "Inter",
         role: "A"
-      }
+      },
+      recentAwards: []
     };
 
     expect(
@@ -72,7 +74,8 @@ describe("realtime public display contracts", () => {
         name: "SFL'92"
       },
       teams: [team],
-      currentPlayer: null
+      currentPlayer: null,
+      recentAwards: []
     };
 
     expect(

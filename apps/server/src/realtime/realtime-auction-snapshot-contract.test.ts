@@ -93,7 +93,8 @@ describe("realtime auction snapshot contracts", () => {
           name: "SFL'92"
         },
         teams: [],
-        currentPlayer: null
+        currentPlayer: null,
+        recentAwards: []
       }
     };
 
@@ -130,7 +131,8 @@ describe("realtime auction snapshot contracts", () => {
             name: "SFL'92"
           },
           teams: [],
-          currentPlayer: null
+          currentPlayer: null,
+          recentAwards: []
         }
       });
 
@@ -163,7 +165,8 @@ describe("realtime auction snapshot contracts", () => {
             name: "SFL'92"
           },
           teams: [],
-          currentPlayer: null
+          currentPlayer: null,
+          recentAwards: []
         }
       });
 

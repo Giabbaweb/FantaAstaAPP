@@ -254,7 +254,7 @@ export function PublicDisplay():
         )
       : "-";
 
-  return (
+    return (
     <main className="public-display">
       <header className="public-display__header">
         <div className="public-display__app-brand">
@@ -318,6 +318,7 @@ export function PublicDisplay():
         </div>
       </header>
 
+      <div className="public-display__auction-row">
       <section className="public-display__auction">
         <p className="public-display__section-label">
           Giocatore chiamato
@@ -342,12 +343,20 @@ export function PublicDisplay():
                   {currentPlayer.name}
                 </h2>
 
-                <span
-                  className="public-display__player-role"
-                  data-role={currentPlayer.role}
-                >
-                  {currentPlayer.role}
-                </span>
+                <div className="public-display__player-meta">
+                  <span
+                    className="public-display__player-role"
+                    data-role={currentPlayer.role}
+                  >
+                    {currentPlayer.role}
+                  </span>
+
+                  {currentPlayer.realTeamName && (
+                    <span className="public-display__player-real-team">
+                      {currentPlayer.realTeamName}
+                    </span>
+                  )}
+                </div>
               </div>
             </>
           ) : (
@@ -392,6 +401,43 @@ export function PublicDisplay():
           </article>
         </div>
       </section>
+
+        <aside className="public-display__recent-awards">
+          <p className="public-display__section-label">
+            Ultime aggiudicazioni
+          </p>
+
+          <div className="public-display__recent-awards-list">
+            {snapshot.publicDisplay.recentAwards.map((award) => (
+              <article
+                className="public-display__recent-award"
+                key={award.eventId}
+              >
+                <span
+                  className="public-display__recent-award-role"
+                  data-role={award.role}
+                >
+                  {award.role}
+                </span>
+
+                <div className="public-display__recent-award-copy">
+                  <strong>
+                    {award.playerName}
+                  </strong>
+
+                  <span>
+                    {award.teamName}
+                  </span>
+                </div>
+
+                <strong className="public-display__recent-award-amount">
+                  {award.amount}
+                </strong>
+              </article>
+            ))}
+          </div>
+        </aside>
+      </div>
 
       <section className="public-display__teams">
         <div className="public-display__teams-heading">
@@ -500,6 +546,7 @@ export function PublicDisplay():
                             <div
                               key={role}
                               className="public-display__team-role"
+                                data-role={role}
                             >
                               <span>
                                 {role}

@@ -1,5 +1,7 @@
 import {
+  and,
   asc,
+  desc,
   eq
 } from "drizzle-orm";
 
@@ -13,6 +15,7 @@ import {
   db
 } from "../db/client.js";
 import {
+  auctionEvents,
   auctionSessions,
   auctionSessionTeams,
   leagues,
@@ -64,8 +67,21 @@ export type RealtimePublicDisplayTeamData = {
 export type RealtimePublicDisplayPlayerData = {
   id: string;
   name: string;
+  realTeamName: string | null;
   role: PlayerRole;
 };
+
+export type RealtimePublicDisplayRecentAwardData = {
+  eventId: string;
+  playerId: string;
+  playerName: string;
+  role: PlayerRole;
+  auctionSessionTeamId: string;
+  teamName: string;
+  amount: number;
+  confirmedAt: string;
+};
+
 
 export interface RealtimePublicDisplayReader {
   findLeagueByAuctionSessionId(
@@ -79,6 +95,10 @@ export interface RealtimePublicDisplayReader {
   findPlayerById(
     playerId: string
   ): Promise<RealtimePublicDisplayPlayerData | null>;
+
+  findRecentAwardsByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<RealtimePublicDisplayRecentAwardData[]>;
 }
 
 export class SqliteRealtimeSnapshotSessionReader
@@ -297,6 +317,61 @@ export class SqliteRealtimePublicDisplayReader
         }
     }));
   }
+  async findRecentAwardsByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<RealtimePublicDisplayRecentAwardData[]> {
+    return db
+      .select({
+        eventId: auctionEvents.id,
+        playerId: players.id,
+        playerName: players.name,
+        role: players.role,
+        auctionSessionTeamId:
+          auctionEvents.auctionSessionTeamId,
+        teamName: teams.name,
+        amount: auctionEvents.amount,
+        confirmedAt: auctionEvents.createdAt
+      })
+      .from(auctionEvents)
+      .innerJoin(
+        players,
+        eq(
+          auctionEvents.playerId,
+          players.id
+        )
+      )
+      .innerJoin(
+        auctionSessionTeams,
+        eq(
+          auctionEvents.auctionSessionTeamId,
+          auctionSessionTeams.id
+        )
+      )
+      .innerJoin(
+        teams,
+        eq(
+          auctionSessionTeams.teamId,
+          teams.id
+        )
+      )
+      .where(
+        and(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          ),
+          eq(
+            auctionEvents.eventType,
+            "AUCTION_AWARD_CONFIRMED"
+          )
+        )
+      )
+      .orderBy(
+        desc(auctionEvents.createdAt),
+        desc(auctionEvents.id)
+      );
+  }
+
   async findPlayerById(
     playerId: string
   ): Promise<RealtimePublicDisplayPlayerData | null> {
@@ -304,6 +379,7 @@ export class SqliteRealtimePublicDisplayReader
       .select({
         id: players.id,
         name: players.name,
+        realTeamName: players.realTeamName,
         role: players.role
       })
       .from(players)
