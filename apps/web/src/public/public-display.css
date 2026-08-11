@@ -2445,3 +2445,183 @@ body {
 > .public-display__teams {
   display: none;
 }
+
+/* Public Display call-team status */
+
+.public-display__team-call-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin: 0 10px 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: clamp(10px, 0.72vw, 13px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.public-display__team-call-badge--passed {
+  border: 1px solid #d6b45c;
+  background: #fff3c9;
+  color: #7b5700;
+}
+
+.public-display__team-call-badge--excluded {
+  border: 1px solid #d69b9b;
+  background: #ffe1e1;
+  color: #8a2323;
+}
+
+.public-display__team-card[data-call-status="PASSED"],
+.public-display__team-card[data-call-status="EXCLUDED"] {
+  opacity: 0.62;
+}
+
+.public-display__team-card[data-call-status="PASSED"]
+.public-display__team-call-badge,
+.public-display__team-card[data-call-status="EXCLUDED"]
+.public-display__team-call-badge {
+  opacity: 1;
+}
+
+/* DARK */
+.public-display--dark
+.public-display__team-call-badge--passed {
+  border-color: #8e6f22;
+  background: #463812;
+  color: #ffd56d;
+}
+
+.public-display--dark
+.public-display__team-call-badge--excluded {
+  border-color: #8a4545;
+  background: #452222;
+  color: #ff9b9b;
+}
+
+/* Public Display team-state overlay refinement */
+
+.public-display__team-card[data-call-status="PASSED"],
+.public-display__team-card[data-call-status="EXCLUDED"] {
+  position: relative;
+  overflow: hidden;
+  opacity: 1;
+}
+
+.public-display__team-card[data-call-status="PASSED"]::after,
+.public-display__team-card[data-call-status="EXCLUDED"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.public-display__team-card[data-call-status="PASSED"]::after {
+  background: rgba(255, 249, 229, 0.58);
+}
+
+.public-display__team-card[data-call-status="EXCLUDED"]::after {
+  background: rgba(255, 240, 240, 0.60);
+}
+
+.public-display__team-status-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  width: calc(100% - 28px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 2px solid;
+  border-radius: 10px;
+  transform:
+    translate(-50%, -50%)
+    rotate(-3deg);
+  box-shadow:
+    0 7px 18px rgba(16, 24, 40, 0.18);
+  text-align: center;
+  pointer-events: none;
+}
+
+.public-display__team-status-overlay--passed {
+  border-color: #e3aa28;
+  background: rgba(255, 239, 184, 0.96);
+  color: #8a5700;
+}
+
+.public-display__team-status-overlay--excluded {
+  border-color: #df7474;
+  background: rgba(255, 211, 211, 0.97);
+  color: #a01f1f;
+}
+
+.public-display__team-status-overlay-title {
+  font-size: clamp(19px, 1.65vw, 27px);
+  font-weight: 950;
+  line-height: 0.95;
+  letter-spacing: 0.025em;
+}
+
+.public-display__team-status-overlay-subtitle {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(10px, 0.82vw, 14px);
+  font-weight: 850;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* COMPACT */
+.public-display--compact
+.public-display__team-status-overlay {
+  width: calc(100% - 12px);
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  transform:
+    translate(-50%, -50%)
+    rotate(-2deg);
+}
+
+.public-display--compact
+.public-display__team-status-overlay-title {
+  font-size: clamp(13px, 1.2vw, 18px);
+}
+
+.public-display--compact
+.public-display__team-status-overlay-subtitle {
+  font-size: clamp(8px, 0.65vw, 10px);
+}
+
+/* DARK */
+.public-display--dark
+.public-display__team-card[data-call-status="PASSED"]::after {
+  background: rgba(12, 17, 23, 0.50);
+}
+
+.public-display--dark
+.public-display__team-card[data-call-status="EXCLUDED"]::after {
+  background: rgba(24, 10, 10, 0.58);
+}
+
+.public-display--dark
+.public-display__team-status-overlay--passed {
+  border-color: #c99428;
+  background: rgba(77, 57, 14, 0.97);
+  color: #ffd66f;
+}
+
+.public-display--dark
+.public-display__team-status-overlay--excluded {
+  border-color: #a84e4e;
+  background: rgba(82, 30, 30, 0.97);
+  color: #ffaaaa;
+}

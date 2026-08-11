@@ -252,6 +252,33 @@ export function PublicDisplay():
     );
   };
 
+  const findOperationalTeam = (
+    auctionSessionTeamId: string
+  ) =>
+    operationalCall?.teams.find(
+      (team) =>
+        team.auctionSessionTeamId ===
+        auctionSessionTeamId
+    ) ?? null;
+
+  const formatExclusionReason = (
+    reason: string | null | undefined
+  ): string => {
+    switch (reason) {
+      case "MAXIMUM_BID_TOO_LOW":
+        return "Max offerta troppo bassa";
+
+      case "ROSTER_FULL":
+        return "Rosa completa";
+
+      case "ROLE_LIMIT_REACHED":
+        return "Limite ruolo raggiunto";
+
+      default:
+        return "Esclusione automatica";
+    }
+  };
+
   const currentLeader =
     operationalCall
       ? findTeamName(
@@ -271,8 +298,8 @@ export function PublicDisplay():
   const displayMode: PublicDisplayMode =
     "STANDARD";
 
-  const activeView: PublicDisplayView =
-    "ROSTER_OVERVIEW";
+  const activeView =
+    "AUCTION" as PublicDisplayView;
 
   const displayModeLabel: Record<
     PublicDisplayMode,
@@ -508,6 +535,11 @@ export function PublicDisplay():
                 (team) => (
                   <article
                     className="public-display__team-card"
+                      data-call-status={
+                        findOperationalTeam(
+                          team.auctionSessionTeamId
+                        )?.status
+                      }
                     key={
                       team.auctionSessionTeamId
                     }
@@ -547,6 +579,53 @@ export function PublicDisplay():
                         }
                       </div>
                     </header>
+
+                      {(() => {
+                        const callTeam =
+                          findOperationalTeam(
+                            team.auctionSessionTeamId
+                          );
+
+                        if (
+                          !callTeam ||
+                          callTeam.status === "ACTIVE"
+                        ) {
+                          return null;
+                        }
+
+                        const isPassed =
+                          callTeam.status ===
+                          "PASSED";
+
+                        return (
+                          <div
+                            className={`public-display__team-status-overlay ${
+                              isPassed
+                                ? "public-display__team-status-overlay--passed"
+                                : "public-display__team-status-overlay--excluded"
+                            }`}
+                          >
+                            <strong className="public-display__team-status-overlay-title">
+                              {
+                                isPassed
+                                  ? "PASS"
+                                  : "ESCLUSA"
+                              }
+                            </strong>
+
+                            <span className="public-display__team-status-overlay-subtitle">
+                              {
+                                isPassed
+                                  ? "Ha Passato!"
+                                  : `Motivo: ${formatExclusionReason(
+                                      callTeam.exclusionReason
+                                    )}`
+                              }
+                            </span>
+                          </div>
+                        );
+                      })()}
+
 
                     <div className="public-display__team-summary">
                       <div>
