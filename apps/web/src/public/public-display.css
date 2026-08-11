@@ -2625,3 +2625,35 @@ body {
   background: rgba(82, 30, 30, 0.97);
   color: #ffaaaa;
 }
+
+/* SESSION STATUS */
+
+.public-display__status[data-status="SETUP"] {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.public-display__status[data-status="READY"] {
+  color: #1d4f91;
+  background: #eaf3ff;
+}
+
+.public-display__status[data-status="RUNNING"] {
+  color: #18733c;
+  background: #e9f7ef;
+}
+
+.public-display__status[data-status="SUSPENDED"] {
+  color: #9a5b00;
+  background: #fff4d8;
+}
+
+.public-display__status[data-status="COMPLETED"] {
+  color: #6941a5;
+  background: #f3edff;
+}
+
+.public-display__status[data-status="CLOSED"] {
+  color: #475569;
+  background: #e8edf3;
+}
