@@ -381,6 +381,22 @@ export function PublicDisplay():
         </div>
       </header>
 
+      {snapshot.session.status === "SUSPENDED" && (
+        <section className="public-display__suspended-banner">
+          <strong>
+            ASTA TEMPORANEAMENTE SOSPESA
+          </strong>
+
+          <span>
+            La situazione dell'asta è stata congelata.
+          </span>
+
+          <small>
+            La sessione riprenderà su indicazione del banditore.
+          </small>
+        </section>
+      )}
+
       {activeView === "ROSTER_OVERVIEW" && (
         <RosterOverview
           teams={snapshot.publicDisplay.teams}

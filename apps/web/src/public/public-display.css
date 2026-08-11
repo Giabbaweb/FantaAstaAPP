@@ -2657,3 +2657,127 @@ body {
   color: #475569;
   background: #e8edf3;
 }
+
+/* Public Display suspended session banner */
+
+.public-display__suspended-banner {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 54px;
+  padding: 9px 16px;
+  border: 2px solid #e4a63a;
+  border-radius: 14px;
+  background: #fff4d8;
+  color: #7c4b00;
+  box-shadow:
+    0 6px 18px rgba(130, 83, 0, 0.12);
+  text-align: center;
+}
+
+.public-display__suspended-banner strong {
+  font-size: clamp(17px, 1.45vw, 25px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.public-display__suspended-banner span {
+  font-size: clamp(11px, 0.85vw, 15px);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.public-display__suspended-banner small {
+  color: #9a6516;
+  font-size: clamp(10px, 0.75vw, 13px);
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+/* COMPACT */
+.public-display--compact
+.public-display__suspended-banner {
+  min-height: 42px;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.public-display--compact
+.public-display__suspended-banner strong {
+  font-size: clamp(13px, 1.1vw, 18px);
+}
+
+.public-display--compact
+.public-display__suspended-banner span,
+.public-display--compact
+.public-display__suspended-banner small {
+  font-size: clamp(8px, 0.62vw, 10px);
+}
+
+/* DARK */
+.public-display--dark
+.public-display__suspended-banner {
+  border-color: #c58b28;
+  background: #3a2a0f;
+  color: #ffd16a;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.public-display--dark
+.public-display__suspended-banner small {
+  color: #d7a952;
+}
+
+/* SUSPENDED layout fix + stronger suspended banner */
+
+/*
+ * The suspended banner adds one grid item between
+ * the header and the normal auction content.
+ *
+ * Keep the original AUCTION row geometry untouched:
+ * player panel and recent awards therefore retain
+ * their approved equal height and internal scrolling.
+ */
+.public-display--view-auction:has(
+  > .public-display__suspended-banner
+) {
+  grid-template-rows:
+    auto
+    auto
+    auto
+    1fr;
+}
+
+/* Stronger suspended-session banner */
+.public-display__suspended-banner {
+  border-color: #d97706;
+  background: #ffd59a;
+  color: #7a3e00;
+  box-shadow:
+    0 6px 18px rgba(170, 82, 0, 0.20);
+}
+
+.public-display__suspended-banner small {
+  color: #8f4d00;
+}
+
+/* DARK */
+.public-display--dark
+.public-display__suspended-banner {
+  border-color: #e19a2b;
+  background: #4b2f0a;
+  color: #ffd88a;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.34);
+}
+
+.public-display--dark
+.public-display__suspended-banner small {
+  color: #e4b765;
+}
