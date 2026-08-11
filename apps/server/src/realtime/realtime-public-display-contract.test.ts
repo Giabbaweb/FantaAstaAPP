@@ -40,7 +40,8 @@ describe("realtime public display contracts", () => {
       },
       rosterSize: 14,
       rosterSizeLimit: 24,
-      remainingRosterSlots: 10
+      remainingRosterSlots: 10,
+        entries: []
     }
   };
 

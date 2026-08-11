@@ -62,6 +62,14 @@ export type RealtimePublicDisplayTeamData = {
     C: number;
     A: number;
   };
+  rosterEntries: {
+    rosterEntryId: string;
+    playerId: string;
+    playerName: string;
+    realTeamName: string | null;
+    role: PlayerRole;
+    acquisitionCost: number;
+  }[];
 };
 
 export type RealtimePublicDisplayPlayerData = {
@@ -250,7 +258,13 @@ export class SqliteRealtimePublicDisplayReader
       .select({
         auctionSessionTeamId:
           rosterEntries.auctionSessionTeamId,
-        role: players.role
+        rosterEntryId: rosterEntries.id,
+        playerId: players.id,
+        playerName: players.name,
+        realTeamName: players.realTeamName,
+        role: players.role,
+        acquisitionCost:
+          rosterEntries.acquisitionCost
       })
       .from(rosterEntries)
       .innerJoin(
@@ -285,6 +299,12 @@ export class SqliteRealtimePublicDisplayReader
         }
       >();
 
+    const rosterEntriesByTeam =
+      new Map<
+        string,
+        RealtimePublicDisplayTeamData["rosterEntries"]
+      >();
+
     for (const record of rosterRecords) {
       const counts =
         roleCountsByTeam.get(
@@ -302,6 +322,26 @@ export class SqliteRealtimePublicDisplayReader
         record.auctionSessionTeamId,
         counts
       );
+
+      const entries =
+        rosterEntriesByTeam.get(
+          record.auctionSessionTeamId
+        ) ?? [];
+
+      entries.push({
+        rosterEntryId: record.rosterEntryId,
+        playerId: record.playerId,
+        playerName: record.playerName,
+        realTeamName: record.realTeamName,
+        role: record.role,
+        acquisitionCost:
+          record.acquisitionCost
+      });
+
+      rosterEntriesByTeam.set(
+        record.auctionSessionTeamId,
+        entries
+      );
     }
 
     return teamRecords.map((record) => ({
@@ -314,7 +354,11 @@ export class SqliteRealtimePublicDisplayReader
           D: 0,
           C: 0,
           A: 0
-        }
+        },
+        rosterEntries:
+          rosterEntriesByTeam.get(
+            record.auctionSessionTeamId
+          ) ?? []
     }));
   }
   async findRecentAwardsByAuctionSessionId(

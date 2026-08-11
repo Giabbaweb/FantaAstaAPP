@@ -171,7 +171,8 @@ league: publicDisplayLeague,
             },
             rosterSize,
             rosterSizeLimit,
-            remainingRosterSlots
+            remainingRosterSlots,
+            entries: team.rosterEntries
           }
         };
       }),

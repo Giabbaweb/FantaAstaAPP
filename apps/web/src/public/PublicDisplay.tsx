@@ -17,6 +17,10 @@ import {
   createPublicDisplayRealtimeClient
 } from "./public-display-realtime.js";
 
+import {
+  RosterOverview
+} from "./RosterOverview.js";
+
 import "./public-display.css";
 
 type PublicDisplayStatus =
@@ -31,6 +35,10 @@ type PublicDisplayMode =
   | "HIGH_CONTRAST_OUTDOOR"
   | "COMPACT"
   | "DARK";
+
+type PublicDisplayView =
+  | "AUCTION"
+  | "ROSTER_OVERVIEW";
 
 function createPublicDisplayDeviceId(): string {
   const storageKey =
@@ -263,6 +271,9 @@ export function PublicDisplay():
   const displayMode: PublicDisplayMode =
     "STANDARD";
 
+  const activeView: PublicDisplayView =
+    "ROSTER_OVERVIEW";
+
   const displayModeLabel: Record<
     PublicDisplayMode,
     string
@@ -275,7 +286,7 @@ export function PublicDisplay():
 
   return (
     <main
-      className={`public-display public-display--${displayMode.toLowerCase()}`}
+      className={`public-display public-display--${displayMode.toLowerCase()} public-display--view-${activeView.toLowerCase()}`}
     >
       <header className="public-display__header">
         <div className="public-display__app-brand">
@@ -342,6 +353,12 @@ export function PublicDisplay():
           </small>
         </div>
       </header>
+
+      {activeView === "ROSTER_OVERVIEW" && (
+        <RosterOverview
+          teams={snapshot.publicDisplay.teams}
+        />
+      )}
 
       <div className="public-display__auction-row">
       <section className="public-display__auction">

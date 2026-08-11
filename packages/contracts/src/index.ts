@@ -731,6 +731,22 @@ export type RealtimePublicDisplayRosterRole = z.infer<
   typeof realtimePublicDisplayRosterRoleSchema
 >;
 
+export const realtimePublicDisplayRosterEntrySchema =
+  z.object({
+    rosterEntryId: z.string().min(1),
+    playerId: z.string().min(1),
+    playerName: z.string().min(1),
+    realTeamName: z.string().min(1).nullable(),
+    role: playerRoleSchema,
+    acquisitionCost:
+      z.number().int().positive()
+  });
+
+export type RealtimePublicDisplayRosterEntry = z.infer<
+  typeof realtimePublicDisplayRosterEntrySchema
+>;
+
+
 export const realtimePublicDisplayRosterSchema =
   z.object({
     P: realtimePublicDisplayRosterRoleSchema,
@@ -740,12 +756,16 @@ export const realtimePublicDisplayRosterSchema =
     rosterSize: z.number().int().nonnegative(),
     rosterSizeLimit: z.number().int().positive(),
     remainingRosterSlots:
-      z.number().int().nonnegative()
+      z.number().int().nonnegative(),
+    entries: z.array(
+      realtimePublicDisplayRosterEntrySchema
+    )
   });
 
 export type RealtimePublicDisplayRoster = z.infer<
   typeof realtimePublicDisplayRosterSchema
 >;
+
 
 export const realtimePublicDisplayTeamSchema =
   z.object({

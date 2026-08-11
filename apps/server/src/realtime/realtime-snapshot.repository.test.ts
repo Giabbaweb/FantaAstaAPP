@@ -282,7 +282,8 @@ describe("realtime snapshot SQLite readers", () => {
           D: 0,
           C: 0,
           A: 0
-        }
+        },
+        rosterEntries: []
       },
       {
         auctionSessionTeamId:
@@ -300,7 +301,41 @@ describe("realtime snapshot SQLite readers", () => {
           D: 1,
           C: 1,
           A: 1
-        }
+        },
+        rosterEntries: [
+          {
+            rosterEntryId: "roster-entry-p",
+            playerId: "player-p",
+            playerName: "Portiere One",
+            realTeamName: null,
+            role: "P",
+            acquisitionCost: 10
+          },
+          {
+            rosterEntryId: "roster-entry-d",
+            playerId: "player-d",
+            playerName: "Difensore One",
+            realTeamName: null,
+            role: "D",
+            acquisitionCost: 5
+          },
+          {
+            rosterEntryId: "roster-entry-c",
+            playerId: "player-c",
+            playerName: "Centrocampista One",
+            realTeamName: null,
+            role: "C",
+            acquisitionCost: 7
+          },
+          {
+            rosterEntryId: "roster-entry-a",
+            playerId: "player-a",
+            playerName: "Attaccante One",
+            realTeamName: null,
+            role: "A",
+            acquisitionCost: 8
+          }
+        ]
       }
     ]);
   });
