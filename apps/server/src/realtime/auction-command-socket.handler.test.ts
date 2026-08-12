@@ -446,4 +446,42 @@ describe("AuctionCommandSocketHandler", () => {
       }
     });
   });
+
+  it("maps suspended session errors", async () => {
+    const {
+      coordinator,
+      handler
+    } = createFixture();
+
+    coordinator.passTurn
+      .mockRejectedValueOnce(
+        new AtomicAuctionCommandExecutorError(
+          "AUCTION_SESSION_SUSPENDED",
+          "Auction session is suspended"
+        )
+      );
+
+    await expect(
+      handler.handle(
+        "socket-1",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "PASS",
+          metadata,
+          auctionSessionTeamId:
+            "session-team-1"
+        }
+      )
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      error: {
+        code:
+          "AUCTION_SESSION_SUSPENDED",
+        message:
+          "Auction session is suspended"
+      }
+    });
+  });
 });

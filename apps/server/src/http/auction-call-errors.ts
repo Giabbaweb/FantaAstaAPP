@@ -72,6 +72,7 @@ export function mapAuctionCallError(
       case "AUCTION_SESSION_STATE_NOT_FOUND":
         return createMapping(404, error);
 
+      case "AUCTION_SESSION_SUSPENDED":
       case "STALE_STATE":
       case "COMMAND_ID_CONFLICT":
         return createMapping(409, error);
