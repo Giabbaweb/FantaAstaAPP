@@ -981,7 +981,9 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 
 La versione corrente è:
 
-v0.8.0
+```text
+v0.9.0
+```
 
 Sono operative:
 
@@ -996,18 +998,25 @@ Sono operative:
 - API REST del motore d'asta;
 - Socket.IO integrato con Fastify;
 - registrazione e autenticazione dei dispositivi realtime;
-- ruoli OPERATOR e OBSERVER;
+- ruoli `OPERATOR`, `OBSERVER` e `PUBLIC_DISPLAY`;
+- una sola connessione `OPERATOR` per partecipazione;
+- connessioni `OBSERVER` e `PUBLIC_DISPLAY` in sola lettura;
 - stanze realtime per sessione e squadra;
+- registrazione `PUBLIC_DISPLAY` senza identità di squadra;
+- ingresso del Public Display nella sola room `session:<auctionSessionId>`;
+- rifiuto lato server dei comandi di scrittura provenienti dal Public Display;
 - snapshot autorevoli;
+- projection Public Display derivata dallo snapshot autorevole;
+- projection Public Display con dati lega, squadre, giocatore corrente, ultime aggiudicazioni e roster entries;
 - eventi realtime dell'asta;
-- stateVersion persistente;
+- `stateVersion` persistente;
 - command registry persistente;
 - controllo ottimistico della concorrenza;
-- idempotenza tramite commandId;
+- idempotenza tramite `commandId`;
 - esecuzione atomica dei comandi;
 - protocollo HTTP atomico;
-- protocollo Socket.IO auction:command;
-- telecomandi BID, PASS e UNDO_PASS;
+- protocollo Socket.IO `auction:command`;
+- telecomandi `BID`, `PASS` e `UNDO_PASS`;
 - riconnessione con nuova sincronizzazione;
 - conferma definitiva atomica delle aggiudicazioni;
 - aggiornamento atomico di rosa, crediti e disponibilità del giocatore;
@@ -1020,13 +1029,23 @@ Sono operative:
 - boundary post-commit `AuctionBackupRequester`;
 - implementazione `NoopAuctionBackupRequester`;
 - isolamento degli errori della richiesta backup dal comando già committato;
-- 31 file di test server e 217 test server verdi;
+- vista `/public` fullscreen e read-only;
+- branding FantaAstaAPP e lega nello schermo pubblico;
+- giocatore chiamato, prezzo corrente, leader e turno;
+- ultime aggiudicazioni confermate con scroll interno;
+- crediti residui, massima offerta e composizione P/D/C/A delle squadre;
+- stati `PASSED` ed `EXCLUDED` con overlay e motivo di esclusione;
+- stato visuale della sessione e banner dedicato per `SUSPENDED`;
+- modalità Public Display `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
+- foglione elettronico delle rose con otto colonne, roster entries e slot liberi;
+- 33 file di test server e 236 test server verdi;
 - 10 file di test domain e 86 test domain verdi;
 - typecheck e build completi del monorepo superati.
 
-La v0.8.0 completa quindi la conferma transazionale delle assegnazioni,
-l'audit persistente delle aggiudicazioni e il boundary post-commit
-necessario al futuro sottosistema di backup.
+La v0.9.0 completa quindi lo Schermo Pubblico realtime e read-only,
+alimentato esclusivamente dallo stato autoritativo del server, e introduce
+le viste operative necessarie al monitor condiviso dell'asta senza creare
+un secondo stato applicativo nel frontend.
 
 ---
 
@@ -1034,31 +1053,30 @@ necessario al futuro sottosistema di backup.
 
 La prossima milestone funzionale è:
 
-v0.9.0 — Schermo pubblico
+```text
+v0.10.0 — Sospensione e resilienza
+```
 
-L'obiettivo sarà realizzare una vista pubblica in sola lettura alimentata
-dallo stato autorevole e dal realtime già disponibili, comprendendo:
+L'obiettivo sarà completare il comportamento operativo della sospensione,
+distinguendolo dalla sola rappresentazione visiva già disponibile nel
+Public Display.
 
-- giocatore chiamato;
-- prezzo corrente;
-- squadra leader;
-- turno;
-- squadre in PASS;
-- crediti residui;
-- posti liberi;
-- conteggi P/D/C/A acquistati;
-- stato della sessione;
-- messaggi di sospensione;
-- modalità `STANDARD`;
-- modalità `HIGH_CONTRAST_OUTDOOR`;
-- modalità `COMPACT`.
+La milestone comprenderà:
 
-Lo schermo pubblico non introdurrà un secondo stato applicativo:
-visualizzerà esclusivamente dati derivati dallo stato autoritativo del server.
+- sospensione completa della sessione;
+- blocco dei comandi operativi durante `SUSPENDED`;
+- telecomandi in sola lettura durante la pausa;
+- conservazione dello stato corrente di chiamata, offerta, leader e turno;
+- supporto a Pizza Break, pause tecniche e altre causali previste;
+- ripresa esclusivamente manuale da parte del banditore;
+- integrazione del boundary di backup previsto per la sospensione;
+- controlli di resilienza e ripresa coerenti con il server autoritativo.
 
-Le decisioni architetturali significative verranno registrate in:
+Le decisioni architetturali significative continueranno a essere registrate in:
 
+```text
 docs/DECISIONS.md
+```
 
 ---
 

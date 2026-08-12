@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 8 completata
-- **Versione corrente:** v0.8.0
-- **Prossimo obiettivo:** Versione 0.9 – Schermo pubblico
+- **Stato:** Milestone 9 completata
+- **Versione corrente:** v0.9.0
+- **Prossimo obiettivo:** Versione 0.10 – Sospensione e resilienza
 
 ## Regole immutabili
 
@@ -138,36 +138,33 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 Nessuna intestazione. Terzo portiere escluso.
 
-## Stato implementativo della v0.8.0
+## Stato implementativo della v0.9.0
 
-Sono completati tutti gli elementi della v0.7.0 e inoltre:
+Sono completati tutti gli elementi della v0.8.0 e inoltre:
 
-- validazione di dominio dell'aggiudicazione definitiva;
-- repository transazionali necessari alla conferma;
-- servizio transazionale per l'assegnazione confermata;
-- creazione atomica della voce di rosa;
-- aggiornamento atomico dei crediti residui;
-- aggiornamento atomico del giocatore a `ROSTERED`;
-- verifica della disponibilità del giocatore;
-- verifica dei crediti;
-- verifica degli slot di rosa;
-- verifica dei limiti per ruolo;
-- verifica della completabilità della rosa;
-- rollback completo in caso di errore;
-- mapping HTTP degli errori di conferma;
-- tabella persistente `auction_events`;
-- repository transazionale degli eventi d'asta;
-- audit di dominio separato dal `command_registry`;
-- evento persistente `AUCTION_AWARD_CONFIRMED`;
-- audit incluso nella stessa transazione della conferma;
-- nessun audit residuo dopo rollback;
-- evento realtime e snapshot pubblicati solo dopo commit;
-- boundary post-commit `AuctionBackupRequester`;
-- implementazione `NoopAuctionBackupRequester`;
-- nessuna richiesta di backup duplicata sui replay idempotenti;
-- fallimento della richiesta di backup isolato dal comando committato;
-- 31 file di test server;
-- 217 test server verdi;
+- ruolo realtime `PUBLIC_DISPLAY` read-only di sessione;
+- registrazione Public Display senza `auctionSessionTeamId`;
+- ingresso del Public Display nella sola room `session:<auctionSessionId>`;
+- divieto lato server di inviare comandi d'asta dal Public Display;
+- projection Public Display inclusa nello snapshot autorevole;
+- dati lega inclusi nella projection;
+- dati squadre con crediti residui, massima offerta e conteggi P/D/C/A;
+- giocatore corrente con ruolo e squadra reale;
+- supporto foto giocatore lato UI;
+- ultime aggiudicazioni confermate;
+- projection completa delle roster entries;
+- foglione elettronico delle rose con 8 colonne e slot liberi;
+- header con branding FantaAstaAPP e lega;
+- vista `/public` fullscreen read-only;
+- stati squadra `PASSED` ed `EXCLUDED` visualizzati con overlay;
+- motivo di esclusione visualizzato;
+- stato sessione visualizzato;
+- banner dedicato per `SUSPENDED`;
+- modalità visuali `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
+- collaudo visivo degli overlay PASS/ESCLUSA in STANDARD, OUTDOOR e DARK;
+- collaudo visivo del banner SUSPENDED in STANDARD, OUTDOOR, DARK e COMPACT;
+- 33 file di test server;
+- 236 test server verdi;
 - 10 file di test domain;
 - 86 test domain verdi;
 - typecheck completo del monorepo superato;
@@ -231,18 +228,16 @@ La riconnessione richiede una nuova registrazione del dispositivo e produce un n
 
 ## Prossimo obiettivo
 
-Versione 0.9 — Schermo pubblico:
+Versione 0.10 — Sospensione e resilienza:
 
-- visualizzare lo stato dell'asta su uno schermo condiviso;
-- mostrare giocatore chiamato, prezzo, leader e turno;
-- mostrare crediti residui e posti liberi;
-- mostrare P/D/C/A acquistati;
-- mostrare lo stato della sessione;
-- supportare modalità `STANDARD`;
-- supportare modalità `HIGH_CONTRAST_OUTDOOR`;
-- supportare modalità `COMPACT`;
-- mantenere lo schermo pubblico in sola lettura;
-- alimentare la UI tramite stato autorevole e realtime esistenti.
+- introdurre la sospensione operativa completa della sessione;
+- supportare Pizza Break e pause tecniche;
+- bloccare i comandi durante `SUSPENDED`;
+- preservare lo stato corrente dell'asta;
+- mantenere i telecomandi in sola lettura durante la sospensione;
+- richiedere una ripresa esclusivamente manuale dal banditore;
+- predisporre le causali di sospensione previste dalla roadmap;
+- integrare il boundary di backup previsto per la sospensione.
 
 Fonte autoritativa completa:
 

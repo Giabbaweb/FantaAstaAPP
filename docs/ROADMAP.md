@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.8.0
+v0.9.0
 ```
 
 Milestone completate:
@@ -82,12 +82,26 @@ Milestone completate:
 - evento `AUCTION_AWARD_CONFIRMED`;
 - rollback completo dell'assegnazione e dell'audit;
 - boundary post-commit per il futuro backup;
-- 217 test server verdi.
+- connessione realtime `PUBLIC_DISPLAY` read-only di sessione;
+- projection Public Display autorevole nello snapshot realtime;
+- branding FantaAstaAPP e lega nello schermo pubblico;
+- vista auction fullscreen con giocatore, prezzo, leader e turno;
+- ultime aggiudicazioni confermate con scroll interno;
+- crediti residui, massima offerta e composizione P/D/C/A per tutte le squadre;
+- stati `PASSED` ed `EXCLUDED` con overlay e motivazione;
+- stati visuali della sessione e banner `SUSPENDED`;
+- modalità `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
+- foglione elettronico delle rose con slot liberi;
+- 33 file di test server verdi;
+- 236 test server verdi;
+- 10 file di test domain verdi;
+- 86 test domain verdi;
+- typecheck e build completi del monorepo superati.
 
 Prossima milestone:
 
 ```text
-v0.9.0 — Schermo pubblico
+v0.10.0 — Sospensione e resilienza
 ```
 
 ---
@@ -552,40 +566,70 @@ v0.8.0 e rimane previsto dalla v0.13.0.
 
 # v0.9.0 — Schermo pubblico
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
-## Obiettivi
+## Obiettivi completati
 
-- visualizzare lo stato dell’asta su uno schermo condiviso;
-- mostrare le informazioni principali di tutte le squadre;
-- supportare l’utilizzo in ambiente esterno.
+- visualizzazione realtime read-only dello stato dell’asta su schermo condiviso;
+- projection Public Display autorevole derivata dallo snapshot server;
+- visualizzazione delle informazioni principali di tutte le squadre;
+- supporto all’utilizzo in ambiente esterno;
+- branding FantaAstaAPP e lega;
+- foglione elettronico delle rose.
 
-## Modalità previste
+## Modalità implementate
 
 ```text
 STANDARD
 HIGH_CONTRAST_OUTDOOR
 COMPACT
+DARK
 ```
 
 ## Informazioni visualizzate
 
 - giocatore chiamato;
+- ruolo e squadra reale del giocatore;
+- foto giocatore, quando disponibile;
 - prezzo corrente;
 - squadra leader;
 - turno;
 - squadre in PASS;
+- squadre escluse e relativo motivo;
 - crediti residui;
+- massima offerta;
 - posti liberi;
 - P/D/C/A acquistati;
+- ultime aggiudicazioni confermate;
 - stato della sessione;
-- messaggi di sospensione.
+- messaggio di sospensione.
+
+## Foglione elettronico
+
+- vista completa delle otto squadre;
+- giocatori già presenti in rosa;
+- slot ancora liberi per ruolo;
+- crediti residui;
+- massima offerta;
+- aggiornamento attraverso la stessa projection autorevole del Public Display.
+
+## Criteri di completamento
+
+- connessione `PUBLIC_DISPLAY` realtime e read-only;
+- nessun comando d’asta inviabile dal Public Display;
+- connessione alla sola room di sessione;
+- snapshot autorevole come unica fonte dello stato visualizzato;
+- stati `PASSED` ed `EXCLUDED` chiaramente distinguibili;
+- sessione `SUSPENDED` chiaramente segnalata senza alterare lo stato sottostante;
+- modalità STANDARD, HIGH_CONTRAST_OUTDOOR, COMPACT e DARK collaudate;
+- foglione elettronico collaudato;
+- test, typecheck e build completi superati.
 
 ---
 
 # v0.10.0 — Sospensione e resilienza
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 
@@ -799,18 +843,12 @@ Questa funzionalità non fa parte della versione 1.0.
 
 Le priorità attuali sono:
 
-1. configurazione della lega
-2. giocatori e import
-3. motore d’asta
-4. realtime
-5. assegnazioni
-6. schermo pubblico
-7. sospensione e resilienza
-8. operazioni manuali
-9. FMS
-10. recovery
-11. collaudo
-12. release stabile.
+1. sospensione e resilienza
+2. operazioni manuali e correzioni
+3. import/export FMS
+4. backup e recovery
+5. collaudo operativo
+6. release stabile.
 
 ---
 

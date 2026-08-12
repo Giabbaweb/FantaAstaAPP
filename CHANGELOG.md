@@ -14,6 +14,59 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.9.0] - 2026-08-12
+
+### Added
+
+* Realtime `PUBLIC_DISPLAY` role for session-level read-only connections
+* Authoritative Public Display projection in the realtime auction snapshot
+* League branding data in the Public Display snapshot
+* Public Display team projection with remaining credits, maximum bid and P/D/C/A roster composition
+* Current-player data with role and real-team information
+* Recent confirmed-award feed for the Public Display
+* Full roster-entry projection for the electronic roster overview
+* `/public` auction view designed for fullscreen monitor use
+* League and FantaAstaAPP branding header
+* Current player presentation with player photo support
+* Recent-awards panel with constrained height and internal scrolling
+* Team cards with credits, maximum bid and roster-role counts
+* Visual overlays for `PASSED` and `EXCLUDED` teams, including exclusion reason
+* Session-status visual indicators
+* Suspended-session banner while preserving the frozen auction state underneath
+* Electronic roster overview with eight team columns and free roster slots
+* Public Display visual modes:
+  * `STANDARD`
+  * `HIGH_CONTRAST_OUTDOOR`
+  * `COMPACT`
+  * `DARK`
+
+### Changed
+
+* Public Display connections join only the session room and do not require a team identity
+* Public Display connections cannot send auction write commands
+* Public Display data is derived exclusively from the authoritative server snapshot
+* Public Display team snapshots now include complete roster entries
+* Fullscreen team-card layout no longer stretches roster-role rows to fill unused viewport height
+* Suspended sessions preserve the normal auction layout while displaying a prominent pause message
+
+### Tested
+
+* Public Display realtime registration and read-only authorization
+* Public Display snapshot contracts and repository projections
+* League, team, player, recent-award and roster-entry Public Display data
+* `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` and `DARK` visual modes
+* `PASSED` and `EXCLUDED` overlays in standard, outdoor and dark modes
+* Suspended-session presentation in standard, outdoor, dark and compact modes
+* Fullscreen Public Display layout
+* 33 automated server test files
+* 236 automated server tests
+* 10 automated domain test files
+* 86 automated domain tests
+* Full monorepo type checking
+* Full monorepo production build
+
+---
+
 ## [0.8.0] - 2026-08-08
 
 ### Added
