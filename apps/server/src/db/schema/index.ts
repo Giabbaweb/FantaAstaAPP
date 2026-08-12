@@ -482,8 +482,16 @@ export const commandRegistry = sqliteTable(
         onDelete: "cascade"
       }),
 
-    auctionCallId: text("auction_call_id")
+    commandScope: text("command_scope", {
+      enum: [
+        "AUCTION_CALL",
+        "AUCTION_SESSION"
+      ]
+    })
       .notNull()
+      .default("AUCTION_CALL"),
+
+    auctionCallId: text("auction_call_id")
       .references(() => auctionCalls.id, {
         onDelete: "cascade"
       }),
@@ -497,7 +505,9 @@ export const commandRegistry = sqliteTable(
         "PASS",
         "UNDO_PASS",
         "CONFIRM",
-        "CANCEL"
+        "CANCEL",
+        "SUSPEND_SESSION",
+        "RESUME_SESSION"
       ]
     }).notNull(),
 
@@ -542,6 +552,15 @@ export const commandRegistry = sqliteTable(
     check(
       "command_registry_version_progression",
       sql`${table.resultStateVersion} = ${table.expectedStateVersion} + 1`
+    ),
+
+    check(
+      "command_registry_scope_target_consistency",
+      sql`(
+        (${table.commandScope} = 'AUCTION_CALL' AND ${table.auctionCallId} IS NOT NULL)
+        OR
+        (${table.commandScope} = 'AUCTION_SESSION' AND ${table.auctionCallId} IS NULL)
+      )`
     )
   ]
 );

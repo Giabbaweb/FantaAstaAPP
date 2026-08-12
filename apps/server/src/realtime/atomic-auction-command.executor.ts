@@ -99,6 +99,16 @@ export class AtomicAuctionCommandExecutor {
           );
 
       if (existingCommand) {
+        if (
+          existingCommand.commandScope !==
+            "AUCTION_CALL"
+        ) {
+          throw new AtomicAuctionCommandExecutorError(
+            "COMMAND_ID_CONFLICT",
+            `Command ID "${input.commandId}" was already used with a different command scope`
+          );
+        }
+
         this.assertMatchingCommand(
           existingCommand,
           input

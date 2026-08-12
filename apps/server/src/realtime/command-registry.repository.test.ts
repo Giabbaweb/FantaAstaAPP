@@ -152,6 +152,57 @@ describe("SqliteCommandRegistryRepository", () => {
     expect(found).toEqual(created);
   });
 
+  it("stores and restores a session command result", async () => {
+    const result = {
+      id: "session-1",
+      leagueId: "league-1",
+      season: "2026/2027",
+      editionNumber: 1,
+      status: "SUSPENDED" as const,
+      suspensionReason: "PIZZA_BREAK" as const,
+      initialCredits: 330,
+      createdAt:
+        "2026-08-12T20:00:00.000Z",
+      updatedAt:
+        "2026-08-12T20:01:00.000Z"
+    };
+
+    const created =
+      await repository.createSessionCommand({
+        auctionSessionId: "session-1",
+        commandId: "session-command-1",
+        commandType: "SUSPEND_SESSION",
+        expectedStateVersion: 0,
+        resultStateVersion: 1,
+        requestFingerprint:
+          "suspend:PIZZA_BREAK",
+        result
+      });
+
+    expect(created).toEqual(
+      expect.objectContaining({
+        auctionSessionId: "session-1",
+        commandScope: "AUCTION_SESSION",
+        auctionCallId: null,
+        commandId: "session-command-1",
+        commandType: "SUSPEND_SESSION",
+        expectedStateVersion: 0,
+        resultStateVersion: 1,
+        requestFingerprint:
+          "suspend:PIZZA_BREAK",
+        result
+      })
+    );
+
+    const found =
+      await repository.findByCommandId(
+        "session-1",
+        "session-command-1"
+      );
+
+    expect(found).toEqual(created);
+  });
+
   it("returns null for an unknown command", async () => {
     await expect(
       repository.findByCommandId(
