@@ -9,6 +9,9 @@ import type {
 import { desc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../db/client.js";
+import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
 import { auctionSessions } from "../db/schema/index.js";
 
 const auctionSessionPublicSelection = {
@@ -33,6 +36,11 @@ export interface AuctionSessionRepository {
   findAll(): Promise<AuctionSession[]>;
 
   findById(id: string): Promise<AuctionSession | null>;
+
+  findByIdWithExecutor(
+    executor: DatabaseWriteExecutor,
+    id: string
+  ): AuctionSession | null;
 
   findActive(): Promise<AuctionSession | null>;
 
@@ -64,11 +72,22 @@ export class SqliteAuctionSessionRepository
   }
 
   async findById(id: string): Promise<AuctionSession | null> {
-    const [session] = await db
+    return this.findByIdWithExecutor(
+      db,
+      id
+    );
+  }
+
+  findByIdWithExecutor(
+    executor: DatabaseWriteExecutor,
+    id: string
+  ): AuctionSession | null {
+    const [session] = executor
       .select(auctionSessionPublicSelection)
       .from(auctionSessions)
       .where(eq(auctionSessions.id, id))
-      .limit(1);
+      .limit(1)
+      .all();
 
     return session ?? null;
   }
