@@ -16,8 +16,24 @@ import {
 
 export type AuctionSessionState = {
   auctionSessionId: string;
+  status:
+    typeof auctionSessions.$inferSelect.status;
+  suspensionReason:
+    typeof auctionSessions.$inferSelect.suspensionReason;
   stateVersion: number;
 };
+
+export type AuctionSessionOperationalStateUpdate =
+  | {
+      status: "SUSPENDED";
+      suspensionReason: NonNullable<
+        typeof auctionSessions.$inferSelect.suspensionReason
+      >;
+    }
+  | {
+      status: "RUNNING";
+      suspensionReason: null;
+    };
 
 export interface AuctionSessionStateRepository {
   findByAuctionSessionId(
@@ -43,6 +59,19 @@ export interface AuctionSessionStateRepository {
     auctionSessionId: string,
     expectedStateVersion: number
   ): number | null;
+
+  updateOperationalStateIfMatches(
+    auctionSessionId: string,
+    expectedStateVersion: number,
+    update: AuctionSessionOperationalStateUpdate
+  ): Promise<AuctionSessionState | null>;
+
+  updateOperationalStateIfMatchesWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string,
+    expectedStateVersion: number,
+    update: AuctionSessionOperationalStateUpdate
+  ): AuctionSessionState | null;
 }
 
 export class SqliteAuctionSessionStateRepository
@@ -55,6 +84,10 @@ export class SqliteAuctionSessionStateRepository
       .select({
         auctionSessionId:
           auctionSessions.id,
+        status:
+          auctionSessions.status,
+        suspensionReason:
+          auctionSessions.suspensionReason,
         stateVersion:
           auctionSessions.stateVersion
       })
@@ -146,4 +179,63 @@ export class SqliteAuctionSessionStateRepository
 
     return updatedState?.stateVersion ?? null;
   }
+
+  async updateOperationalStateIfMatches(
+    auctionSessionId: string,
+    expectedStateVersion: number,
+    update: AuctionSessionOperationalStateUpdate
+  ): Promise<AuctionSessionState | null> {
+    return this.updateOperationalStateIfMatchesWithExecutor(
+      db,
+      auctionSessionId,
+      expectedStateVersion,
+      update
+    );
+  }
+
+  updateOperationalStateIfMatchesWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string,
+    expectedStateVersion: number,
+    update: AuctionSessionOperationalStateUpdate
+  ): AuctionSessionState | null {
+    const [updatedState] = executor
+      .update(auctionSessions)
+      .set({
+        status:
+          update.status,
+        suspensionReason:
+          update.suspensionReason,
+        stateVersion:
+          sql`${auctionSessions.stateVersion} + 1`,
+        updatedAt:
+          sql`CURRENT_TIMESTAMP`
+      })
+      .where(
+        and(
+          eq(
+            auctionSessions.id,
+            auctionSessionId
+          ),
+          eq(
+            auctionSessions.stateVersion,
+            expectedStateVersion
+          )
+        )
+      )
+      .returning({
+        auctionSessionId:
+          auctionSessions.id,
+        status:
+          auctionSessions.status,
+        suspensionReason:
+          auctionSessions.suspensionReason,
+        stateVersion:
+          auctionSessions.stateVersion
+      })
+      .all();
+
+    return updatedState ?? null;
+  }
+
 }
