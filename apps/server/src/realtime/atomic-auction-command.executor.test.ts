@@ -297,6 +297,67 @@ describe("AtomicAuctionCommandExecutor", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("rejects a new auction call command while the session is suspended", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "SUSPENDED",
+        suspensionReason: "PIZZA_BREAK"
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    const input = createInput();
+
+    await expect(
+      executor.execute(input)
+    ).rejects.toMatchObject({
+      code: "AUCTION_SESSION_SUSPENDED"
+    });
+
+    expect(
+      input.apply
+    ).not.toHaveBeenCalled();
+  });
+
+  it("returns an idempotent replay while the session is suspended", async () => {
+    const firstInput = createInput();
+
+    const firstResult =
+      await executor.execute(firstInput);
+
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "SUSPENDED",
+        suspensionReason: "PIZZA_BREAK"
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    const retryInput = createInput();
+
+    const retryResult =
+      await executor.execute(retryInput);
+
+    expect(retryResult).toEqual({
+      ...firstResult,
+      idempotentReplay: true
+    });
+
+    expect(
+      retryInput.apply
+    ).not.toHaveBeenCalled();
+  });
+
   it("rejects a stale state version", async () => {
     await expect(
       executor.execute(

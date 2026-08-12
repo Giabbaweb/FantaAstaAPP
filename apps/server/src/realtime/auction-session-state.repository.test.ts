@@ -44,6 +44,22 @@ describe("SqliteAuctionSessionStateRepository", () => {
     });
   });
 
+  it("reads the complete session state with a transaction executor", async () => {
+    const result = db.transaction((tx) =>
+      repository.findByAuctionSessionIdWithExecutor(
+        tx,
+        auctionSessionId
+      )
+    );
+
+    expect(result).toEqual({
+      auctionSessionId,
+      status: "RUNNING",
+      suspensionReason: null,
+      stateVersion: 7
+    });
+  });
+
   it("suspends the session and increments stateVersion atomically", async () => {
     const result =
       await repository.updateOperationalStateIfMatches(

@@ -40,6 +40,11 @@ export interface AuctionSessionStateRepository {
     auctionSessionId: string
   ): Promise<AuctionSessionState | null>;
 
+  findByAuctionSessionIdWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string
+  ): AuctionSessionState | null;
+
   getCurrentStateVersion(
     auctionSessionId: string
   ): Promise<number | null>;
@@ -80,7 +85,17 @@ export class SqliteAuctionSessionStateRepository
   async findByAuctionSessionId(
     auctionSessionId: string
   ): Promise<AuctionSessionState | null> {
-    const [state] = await db
+    return this.findByAuctionSessionIdWithExecutor(
+      db,
+      auctionSessionId
+    );
+  }
+
+  findByAuctionSessionIdWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string
+  ): AuctionSessionState | null {
+    const [state] = executor
       .select({
         auctionSessionId:
           auctionSessions.id,
@@ -98,7 +113,8 @@ export class SqliteAuctionSessionStateRepository
           auctionSessionId
         )
       )
-      .limit(1);
+      .limit(1)
+      .all();
 
     return state ?? null;
   }
