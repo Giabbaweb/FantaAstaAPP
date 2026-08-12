@@ -3082,3 +3082,365 @@ COMPACT
 ```
 
 rimangono decisioni di presentazione e non richiedono una ADR separata.
+
+---
+
+# ADR-047 — La sospensione operativa della sessione congela l’asta senza modificare la chiamata corrente
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Lifecycle sessione, comandi autorevoli, resilienza e backup
+
+## Contesto
+
+FantaAstaAPP prevede fin dalla gestione del lifecycle delle sessioni lo stato:
+
+```text
+SUSPENDED
+```
+
+con transizione:
+
+```text
+RUNNING
+  ↓ suspend
+SUSPENDED
+  ↓ resume
+RUNNING
+```
+
+ADR-014 stabilisce inoltre che una sessione sospesa non riprenda mai automaticamente e che la ripresa richieda sempre un’azione esplicita del banditore.
+
+La Milestone 10 completa il comportamento operativo della sospensione.
+
+La v0.9.0 è già in grado di rappresentare graficamente una sessione `SUSPENDED` nello Schermo Pubblico, ma tale rappresentazione non costituisce ancora una sospensione operativa completa.
+
+Il codice esistente distingue inoltre due concetti:
+
+```text
+AuctionSession.status
+AuctionCall.status
+```
+
+Entrambi prevedono uno stato `SUSPENDED`, ma la sospensione di `AuctionCall` non è attualmente collegata a un caso d’uso applicativo del server.
+
+La macchina a stati di `AuctionCall` consente:
+
+```text
+OPEN
+  ↓ suspend
+SUSPENDED
+  ↓ resume
+OPEN
+```
+
+mentre la sospensione dell’intera sessione deve poter congelare lo stato corrente dell’asta senza ricostruire artificialmente la chiamata al momento della ripresa.
+
+Durante una sospensione devono rimanere invariati almeno:
+
+```text
+giocatore corrente
+offerta corrente
+leader corrente
+turno corrente
+PASS
+esclusioni
+stati delle squadre
+```
+
+La sospensione deve inoltre rispettare le garanzie già introdotte per i comandi autorevoli:
+
+```text
+commandId
+stateVersion
+command registry persistente
+optimistic concurrency
+transazione SQLite
+realtime post-commit
+```
+
+e deve richiedere un backup dopo il commit.
+
+## Decisione
+
+La sospensione operativa dell’intera asta viene rappresentata esclusivamente tramite:
+
+```text
+AuctionSession.status = SUSPENDED
+```
+
+La sospensione della sessione non modifica automaticamente lo stato della chiamata corrente.
+
+Per esempio:
+
+```text
+AuctionSession:
+RUNNING → SUSPENDED
+
+AuctionCall:
+OPEN → OPEN
+```
+
+oppure:
+
+```text
+AuctionSession:
+RUNNING → SUSPENDED
+
+AuctionCall:
+PROVISIONAL_AWARD → PROVISIONAL_AWARD
+```
+
+L’aggregate della chiamata corrente rimane invariato.
+
+Non vengono modificati:
+
+```text
+currentBid
+currentLeaderAuctionSessionTeamId
+currentTurnAuctionSessionTeamId
+provisionalWinnerAuctionSessionTeamId
+AuctionCallTeam.status
+exclusionReason
+```
+
+Lo stato `AuctionCall.SUSPENDED` rimane parte della macchina a stati della chiamata e non viene eliminato né ridefinito, ma non rappresenta automaticamente la sospensione operativa dell’intera sessione.
+
+Durante:
+
+```text
+AuctionSession.status = SUSPENDED
+```
+
+lo stato della sessione rappresenta un gate operativo globale.
+
+I comandi che modificano lo stato dell’asta devono essere rifiutati lato server.
+
+Sono bloccati almeno:
+
+```text
+OPEN
+BID
+PASS
+UNDO_PASS
+CONFIRM
+CANCEL
+```
+
+e qualsiasi ulteriore comando operativo che possa modificare la chiamata o lo stato autorevole dell’asta.
+
+La sola disabilitazione dei controlli nella UI non costituisce una protezione sufficiente.
+
+Il server rimane l’unica autorità responsabile dell’enforcement.
+
+La sospensione richiede una causale appartenente alla seguente union chiusa:
+
+```text
+PIZZA_BREAK
+TECHNICAL_BREAK
+ORGANIZATIONAL_BREAK
+NETWORK_ISSUE
+OTHER
+```
+
+La causale viene persistita insieme allo stato della sessione in modo che rimanga disponibile dopo:
+
+```text
+refresh
+reconnect
+server restart
+```
+
+La ripresa della sessione può avvenire esclusivamente tramite un comando esplicito del banditore:
+
+```text
+RESUME_SESSION
+```
+
+Non possono produrre una ripresa automatica:
+
+```text
+scadenza di un timer
+ritorno della rete
+riconnessione di un dispositivo
+refresh di un client
+riavvio del server
+riapertura del Public Display
+```
+
+La disconnessione di un dispositivo continua a essere separata dallo stato di dominio e non modifica la sessione, la chiamata, il turno o i PASS.
+
+I comandi di sospensione e ripresa sono comandi autorevoli e devono rispettare le stesse garanzie architetturali previste per gli altri comandi che modificano lo stato.
+
+Devono quindi partecipare a un flusso che garantisca almeno:
+
+```text
+commandId
+expected stateVersion
+request fingerprint
+controllo idempotenza
+controllo optimistic concurrency
+transazione SQLite
+incremento stateVersion
+registrazione nel command_registry
+commit
+pubblicazione realtime post-commit
+```
+
+L’ADR non impone una specifica classe applicativa o il riutilizzo diretto dell’attuale executor delle chiamate d’asta.
+
+L’implementazione deve preservare le garanzie della pipeline autorevole senza introdurre un percorso concorrente o meno affidabile.
+
+La sospensione e la ripresa sono eventi significativi di dominio.
+
+Devono essere registrabili nell’audit trail persistente separato dal `command_registry` tramite eventi semanticamente distinti:
+
+```text
+SESSION_SUSPENDED
+SESSION_RESUMED
+```
+
+L’evento di sospensione deve conservare almeno:
+
+```text
+auctionSessionId
+eventType
+suspensionReason
+createdAt
+```
+
+L’evento di ripresa deve conservare almeno:
+
+```text
+auctionSessionId
+eventType
+createdAt
+```
+
+La registrazione dell’audit deve partecipare alla stessa atomicità del comando autorevole.
+
+Se la transazione viene annullata, non deve rimanere alcun evento di audit relativo alla sospensione o alla ripresa fallita.
+
+Dopo un commit riuscito devono essere pubblicati:
+
+```text
+auction:event
+auction:snapshot
+```
+
+coerenti con il nuovo stato autorevole.
+
+Un replay idempotente non deve produrre una seconda pubblicazione degli stessi effetti realtime.
+
+Durante `SUSPENDED`, i telecomandi continuano a ricevere lo snapshot autorevole e gli aggiornamenti realtime, ma operano in sola lettura.
+
+Il frontend può disabilitare i controlli operativi, ma il rifiuto dei comandi deve essere garantito lato server.
+
+Il Public Display continua a essere una connessione read-only di sessione e deve mostrare:
+
+```text
+stato SUSPENDED
+causale della sospensione
+stato congelato dell’asta
+```
+
+senza ricostruire autonomamente lo stato.
+
+Una sospensione appena committata deve richiedere un backup attraverso il boundary applicativo di backup.
+
+Il backup viene richiesto esclusivamente dopo il commit.
+
+Si applicano le seguenti regole:
+
+```text
+rollback
+→ nessun backup
+
+idempotent replay
+→ nessun backup duplicato
+
+errore del backup
+→ non annulla la sospensione già committata
+```
+
+Il sottosistema completo di backup e recovery rimane separato ed è previsto dalla Milestone 13.
+
+Questa decisione non introduce quindi:
+
+```text
+restore automatico
+integrity check completo
+retention dei backup
+rotazione dei backup
+recovery workflow
+recovery UI
+```
+
+Se il server viene riavviato mentre una sessione persistita è:
+
+```text
+SUSPENDED
+```
+
+la sessione deve rimanere:
+
+```text
+SUSPENDED
+```
+
+Il bootstrap del server non può trasformarla automaticamente in `RUNNING`.
+
+I client che si riconnettono ricevono lo stato tramite il normale snapshot autorevole.
+
+La sospensione e la ripresa rimangono operazioni amministrative esplicite riservate alla capacità del banditore.
+
+La modalità tecnica con cui tale capacità viene autenticata o autorizzata non viene ridefinita da questa ADR e deve rispettare il modello amministrativo esistente.
+
+## Conseguenze
+
+### Positive
+
+- La sospensione della sessione non altera né ricostruisce artificialmente la chiamata corrente.
+- Offerta, leader, turno, PASS ed esclusioni rimangono invariati durante la pausa.
+- `AuctionSession.status` rappresenta un gate operativo globale semplice e deterministico.
+- La macchina a stati della chiamata mantiene la propria semantica indipendente.
+- I comandi vengono bloccati dal server e non soltanto dalla UI.
+- La causale della sospensione rimane disponibile dopo reconnect o restart.
+- Suspend e resume partecipano alle stesse garanzie di idempotenza e concorrenza degli altri comandi autorevoli.
+- L’audit di dominio rimane separato dal command registry.
+- Eventi e snapshot vengono pubblicati solo dopo il commit.
+- I replay idempotenti non duplicano effetti realtime o backup.
+- Il Public Display può continuare a mostrare lo stato congelato già previsto dalla v0.9.0.
+- Il boundary di backup esistente può essere esteso senza anticipare il completo sottosistema di recovery.
+- Nessun evento di rete o riavvio può causare una ripresa automatica.
+
+### Negative
+
+- È necessario introdurre un percorso atomico per comandi di sessione che non dipenda esclusivamente dall’aggregate `AuctionCall`.
+- Ogni comando operativo deve verificare anche lo stato della sessione.
+- La causale della sospensione richiede persistenza e contratti condivisi.
+- L’audit trail deve essere esteso con nuovi tipi di evento.
+- Snapshot e frontend devono esporre e interpretare la causale della sospensione.
+- Il backup alla sospensione introduce un effetto I/O post-commit.
+- Stato visibile e capacità operative devono rimanere concetti distinti nei client.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-002 per il server autoritativo;
+- ADR-014 per il divieto di ripresa automatica;
+- ADR-019 per il lifecycle della sessione;
+- ADR-031 per la macchina a stati della chiamata;
+- ADR-034 per la persistenza coerente dell’aggregate della chiamata;
+- ADR-036 per i contratti realtime condivisi;
+- ADR-041 per lo snapshot autorevole;
+- ADR-042 per `stateVersion`, optimistic concurrency e command registry;
+- ADR-043 per la pipeline atomica e la pubblicazione realtime post-commit;
+- ADR-044 per la separazione tra presenza realtime e dominio;
+- ADR-045 per l’audit persistente separato dal command registry;
+- ADR-046 per il Public Display read-only di sessione.
+
+La decisione riguarda esclusivamente la sospensione operativa e la ripresa controllata della sessione.
+
+Il sottosistema completo di backup e recovery rimane previsto dalla Milestone 13.
