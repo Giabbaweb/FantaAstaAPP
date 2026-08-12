@@ -54,6 +54,16 @@ export const auctionSessions = sqliteTable(
       .notNull()
       .default("SETUP"),
 
+    suspensionReason: text("suspension_reason", {
+      enum: [
+        "PIZZA_BREAK",
+        "TECHNICAL_BREAK",
+        "ORGANIZATIONAL_BREAK",
+        "NETWORK_ISSUE",
+        "OTHER"
+      ]
+    }),
+
     initialCredits: integer("initial_credits")
       .notNull()
       .default(330),

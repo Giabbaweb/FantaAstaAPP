@@ -17,6 +17,7 @@ const auctionSessionPublicSelection = {
   season: auctionSessions.season,
   editionNumber: auctionSessions.editionNumber,
   status: auctionSessions.status,
+  suspensionReason: auctionSessions.suspensionReason,
   initialCredits: auctionSessions.initialCredits,
   createdAt: auctionSessions.createdAt,
   updatedAt: auctionSessions.updatedAt

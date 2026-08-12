@@ -65,6 +65,7 @@ describe("realtime auction snapshot contracts", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "RUNNING",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt:
           "2026-08-02T19:00:00.000Z",
@@ -117,6 +118,7 @@ describe("realtime auction snapshot contracts", () => {
           season: "2026/2027",
           editionNumber: 35,
           status: "READY",
+          suspensionReason: null,
           initialCredits: 330,
           createdAt:
             "2026-08-02T19:00:00.000Z",
@@ -151,6 +153,7 @@ describe("realtime auction snapshot contracts", () => {
           season: "2026/2027",
           editionNumber: 35,
           status: "RUNNING",
+          suspensionReason: null,
           initialCredits: 330,
           createdAt:
             "2026-08-02T19:00:00.000Z",

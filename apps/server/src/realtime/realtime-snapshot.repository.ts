@@ -123,6 +123,8 @@ export class SqliteRealtimeSnapshotSessionReader
         editionNumber:
           auctionSessions.editionNumber,
         status: auctionSessions.status,
+        suspensionReason:
+          auctionSessions.suspensionReason,
         initialCredits:
           auctionSessions.initialCredits,
         stateVersion:

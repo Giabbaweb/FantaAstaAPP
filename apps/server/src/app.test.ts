@@ -116,6 +116,7 @@ describe("application integration", () => {
           season: string;
           editionNumber: number;
           status: string;
+          suspensionReason: string | null;
           initialCredits: number;
           createdAt: string;
           updatedAt: string;
@@ -131,6 +132,7 @@ describe("application integration", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
@@ -181,6 +183,7 @@ describe("application integration", () => {
       season: "2026/2027",
       editionNumber: 35,
       status: "READY",
+      suspensionReason: null,
       initialCredits: 330
     });
 
@@ -213,6 +216,7 @@ describe("application integration", () => {
       season: "2026/2027",
       editionNumber: 35,
       status: "READY",
+      suspensionReason: null,
       initialCredits: 330,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
@@ -303,6 +307,7 @@ describe("GET /api/auction-sessions", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
@@ -352,6 +357,7 @@ describe("GET /api/auction-sessions", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)

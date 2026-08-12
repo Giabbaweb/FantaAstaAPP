@@ -639,6 +639,7 @@ describe("Socket.IO server", () => {
         season: "2026/2027",
         editionNumber: 1,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)

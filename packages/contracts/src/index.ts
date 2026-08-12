@@ -177,12 +177,26 @@ export type AuctionSessionStatus = z.infer<
   typeof auctionSessionStatusSchema
 >;
 
+export const auctionSessionSuspensionReasonSchema = z.enum([
+  "PIZZA_BREAK",
+  "TECHNICAL_BREAK",
+  "ORGANIZATIONAL_BREAK",
+  "NETWORK_ISSUE",
+  "OTHER"
+]);
+
+export type AuctionSessionSuspensionReason = z.infer<
+  typeof auctionSessionSuspensionReasonSchema
+>;
+
 export const auctionSessionSchema = z.object({
   id: z.string().min(1),
   leagueId: z.string().min(1),
   season: z.string().min(1),
   editionNumber: z.number().int().positive(),
   status: auctionSessionStatusSchema,
+  suspensionReason:
+    auctionSessionSuspensionReasonSchema.nullable(),
   initialCredits: z.number().int().nonnegative(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1)
