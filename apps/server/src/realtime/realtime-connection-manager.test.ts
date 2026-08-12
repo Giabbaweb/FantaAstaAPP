@@ -34,6 +34,7 @@ describe("RealtimeConnectionManager", () => {
 
     const registeredConnection =
       manager.register("socket-1", {
+        kind: "TEAM",
         deviceId: "device-1",
         auctionSessionId: "session-1",
         auctionSessionTeamId: "session-team-1",
@@ -44,6 +45,7 @@ describe("RealtimeConnectionManager", () => {
 
     expect(registeredConnection).toEqual({
       status: "REGISTERED",
+      kind: "TEAM",
       socketId: "socket-1",
       deviceId: "device-1",
       auctionSessionId: "session-1",
@@ -60,6 +62,7 @@ describe("RealtimeConnectionManager", () => {
 
     expect(() =>
       manager.register("missing-socket", {
+        kind: "TEAM",
         deviceId: "device-1",
         auctionSessionId: "session-1",
         auctionSessionTeamId: "session-team-1",
@@ -79,6 +82,7 @@ describe("RealtimeConnectionManager", () => {
     });
 
     manager.register("socket-1", {
+      kind: "TEAM",
       deviceId: "device-1",
       auctionSessionId: "session-1",
       auctionSessionTeamId: "session-team-1",
@@ -87,6 +91,7 @@ describe("RealtimeConnectionManager", () => {
 
     expect(() =>
       manager.register("socket-1", {
+        kind: "TEAM",
         deviceId: "device-2",
         auctionSessionId: "session-1",
         auctionSessionTeamId: "session-team-1",
@@ -149,6 +154,7 @@ describe("RealtimeConnectionManager", () => {
     });
 
     manager.register("socket-1", {
+      kind: "TEAM",
       deviceId: "device-1",
       auctionSessionId: "session-1",
       auctionSessionTeamId: "session-team-1",
@@ -160,6 +166,7 @@ describe("RealtimeConnectionManager", () => {
     });
 
     manager.register("socket-2", {
+      kind: "TEAM",
       deviceId: "device-2",
       auctionSessionId: "session-2",
       auctionSessionTeamId: "session-team-2",
@@ -189,6 +196,7 @@ describe("RealtimeConnectionManager", () => {
     });
 
     manager.register("operator-socket", {
+      kind: "TEAM",
       deviceId: "operator-device",
       auctionSessionId: "session-1",
       auctionSessionTeamId: "session-team-1",
@@ -200,6 +208,7 @@ describe("RealtimeConnectionManager", () => {
     });
 
     manager.register("observer-socket", {
+      kind: "TEAM",
       deviceId: "observer-device",
       auctionSessionId: "session-1",
       auctionSessionTeamId: "session-team-1",
@@ -228,5 +237,44 @@ describe("RealtimeConnectionManager", () => {
       )
     ).toBeNull();
   });
+  it("registers a public display for a session", () => {
+    const manager =
+      new RealtimeConnectionManager();
 
+    manager.connect({
+      socketId: "public-display-socket"
+    });
+
+    const registeredConnection =
+      manager.register(
+        "public-display-socket",
+        {
+          kind: "PUBLIC_DISPLAY",
+          deviceId: "public-display-1",
+          auctionSessionId: "session-1"
+        }
+      );
+
+    expect(registeredConnection).toEqual(
+      expect.objectContaining({
+        status: "REGISTERED",
+        kind: "PUBLIC_DISPLAY",
+        socketId: "public-display-socket",
+        deviceId: "public-display-1",
+        auctionSessionId: "session-1"
+      })
+    );
+
+    expect(
+      manager.listSessionConnections(
+        "session-1"
+      )
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: "PUBLIC_DISPLAY",
+        socketId: "public-display-socket"
+      })
+    );
+
+  });
 });

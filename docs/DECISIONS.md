@@ -2907,3 +2907,178 @@ previsto dalla Milestone 13.
 
 La Milestone 8 predisporrà soltanto il punto applicativo necessario
 a richiedere un backup dopo il commit dell’operazione critica.
+
+---
+
+# ADR-046 — Il Public Display è una connessione realtime read-only di sessione
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Realtime, autorizzazioni e Schermo Pubblico
+
+## Contesto
+
+Il protocollo realtime attualmente implementato è progettato per dispositivi associati alla partecipazione di una squadra a una sessione d'asta.
+
+Una connessione realtime di squadra registrata contiene:
+
+```text
+deviceId
+auctionSessionId
+auctionSessionTeamId
+role
+```
+
+con ruolo:
+
+```text
+OPERATOR
+OBSERVER
+```
+
+La registrazione richiede inoltre il PIN operativo associato a `auction_session_teams`.
+
+Questo modello è corretto per i telecomandi e per gli osservatori di squadra, ma non rappresenta correttamente lo Schermo Pubblico previsto dalla route:
+
+```text
+/public
+```
+
+Il Public Display:
+
+- appartiene alla sessione d'asta e non a una singola squadra;
+- deve visualizzare lo stato dell'intera sessione;
+- non possiede un `auctionSessionTeamId`;
+- non deve utilizzare il PIN operativo di una squadra;
+- non deve inviare comandi d'asta;
+- deve ricevere lo snapshot autorevole;
+- deve ricevere gli aggiornamenti realtime della sessione;
+- deve poter risincronizzarsi dopo refresh o riconnessione.
+
+Registrare artificialmente lo Schermo Pubblico come `OBSERVER` di una squadra introdurrebbe un'associazione inesistente nel dominio e confonderebbe il ruolo di squadra con una vista pubblica di sessione.
+
+## Decisione
+
+Il Public Display viene modellato come una connessione realtime registrata distinta dai dispositivi di squadra.
+
+Il modello realtime deve distinguere almeno due categorie concettuali:
+
+```text
+TEAM
+PUBLIC_DISPLAY
+```
+
+Una registrazione `TEAM` conserva il modello esistente e comprende:
+
+```text
+deviceId
+auctionSessionId
+auctionSessionTeamId
+role
+```
+
+dove il ruolo rimane:
+
+```text
+OPERATOR
+OBSERVER
+```
+
+Una registrazione `PUBLIC_DISPLAY` appartiene invece esclusivamente alla sessione e comprende almeno:
+
+```text
+deviceId
+auctionSessionId
+```
+
+Non possiede:
+
+```text
+auctionSessionTeamId
+RealtimeRole
+PIN di squadra
+```
+
+Il tipo `RealtimeRole` continua quindi a rappresentare esclusivamente i ruoli dei dispositivi associati a una squadra e non viene esteso con `PUBLIC_DISPLAY`.
+
+Una connessione Public Display autorizzata viene associata alla room di sessione già prevista:
+
+```text
+auction-session:<auctionSessionId>
+```
+
+Non è necessario introdurre una nuova room specifica per lo Schermo Pubblico nella Milestone 9.
+
+Il Public Display può ricevere:
+
+```text
+realtime:registered
+auction:snapshot
+auction:event
+```
+
+e gli eventuali ulteriori messaggi read-only previsti dal protocollo.
+
+Il Public Display non possiede alcuna capacità di inviare comandi tramite:
+
+```text
+auction:command
+```
+
+La sola assenza di controlli interattivi nella UI non costituisce una garanzia sufficiente.
+
+Il server deve impedire l'esecuzione di comandi provenienti da una connessione Public Display.
+
+Lo Schermo Pubblico mantiene esclusivamente l'ultima rappresentazione ricevuta dal server e non introduce uno stato d'asta autorevole alternativo.
+
+Lo snapshot autorevole definito da ADR-041 rimane la base della sincronizzazione iniziale e delle successive risincronizzazioni.
+
+Gli eventi realtime rappresentano aggiornamenti già accettati dal server e non sostituiscono lo snapshot come fonte di sincronizzazione.
+
+## Conseguenze
+
+### Positive
+
+- Il Public Display non viene associato artificialmente a una squadra.
+- `OPERATOR` e `OBSERVER` mantengono il loro significato attuale.
+- Non viene utilizzato il PIN operativo di una squadra per lo Schermo Pubblico.
+- La room di sessione esistente può essere riutilizzata.
+- Il Public Display riceve lo stesso stato autorevole degli altri client.
+- La read-only capability viene garantita lato server.
+- Nessuna nuova logica d'asta viene introdotta nel frontend.
+- Nessuna modifica è richiesta al significato di `stateVersion`.
+- Nessuna modifica è richiesta al `command_registry`.
+- Il modello rimane compatibile con ADR-002, ADR-036, ADR-037, ADR-038, ADR-040, ADR-041, ADR-042, ADR-043 e ADR-044.
+
+### Negative
+
+- Il contratto di registrazione realtime deve supportare più di una forma di registrazione.
+- Il modello delle connessioni registrate deve distinguere una connessione di squadra da una connessione Public Display.
+- Il connection manager e gli handler Socket.IO devono gestire esplicitamente entrambe le categorie.
+- I test realtime devono verificare che il Public Display non possa eseguire comandi d'asta.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-002 per il server autoritativo;
+- ADR-011 per Socket.IO;
+- ADR-036 per i contratti realtime condivisi;
+- ADR-037 per la separazione tra dispositivo e connessione;
+- ADR-038 per l'isolamento realtime tramite room;
+- ADR-040 per i ruoli `OPERATOR` e `OBSERVER`;
+- ADR-041 per lo snapshot autorevole;
+- ADR-043 per la pubblicazione realtime post-commit;
+- ADR-044 per la separazione tra presenza realtime e stato di dominio.
+
+La decisione riguarda esclusivamente accesso e sincronizzazione dello Schermo Pubblico.
+
+Le modalità grafiche:
+
+```text
+STANDARD
+HIGH_CONTRAST_OUTDOOR
+COMPACT
+```
+
+rimangono decisioni di presentazione e non richiedono una ADR separata.

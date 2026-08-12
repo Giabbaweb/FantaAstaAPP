@@ -43,6 +43,11 @@ type AuctionSessionDetailResponse = {
   error: null;
 };
 
+type ActiveAuctionSessionResponse = {
+  data: AuctionSession | null;
+  error: null;
+};
+
 type AuctionSessionParams = {
   id: string;
 };
@@ -107,6 +112,21 @@ export const auctionSessionRoutes: FastifyPluginAsync =
     );
 
     fastify.get<{
+  Reply: ActiveAuctionSessionResponse;
+}>(
+  "/api/auction-sessions/active",
+  async (_request, reply) => {
+    const session =
+      await service.getActiveSession();
+
+    return reply.code(200).send({
+      data: session,
+      error: null
+    });
+  }
+);
+
+fastify.get<{
       Params: AuctionSessionParams;
       Reply:
         | AuctionSessionDetailResponse

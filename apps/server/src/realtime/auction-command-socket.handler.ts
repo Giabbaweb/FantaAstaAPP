@@ -69,6 +69,13 @@ export class AuctionCommandSocketHandler {
       );
     }
 
+    if (connection.kind !== "TEAM") {
+      return this.failure(
+        "UNAUTHORIZED",
+        "Public display connections cannot execute auction commands"
+      );
+    }
+
     if (connection.role !== "OPERATOR") {
       return this.failure(
         "UNAUTHORIZED",

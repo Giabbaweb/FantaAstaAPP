@@ -167,7 +167,79 @@ describe("application integration", () => {
     });
   });
 
-  describe("GET /api/auction-sessions", () => {
+  describe("GET /api/auction-sessions/active", () => {
+  it("returns the active auction session", async () => {
+    await db.insert(leagues).values({
+      id: "league-active",
+      name: "Active League",
+      normalizedName: "active league"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-active",
+      leagueId: "league-active",
+      season: "2026/2027",
+      editionNumber: 35,
+      status: "READY",
+      initialCredits: 330
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/auction-sessions/active"
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    const body = response.json<{
+      data: {
+        id: string;
+        leagueId: string;
+        season: string;
+        editionNumber: number;
+        status: string;
+        initialCredits: number;
+        createdAt: string;
+        updatedAt: string;
+      } | null;
+      error: null;
+    }>();
+
+    expect(body.error).toBeNull();
+
+    expect(body.data).toEqual({
+      id: "session-active",
+      leagueId: "league-active",
+      season: "2026/2027",
+      editionNumber: 35,
+      status: "READY",
+      initialCredits: 330,
+      createdAt: expect.any(String),
+      updatedAt: expect.any(String)
+    });
+  });
+
+  it("returns null when there is no active auction session", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/auction-sessions/active"
+    });
+
+    expect(response.statusCode).toBe(200);
+
+    const body = response.json<{
+      data: null;
+      error: null;
+    }>();
+
+    expect(body).toEqual({
+      data: null,
+      error: null
+    });
+  });
+});
+
+describe("GET /api/auction-sessions", () => {
     it("returns an empty auction session list", async () => {
       const response = await app.inject({
         method: "GET",
@@ -1269,6 +1341,7 @@ describe("application integration", () => {
           fmsCode: "1001",
           name: "SOMMER Yann",
           normalizedName: "sommer yann",
+          realTeamName: "Inter",
           role: "P",
           availabilityStatus: "AVAILABLE",
           createdAt: expect.any(String),

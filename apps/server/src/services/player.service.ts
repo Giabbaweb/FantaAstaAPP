@@ -71,6 +71,7 @@ export class PlayerService {
       fmsCode: input.fmsCode,
       name: input.name,
       normalizedName,
+      realTeamName: input.realTeamName ?? null,
       role: input.role,
       availabilityStatus: input.availabilityStatus
     };
@@ -121,6 +122,10 @@ export class PlayerService {
 
     if (input.role !== undefined) {
       persistenceInput.role = input.role;
+    }
+
+    if (input.realTeamName !== undefined) {
+      persistenceInput.realTeamName = input.realTeamName;
     }
 
     if (input.availabilityStatus !== undefined) {

@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.7.0-blue" alt="Version v0.7.0">
+  <img src="https://img.shields.io/badge/version-v0.9.0-blue" alt="Version v0.9.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.8.0**
+**v0.9.0**
 
 Completed milestones
 
@@ -209,7 +209,23 @@ Completed milestones
 - ✅ Complete rollback of confirmed awards and audit on failure
 - ✅ Post-commit backup requester boundary
 - ✅ Idempotent confirmation replay without duplicate backup requests
-- ✅ 217 backend tests passing
+- ✅ PUBLIC_DISPLAY realtime read-only role
+- ✅ Session-level Public Display registration
+- ✅ Authoritative Public Display projection
+- ✅ League branding in the Public Display
+- ✅ Current player, price, leader and turn presentation
+- ✅ Recent confirmed awards panel with internal scrolling
+- ✅ Team credits, maximum bid and P/D/C/A composition
+- ✅ PASSED and EXCLUDED visual overlays
+- ✅ Session status indicators and SUSPENDED banner
+- ✅ STANDARD, HIGH_CONTRAST_OUTDOOR, COMPACT and DARK display modes
+- ✅ Electronic roster overview with roster entries and free slots
+- ✅ 33 backend test files
+- ✅ 236 backend tests passing
+- ✅ 10 domain test files
+- ✅ 86 domain tests passing
+- ✅ Full monorepo type checking
+- ✅ Full monorepo production build
 
 Auction Session lifecycle
 
@@ -230,7 +246,7 @@ RUNNING
 
 Next milestone
 
-➡ **v0.9.0 — Schermo pubblico**
+➡ **v0.10.0 — Sospensione e resilienza**
 
 ---
 
@@ -272,6 +288,24 @@ pnpm test
 
 ---
 
+## Public Display
+
+Version v0.9.0 introduces a realtime, read-only Public Display for the shared auction monitor.
+
+Main capabilities:
+
+- fullscreen `/public` view driven exclusively by the authoritative server snapshot;
+- session-level `PUBLIC_DISPLAY` realtime role with no auction write commands;
+- current player, price, provisional leader and turn;
+- recent confirmed awards;
+- remaining credits, maximum bid and P/D/C/A composition for all teams;
+- visual overlays for `PASSED` and `EXCLUDED` teams, including exclusion reason;
+- session status indicators and a dedicated `SUSPENDED` banner;
+- `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` and `DARK` visual modes;
+- electronic roster overview with roster entries and free role slots.
+
+---
+
 ## 📚 Documentation
 
 The `docs/` directory contains the complete project documentation.
@@ -307,8 +341,8 @@ The `docs/` directory contains the complete project documentation.
 | v0.6 | ✅ Auction Engine |
 | v0.7 | ✅ Realtime Controllers |
 | v0.8 | ✅ Confirmed Awards & Transactions |
-| v0.9    | ⏭️ Public Display                  |
-| v0.10   | ⏳ Suspension & Resilience         |
+| v0.9    | ✅ Public Display                  |
+| v0.10   | ⏭️ Suspension & Resilience         |
 | v0.11   | ⏳ Manual Operations & Corrections |
 | v0.12   | ⏳ FMS Import/Export               |
 | v0.13   | ⏳ Backup & Recovery               |

@@ -254,6 +254,8 @@ export const playerSchema = z.object({
   fmsCode: z.string().trim().min(1).max(50),
   name: z.string().trim().min(1).max(150),
   normalizedName: z.string().min(1),
+  realTeamName:
+    z.string().trim().min(1).max(100).nullable(),
   role: playerRoleSchema,
   availabilityStatus: playerAvailabilityStatusSchema,
   createdAt: z.string().min(1),
@@ -268,6 +270,8 @@ export const createPlayerSchema = z.object({
   auctionSessionId: z.string().min(1),
   fmsCode: z.string().trim().min(1).max(50),
   name: z.string().trim().min(1).max(150),
+  realTeamName:
+    z.string().trim().min(1).max(100).nullable().optional(),
   role: playerRoleSchema,
   availabilityStatus: playerAvailabilityStatusSchema
     .default("AVAILABLE")
@@ -281,6 +285,8 @@ export const updatePlayerSchema = z
   .object({
     fmsCode: z.string().trim().min(1).max(50).optional(),
     name: z.string().trim().min(1).max(150).optional(),
+    realTeamName:
+      z.string().trim().min(1).max(100).nullable().optional(),
     role: playerRoleSchema.optional(),
     availabilityStatus:
       playerAvailabilityStatusSchema.optional()
@@ -514,15 +520,43 @@ export type RealtimeEventName = z.infer<
   typeof realtimeEventNameSchema
 >;
 
-export const realtimeRegistrationRequestSchema = z.object({
-  deviceId: z.string().trim().min(1).max(100),
-  auctionSessionId: z.string().trim().min(1).max(100),
-  auctionSessionTeamId: z.string().trim().min(1).max(100),
-  role: realtimeRoleSchema,
-  pin: z.string().regex(/^\d{4,8}$/, {
-    message: "PIN must contain between 4 and 8 digits"
-  })
-});
+export const realtimeRegistrationKindSchema = z.enum([
+  "TEAM",
+  "PUBLIC_DISPLAY"
+]);
+
+export type RealtimeRegistrationKind = z.infer<
+  typeof realtimeRegistrationKindSchema
+>;
+
+export const realtimeTeamRegistrationRequestSchema =
+  z.object({
+    kind: z.literal("TEAM"),
+    deviceId: z.string().trim().min(1).max(100),
+    auctionSessionId:
+      z.string().trim().min(1).max(100),
+    auctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    role: realtimeRoleSchema,
+    pin: z.string().regex(/^\d{4,8}$/, {
+      message:
+        "PIN must contain between 4 and 8 digits"
+    })
+  });
+
+export const realtimePublicDisplayRegistrationRequestSchema =
+  z.object({
+    kind: z.literal("PUBLIC_DISPLAY"),
+    deviceId: z.string().trim().min(1).max(100),
+    auctionSessionId:
+      z.string().trim().min(1).max(100)
+  });
+
+export const realtimeRegistrationRequestSchema =
+  z.discriminatedUnion("kind", [
+    realtimeTeamRegistrationRequestSchema,
+    realtimePublicDisplayRegistrationRequestSchema
+  ]);
 
 export type RealtimeRegistrationRequest = z.infer<
   typeof realtimeRegistrationRequestSchema
@@ -537,15 +571,33 @@ export type RealtimeConnectedPayload = z.infer<
   typeof realtimeConnectedPayloadSchema
 >;
 
-export const realtimeRegisteredPayloadSchema = z.object({
-  socketId: z.string().min(1),
-  deviceId: z.string().min(1),
-  auctionSessionId: z.string().min(1),
-  auctionSessionTeamId: z.string().min(1),
-  role: realtimeRoleSchema,
-  connectedAt: z.string().min(1),
-  registeredAt: z.string().min(1)
-});
+export const realtimeTeamRegisteredPayloadSchema =
+  z.object({
+    kind: z.literal("TEAM"),
+    socketId: z.string().min(1),
+    deviceId: z.string().min(1),
+    auctionSessionId: z.string().min(1),
+    auctionSessionTeamId: z.string().min(1),
+    role: realtimeRoleSchema,
+    connectedAt: z.string().min(1),
+    registeredAt: z.string().min(1)
+  });
+
+export const realtimePublicDisplayRegisteredPayloadSchema =
+  z.object({
+    kind: z.literal("PUBLIC_DISPLAY"),
+    socketId: z.string().min(1),
+    deviceId: z.string().min(1),
+    auctionSessionId: z.string().min(1),
+    connectedAt: z.string().min(1),
+    registeredAt: z.string().min(1)
+  });
+
+export const realtimeRegisteredPayloadSchema =
+  z.discriminatedUnion("kind", [
+    realtimeTeamRegisteredPayloadSchema,
+    realtimePublicDisplayRegisteredPayloadSchema
+  ]);
 
 export type RealtimeRegisteredPayload = z.infer<
   typeof realtimeRegisteredPayloadSchema
@@ -669,6 +721,128 @@ export type RealtimeOperationalAuctionCall = z.infer<
   typeof realtimeOperationalAuctionCallSchema
 >;
 
+export const realtimePublicDisplayRosterRoleSchema =
+  z.object({
+    count: z.number().int().nonnegative(),
+    limit: z.number().int().positive()
+  });
+
+export type RealtimePublicDisplayRosterRole = z.infer<
+  typeof realtimePublicDisplayRosterRoleSchema
+>;
+
+export const realtimePublicDisplayRosterEntrySchema =
+  z.object({
+    rosterEntryId: z.string().min(1),
+    playerId: z.string().min(1),
+    playerName: z.string().min(1),
+    realTeamName: z.string().min(1).nullable(),
+    role: playerRoleSchema,
+    acquisitionCost:
+      z.number().int().positive()
+  });
+
+export type RealtimePublicDisplayRosterEntry = z.infer<
+  typeof realtimePublicDisplayRosterEntrySchema
+>;
+
+
+export const realtimePublicDisplayRosterSchema =
+  z.object({
+    P: realtimePublicDisplayRosterRoleSchema,
+    D: realtimePublicDisplayRosterRoleSchema,
+    C: realtimePublicDisplayRosterRoleSchema,
+    A: realtimePublicDisplayRosterRoleSchema,
+    rosterSize: z.number().int().nonnegative(),
+    rosterSizeLimit: z.number().int().positive(),
+    remainingRosterSlots:
+      z.number().int().nonnegative(),
+    entries: z.array(
+      realtimePublicDisplayRosterEntrySchema
+    )
+  });
+
+export type RealtimePublicDisplayRoster = z.infer<
+  typeof realtimePublicDisplayRosterSchema
+>;
+
+
+export const realtimePublicDisplayTeamSchema =
+  z.object({
+    auctionSessionTeamId: z.string().min(1),
+    teamId: z.string().min(1),
+    teamName: z.string().min(1),
+    shortName: z.string().nullable(),
+    primaryColor: z.string().nullable(),
+    secondaryColor: z.string().nullable(),
+    logoPath: z.string().nullable(),
+    tableOrder: z.number().int().positive(),
+    remainingCredits:
+      z.number().int().nonnegative(),
+    maximumBid:
+      z.number().int().nonnegative().nullable(),
+    roster: realtimePublicDisplayRosterSchema
+  });
+
+export type RealtimePublicDisplayTeam = z.infer<
+  typeof realtimePublicDisplayTeamSchema
+>;
+
+export const realtimePublicDisplayPlayerSchema =
+  z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    realTeamName: z.string().min(1).nullable(),
+    role: playerRoleSchema
+  });
+
+export type RealtimePublicDisplayPlayer = z.infer<
+  typeof realtimePublicDisplayPlayerSchema
+>;
+
+export const realtimePublicDisplayRecentAwardSchema =
+  z.object({
+    eventId: z.string().min(1),
+    playerId: z.string().min(1),
+    playerName: z.string().min(1),
+    role: playerRoleSchema,
+    auctionSessionTeamId: z.string().min(1),
+    teamName: z.string().min(1),
+    amount: z.number().int().positive(),
+    confirmedAt: z.string().min(1)
+  });
+
+export type RealtimePublicDisplayRecentAward = z.infer<
+  typeof realtimePublicDisplayRecentAwardSchema
+>;
+
+export const realtimePublicDisplayLeagueSchema =
+z.object({
+id: z.string().min(1),
+name: z.string().min(1)
+});
+
+export type RealtimePublicDisplayLeague = z.infer<
+typeof realtimePublicDisplayLeagueSchema
+>;
+
+export const realtimePublicDisplayProjectionSchema =
+  z.object({
+league: realtimePublicDisplayLeagueSchema,
+    teams: z.array(
+      realtimePublicDisplayTeamSchema
+    ),
+    currentPlayer:
+      realtimePublicDisplayPlayerSchema.nullable(),
+    recentAwards: z.array(
+      realtimePublicDisplayRecentAwardSchema
+    )
+  });
+
+export type RealtimePublicDisplayProjection = z.infer<
+  typeof realtimePublicDisplayProjectionSchema
+>;
+
 export const realtimeAuctionSnapshotSchema = z.object({
   stateVersion: z.number().int().nonnegative(),
   generatedAt: z.string().min(1),
@@ -677,7 +851,9 @@ export const realtimeAuctionSnapshotSchema = z.object({
     realtimeAuctionSessionTeamSchema
   ),
   operationalAuctionCall:
-    realtimeOperationalAuctionCallSchema.nullable()
+    realtimeOperationalAuctionCallSchema.nullable(),
+  publicDisplay:
+    realtimePublicDisplayProjectionSchema
 });
 
 export type RealtimeAuctionSnapshot = z.infer<

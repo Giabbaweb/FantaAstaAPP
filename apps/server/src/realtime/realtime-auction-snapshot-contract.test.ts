@@ -86,6 +86,15 @@ describe("realtime auction snapshot contracts", () => {
         teams: [
           auctionCallTeam
         ]
+      },
+      publicDisplay: {
+        league: {
+          id: "league-1",
+          name: "SFL'92"
+        },
+        teams: [],
+        currentPlayer: null,
+        recentAwards: []
       }
     };
 
@@ -115,7 +124,16 @@ describe("realtime auction snapshot contracts", () => {
             "2026-08-02T19:00:00.000Z"
         },
         sessionTeams: [],
-        operationalAuctionCall: null
+        operationalAuctionCall: null,
+        publicDisplay: {
+          league: {
+            id: "league-1",
+            name: "SFL'92"
+          },
+          teams: [],
+          currentPlayer: null,
+          recentAwards: []
+        }
       });
 
     expect(result.success).toBe(true);
@@ -140,7 +158,16 @@ describe("realtime auction snapshot contracts", () => {
             "2026-08-02T20:01:00.000Z"
         },
         sessionTeams: [],
-        operationalAuctionCall: null
+        operationalAuctionCall: null,
+        publicDisplay: {
+          league: {
+            id: "league-1",
+            name: "SFL'92"
+          },
+          teams: [],
+          currentPlayer: null,
+          recentAwards: []
+        }
       });
 
     expect(result.success).toBe(false);

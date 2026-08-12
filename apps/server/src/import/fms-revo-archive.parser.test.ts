@@ -38,6 +38,7 @@ describe("FmsRevoArchiveParser", () => {
         auctionSessionId,
         fmsCode: "1001",
         name: "SOMMER Yann",
+        realTeamName: "Inter",
         role: "P",
         availabilityStatus: "AVAILABLE"
       },
@@ -45,6 +46,7 @@ describe("FmsRevoArchiveParser", () => {
         auctionSessionId,
         fmsCode: "1002",
         name: "GABBIA Matteo",
+        realTeamName: "Milan",
         role: "D",
         availabilityStatus: "AVAILABLE"
       },
@@ -52,6 +54,7 @@ describe("FmsRevoArchiveParser", () => {
         auctionSessionId,
         fmsCode: "1003",
         name: "TONALI Sandro",
+        realTeamName: "{SERIE ESTERA}",
         role: "C",
         availabilityStatus: "UNAVAILABLE"
       },
@@ -59,6 +62,7 @@ describe("FmsRevoArchiveParser", () => {
         auctionSessionId,
         fmsCode: "1004",
         name: "ROSSI Mario",
+        realTeamName: "{SERIE MINORE}",
         role: "A",
         availabilityStatus: "UNAVAILABLE"
       }

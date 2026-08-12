@@ -1,23 +1,38 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-const App = (): React.JSX.Element => {
-  return (
-    <main>
-      <h1>FantaAstaAPP</h1>
-      <p>Frontend in inizializzazione.</p>
-    </main>
-  );
-};
+import {
+  PublicDisplay
+} from "./public/PublicDisplay.js";
 
-const rootElement = document.getElementById("root");
+const rootElement =
+  document.getElementById("root");
 
 if (!rootElement) {
-  throw new Error("Elemento root non trovato");
+  throw new Error(
+    "Elemento root non trovato"
+  );
 }
 
-ReactDOM.createRoot(rootElement).render(
+const pathname =
+  window.location.pathname;
+
+const app =
+  pathname === "/public"
+    ? <PublicDisplay />
+    : (
+        <main>
+          <h1>FantaAstaAPP</h1>
+          <p>
+            Frontend in inizializzazione.
+          </p>
+        </main>
+      );
+
+ReactDOM.createRoot(
+  rootElement
+).render(
   <React.StrictMode>
-    <App />
+    {app}
   </React.StrictMode>
 );

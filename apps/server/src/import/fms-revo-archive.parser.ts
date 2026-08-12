@@ -204,6 +204,7 @@ export class FmsRevoArchiveParser {
         fmsCode,
         name,
         role,
+        realTeamName: realTeamName || null,
         availabilityStatus:
           getAvailabilityStatus(realTeamName)
       });
