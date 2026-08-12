@@ -398,6 +398,24 @@ export type RealtimeCommandMetadata = z.infer<
   typeof realtimeCommandMetadataSchema
 >;
 
+export const suspendAuctionSessionCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    reason: auctionSessionSuspensionReasonSchema
+  });
+
+export type SuspendAuctionSessionCommand =
+  z.infer<
+    typeof suspendAuctionSessionCommandSchema
+  >;
+
+export const resumeAuctionSessionCommandSchema =
+  realtimeCommandMetadataSchema;
+
+export type ResumeAuctionSessionCommand =
+  z.infer<
+    typeof resumeAuctionSessionCommandSchema
+  >;
+
 export const auctionCommandTypeSchema = z.enum([
   "OPEN",
   "BID",

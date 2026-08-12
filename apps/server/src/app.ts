@@ -18,6 +18,9 @@ import {
   SqliteAuctionEventRepository
 } from "./repositories/auction-event.repository.js";
 import {
+  SqliteAuctionSessionRepository
+} from "./repositories/auction-session.repository.js";
+import {
   SqliteAuctionSessionTeamRepository
 } from "./repositories/auction-session-team.repository.js";
 import {
@@ -60,6 +63,9 @@ import {
   AtomicAuctionCommandExecutor
 } from "./realtime/atomic-auction-command.executor.js";
 import {
+  AtomicAuctionSessionCommandExecutor
+} from "./realtime/atomic-auction-session-command.executor.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
@@ -101,6 +107,9 @@ import {
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
+import {
+  AuctionSessionOperationalCommandService
+} from "./services/auction-session-operational-command.service.js";
 import {
   ConfirmedAuctionAwardService
 } from "./services/confirmed-auction-award.service.js";
@@ -157,6 +166,21 @@ export async function buildApp() {
       auctionCallRepository,
       new SqliteAuctionSessionStateRepository(),
       new SqliteCommandRegistryRepository()
+    );
+
+  const auctionSessionRepository =
+    new SqliteAuctionSessionRepository();
+
+  const atomicAuctionSessionCommandExecutor =
+    new AtomicAuctionSessionCommandExecutor(
+      auctionSessionRepository,
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository()
+    );
+
+  const auctionSessionOperationalCommandService =
+    new AuctionSessionOperationalCommandService(
+      atomicAuctionSessionCommandExecutor
     );
 
   const confirmedAuctionAwardService =
@@ -230,7 +254,11 @@ export async function buildApp() {
   );
 
   await app.register(dbHealthRoutes);
-  await app.register(auctionSessionRoutes);
+  await app.register(
+    auctionSessionRoutes(
+      auctionSessionOperationalCommandService
+    )
+  );
   await app.register(
     auctionCallRoutes(
       auctionCallService,

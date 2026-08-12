@@ -3,6 +3,9 @@ import {
 } from "@fantaastaapp/domain";
 
 import {
+  AtomicAuctionSessionCommandExecutorError
+} from "../realtime/atomic-auction-session-command.executor.js";
+import {
   AuctionSessionServiceError
 } from "../services/auction-session.service.js";
 
@@ -58,6 +61,23 @@ export type AuctionSessionErrorMapping =
       statusCode: 409;
       body: AuctionSessionConflictResponse;
     };
+
+export type AuctionSessionOperationalCommandErrorResponse = {
+  data: null;
+  error: {
+    code:
+      | "AUCTION_SESSION_NOT_FOUND"
+      | "STALE_STATE"
+      | "COMMAND_ID_CONFLICT"
+      | "AUCTION_SESSION_SAVE_FAILED";
+    message: string;
+  };
+};
+
+export type AuctionSessionOperationalCommandErrorMapping = {
+  statusCode: 404 | 409 | 500;
+  body: AuctionSessionOperationalCommandErrorResponse;
+};
 
 export function mapAuctionSessionError(
   error: unknown
@@ -117,6 +137,61 @@ export function mapAuctionSessionError(
   }
 
   return null;
+}
+
+export function mapAuctionSessionOperationalCommandError(
+  error: unknown
+): AuctionSessionOperationalCommandErrorMapping | null {
+  if (
+    !(
+      error instanceof
+      AtomicAuctionSessionCommandExecutorError
+    )
+  ) {
+    return null;
+  }
+
+  switch (error.code) {
+    case "AUCTION_SESSION_NOT_FOUND":
+      return {
+        statusCode: 404,
+        body: {
+          data: null,
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        }
+      };
+
+    case "STALE_STATE":
+    case "COMMAND_ID_CONFLICT":
+      return {
+        statusCode: 409,
+        body: {
+          data: null,
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        }
+      };
+
+    case "AUCTION_SESSION_SAVE_FAILED":
+      return {
+        statusCode: 500,
+        body: {
+          data: null,
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        }
+      };
+
+    default:
+      return null;
+  }
 }
 
 export function mapAuctionSessionCreationError(

@@ -1,5 +1,7 @@
 import {
   createAuctionSessionSchema,
+  resumeAuctionSessionCommandSchema,
+  suspendAuctionSessionCommandSchema,
   updateAuctionSessionSchema
 } from "@fantaastaapp/contracts";
 import type {
@@ -19,16 +21,21 @@ import type {
 
 import {
   mapAuctionSessionCreationError,
-  mapAuctionSessionError
+  mapAuctionSessionError,
+  mapAuctionSessionOperationalCommandError
 } from "../http/auction-session-errors.js";
 import type {
   AuctionSessionConflictResponse,
   AuctionSessionCreationConflictResponse,
-  AuctionSessionNotFoundResponse
+  AuctionSessionNotFoundResponse,
+  AuctionSessionOperationalCommandErrorResponse
 } from "../http/auction-session-errors.js";
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
+import {
+  AuctionSessionOperationalCommandService
+} from "../services/auction-session-operational-command.service.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -57,6 +64,12 @@ type AuctionSessionCommandParams = {
   command: string;
 };
 
+type AuctionSessionCommandBody = {
+  commandId?: unknown;
+  stateVersion?: unknown;
+  reason?: unknown;
+};
+
 type CreateAuctionSessionResponse = {
   data: AuctionSession;
   error: null;
@@ -69,6 +82,13 @@ type UpdateAuctionSessionResponse = {
 
 type ExecuteAuctionSessionCommandResponse = {
   data: AuctionSession;
+  error: null;
+};
+
+type ExecuteOperationalAuctionSessionCommandResponse = {
+  data: AuctionSession;
+  stateVersion: number;
+  idempotentReplay: boolean;
   error: null;
 };
 
@@ -94,8 +114,11 @@ const repository =
 const service =
   new AuctionSessionService(repository);
 
-export const auctionSessionRoutes: FastifyPluginAsync =
-  async (fastify) => {
+export function auctionSessionRoutes(
+  operationalCommandService:
+    AuctionSessionOperationalCommandService
+): FastifyPluginAsync {
+  return async (fastify) => {
     fastify.get<{
       Reply: AuctionSessionListResponse;
     }>(
@@ -298,16 +321,149 @@ fastify.get<{
 
     fastify.post<{
       Params: AuctionSessionCommandParams;
+      Body: AuctionSessionCommandBody;
       Reply:
         | ExecuteAuctionSessionCommandResponse
+        | ExecuteOperationalAuctionSessionCommandResponse
         | InvalidRequestResponse
         | AuctionSessionNotFoundResponse
-        | AuctionSessionConflictResponse;
+        | AuctionSessionConflictResponse
+        | AuctionSessionOperationalCommandErrorResponse;
     }>(
       "/api/auction-sessions/:id/commands/:command",
       async (request, reply) => {
         const { id, command } =
           request.params;
+
+        const body = request.body ?? {};
+
+        if (command === "suspend") {
+          const validation =
+            suspendAuctionSessionCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  '"commandId", "stateVersion" and "reason" are required and must be valid'
+              }
+            });
+          }
+
+          try {
+            const result =
+              await operationalCommandService.suspend({
+                auctionSessionId: id,
+                commandId:
+                  validation.data.commandId,
+                expectedStateVersion:
+                  validation.data.stateVersion,
+                reason:
+                  validation.data.reason
+              });
+
+            return reply.code(200).send({
+              data: result.session,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const operationalMapped =
+              mapAuctionSessionOperationalCommandError(
+                error
+              );
+
+            if (operationalMapped) {
+              return reply
+                .code(
+                  operationalMapped.statusCode
+                )
+                .send(
+                  operationalMapped.body
+                );
+            }
+
+            const mapped =
+              mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (command === "resume") {
+          const validation =
+            resumeAuctionSessionCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  '"commandId" and "stateVersion" are required and must be valid'
+              }
+            });
+          }
+
+          try {
+            const result =
+              await operationalCommandService.resume({
+                auctionSessionId: id,
+                commandId:
+                  validation.data.commandId,
+                expectedStateVersion:
+                  validation.data.stateVersion
+              });
+
+            return reply.code(200).send({
+              data: result.session,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const operationalMapped =
+              mapAuctionSessionOperationalCommandError(
+                error
+              );
+
+            if (operationalMapped) {
+              return reply
+                .code(
+                  operationalMapped.statusCode
+                )
+                .send(
+                  operationalMapped.body
+                );
+            }
+
+            const mapped =
+              mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
 
         if (!isAuctionSessionCommand(command)) {
           return reply.code(400).send({
@@ -346,3 +502,4 @@ fastify.get<{
       }
     );
   };
+}
