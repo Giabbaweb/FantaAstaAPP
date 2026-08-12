@@ -49,6 +49,9 @@ export type ExecuteAtomicAuctionSessionCommandInput = {
   expectedStateVersion: number;
   requestFingerprint: string;
   update: AuctionSessionOperationalStateUpdate;
+  validate?: (
+    session: AuctionSession
+  ) => void;
 };
 
 export type ExecuteAtomicAuctionSessionCommandResult = {
@@ -127,6 +130,24 @@ export class AtomicAuctionSessionCommandExecutor {
           `Auction session "${input.auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentStateVersion}`
         );
       }
+
+      const currentSession =
+        this.auctionSessionRepository
+          .findByIdWithExecutor(
+            tx,
+            input.auctionSessionId
+          );
+
+      if (!currentSession) {
+        throw new AtomicAuctionSessionCommandExecutorError(
+          "AUCTION_SESSION_NOT_FOUND",
+          `Auction session "${input.auctionSessionId}" was not found`
+        );
+      }
+
+      input.validate?.(
+        currentSession
+      );
 
       const updatedState =
         this.stateRepository
