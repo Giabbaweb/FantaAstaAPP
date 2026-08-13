@@ -577,40 +577,51 @@ export const auctionEvents = sqliteTable(
       }),
 
     auctionCallId: text("auction_call_id")
-      .notNull()
       .references(() => auctionCalls.id, {
         onDelete: "cascade"
       }),
 
     eventType: text("event_type", {
       enum: [
-        "AUCTION_AWARD_CONFIRMED"
+        "AUCTION_AWARD_CONFIRMED",
+        "SESSION_SUSPENDED",
+        "SESSION_RESUMED"
       ]
     }).notNull(),
 
     auctionSessionTeamId: text(
       "auction_session_team_id"
-    )
-      .notNull()
-      .references(() => auctionSessionTeams.id, {
-        onDelete: "restrict"
-      }),
+    ).references(() => auctionSessionTeams.id, {
+      onDelete: "restrict"
+    }),
 
     playerId: text("player_id")
-      .notNull()
       .references(() => players.id, {
         onDelete: "restrict"
       }),
 
-    amount: integer("amount").notNull(),
+    amount: integer("amount"),
 
     creditsBefore: integer(
       "credits_before"
-    ).notNull(),
+    ),
 
     creditsAfter: integer(
       "credits_after"
-    ).notNull(),
+    ),
+
+    suspensionReason: text(
+      "suspension_reason",
+      {
+        enum: [
+          "PIZZA_BREAK",
+          "TECHNICAL_BREAK",
+          "ORGANIZATIONAL_BREAK",
+          "NETWORK_ISSUE",
+          "OTHER"
+        ]
+      }
+    ),
 
     createdAt: text("created_at")
       .notNull()
@@ -625,23 +636,66 @@ export const auctionEvents = sqliteTable(
     ),
 
     check(
+      "auction_events_shape_consistency",
+      sql`(
+        (
+          ${table.eventType} = 'AUCTION_AWARD_CONFIRMED'
+          AND ${table.auctionCallId} IS NOT NULL
+          AND ${table.auctionSessionTeamId} IS NOT NULL
+          AND ${table.playerId} IS NOT NULL
+          AND ${table.amount} IS NOT NULL
+          AND ${table.creditsBefore} IS NOT NULL
+          AND ${table.creditsAfter} IS NOT NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'SESSION_SUSPENDED'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NULL
+          AND ${table.playerId} IS NULL
+          AND ${table.amount} IS NULL
+          AND ${table.creditsBefore} IS NULL
+          AND ${table.creditsAfter} IS NULL
+          AND ${table.suspensionReason} IS NOT NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'SESSION_RESUMED'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NULL
+          AND ${table.playerId} IS NULL
+          AND ${table.amount} IS NULL
+          AND ${table.creditsBefore} IS NULL
+          AND ${table.creditsAfter} IS NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+      )`
+    ),
+
+    check(
       "auction_events_amount_positive",
-      sql`${table.amount} > 0`
+      sql`${table.amount} IS NULL OR ${table.amount} > 0`
     ),
 
     check(
       "auction_events_credits_before_nonnegative",
-      sql`${table.creditsBefore} >= 0`
+      sql`${table.creditsBefore} IS NULL OR ${table.creditsBefore} >= 0`
     ),
 
     check(
       "auction_events_credits_after_nonnegative",
-      sql`${table.creditsAfter} >= 0`
+      sql`${table.creditsAfter} IS NULL OR ${table.creditsAfter} >= 0`
     ),
 
     check(
       "auction_events_credit_balance",
-      sql`${table.creditsAfter} = ${table.creditsBefore} - ${table.amount}`
+      sql`(
+        ${table.amount} IS NULL
+        OR ${table.creditsBefore} IS NULL
+        OR ${table.creditsAfter} IS NULL
+        OR ${table.creditsAfter} = ${table.creditsBefore} - ${table.amount}
+      )`
     )
   ]
 );

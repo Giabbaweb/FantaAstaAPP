@@ -366,7 +366,7 @@ export class SqliteRealtimePublicDisplayReader
   async findRecentAwardsByAuctionSessionId(
     auctionSessionId: string
   ): Promise<RealtimePublicDisplayRecentAwardData[]> {
-    return db
+    const records = await db
       .select({
         eventId: auctionEvents.id,
         playerId: players.id,
@@ -416,6 +416,30 @@ export class SqliteRealtimePublicDisplayReader
         desc(auctionEvents.createdAt),
         desc(auctionEvents.id)
       );
+
+    return records.map((record) => {
+      if (
+        record.auctionSessionTeamId === null ||
+        record.amount === null
+      ) {
+        throw new Error(
+          `Invalid AUCTION_AWARD_CONFIRMED event "${record.eventId}"`
+        );
+      }
+
+      return {
+        eventId: record.eventId,
+        playerId: record.playerId,
+        playerName: record.playerName,
+        role: record.role,
+        auctionSessionTeamId:
+          record.auctionSessionTeamId,
+        teamName: record.teamName,
+        amount: record.amount,
+        confirmedAt:
+          record.confirmedAt
+      };
+    });
   }
 
   async findPlayerById(
