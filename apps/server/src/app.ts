@@ -175,7 +175,8 @@ export async function buildApp() {
     new AtomicAuctionSessionCommandExecutor(
       auctionSessionRepository,
       new SqliteAuctionSessionStateRepository(),
-      new SqliteCommandRegistryRepository()
+      new SqliteCommandRegistryRepository(),
+      new SqliteAuctionEventRepository()
     );
 
   const auctionSessionOperationalCommandService =

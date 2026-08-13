@@ -9,6 +9,10 @@ import type {
   AuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import type {
+  AuctionEventRepository,
+  CreateAuctionEventInput
+} from "../repositories/auction-event.repository.js";
+import type {
   AuctionSessionOperationalStateUpdate,
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
@@ -49,6 +53,8 @@ export type ExecuteAtomicAuctionSessionCommandInput = {
   expectedStateVersion: number;
   requestFingerprint: string;
   update: AuctionSessionOperationalStateUpdate;
+  auditEvent:
+    CreateAuctionEventInput;
   validate?: (
     session: AuctionSession
   ) => void;
@@ -67,7 +73,9 @@ export class AtomicAuctionSessionCommandExecutor {
     private readonly stateRepository:
       AuctionSessionStateRepository,
     private readonly commandRegistryRepository:
-      CommandRegistryRepository
+      CommandRegistryRepository,
+    private readonly auctionEventRepository:
+      AuctionEventRepository
   ) {}
 
   async execute(
@@ -178,6 +186,12 @@ export class AtomicAuctionSessionCommandExecutor {
           `Failed to load updated auction session "${input.auctionSessionId}"`
         );
       }
+
+      this.auctionEventRepository
+        .createWithExecutor(
+          tx,
+          input.auditEvent
+        );
 
       const registeredCommand =
         this.commandRegistryRepository

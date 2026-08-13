@@ -52,6 +52,14 @@ export class AuctionSessionOperationalCommandService {
         suspensionReason:
           input.reason
       },
+      auditEvent: {
+        auctionSessionId:
+          input.auctionSessionId,
+        eventType:
+          "SESSION_SUSPENDED",
+        suspensionReason:
+          input.reason
+      },
       validate: (session) => {
         transitionAuctionSessionStatus(
           session.status,
@@ -78,6 +86,12 @@ export class AuctionSessionOperationalCommandService {
       update: {
         status: "RUNNING",
         suspensionReason: null
+      },
+      auditEvent: {
+        auctionSessionId:
+          input.auctionSessionId,
+        eventType:
+          "SESSION_RESUMED"
       },
       validate: (session) => {
         transitionAuctionSessionStatus(

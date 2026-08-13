@@ -5,13 +5,19 @@ import {
   it
 } from "vitest";
 
+import { eq } from "drizzle-orm";
+
 import {
   db
 } from "../db/client.js";
 import {
+  auctionEvents,
   auctionSessions,
   leagues
 } from "../db/schema/index.js";
+import {
+  SqliteAuctionEventRepository
+} from "../repositories/auction-event.repository.js";
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
@@ -44,7 +50,8 @@ describe(
         new AtomicAuctionSessionCommandExecutor(
           sessionRepository,
           new SqliteAuctionSessionStateRepository(),
-          new SqliteCommandRegistryRepository()
+          new SqliteCommandRegistryRepository(),
+          new SqliteAuctionEventRepository()
         );
 
       service =
@@ -90,6 +97,31 @@ describe(
             "PIZZA_BREAK"
         }
       });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        auctionSessionId,
+        eventType:
+          "SESSION_SUSPENDED",
+        suspensionReason:
+          "PIZZA_BREAK",
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null
+      });
     });
 
     it("resumes a suspended session and clears its reason", async () => {
@@ -117,6 +149,30 @@ describe(
           status: "RUNNING",
           suspensionReason: null
         }
+      });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        auctionSessionId,
+        eventType:
+          "SESSION_RESUMED",
+        suspensionReason: null,
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null
       });
     });
 
@@ -173,6 +229,24 @@ describe(
       expect(retry).toEqual({
         ...first,
         idempotentReplay: true
+      });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        eventType:
+          "SESSION_SUSPENDED",
+        suspensionReason:
+          "PIZZA_BREAK"
       });
     });
   }

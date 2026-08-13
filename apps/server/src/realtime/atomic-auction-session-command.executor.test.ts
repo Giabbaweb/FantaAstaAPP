@@ -10,6 +10,7 @@ import {
 } from "../db/client.js";
 import {
   auctionCalls,
+  auctionEvents,
   auctionSessions,
   auctionSessionTeams,
   commandRegistry,
@@ -17,6 +18,9 @@ import {
   players,
   teams
 } from "../db/schema/index.js";
+import {
+  SqliteAuctionEventRepository
+} from "../repositories/auction-event.repository.js";
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
@@ -41,7 +45,8 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       new AtomicAuctionSessionCommandExecutor(
         new SqliteAuctionSessionRepository(),
         new SqliteAuctionSessionStateRepository(),
-        new SqliteCommandRegistryRepository()
+        new SqliteCommandRegistryRepository(),
+        new SqliteAuctionEventRepository()
       );
 
     await db.insert(leagues).values({
@@ -86,6 +91,13 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
         status: "SUSPENDED" as const,
         suspensionReason:
           "PIZZA_BREAK" as const
+      },
+      auditEvent: {
+        auctionSessionId,
+        eventType:
+          "SESSION_SUSPENDED" as const,
+        suspensionReason:
+          "PIZZA_BREAK" as const
       }
     };
   }
@@ -121,6 +133,20 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       suspensionReason: "PIZZA_BREAK",
       stateVersion: 1
     });
+
+    const storedEvents =
+      await db
+        .select()
+        .from(auctionEvents);
+
+    expect(storedEvents).toHaveLength(1);
+    expect(storedEvents[0]).toMatchObject({
+      auctionSessionId,
+      eventType:
+        "SESSION_SUSPENDED",
+      suspensionReason:
+        "PIZZA_BREAK"
+    });
   });
 
   it("returns the original result for an identical retry", async () => {
@@ -149,6 +175,20 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
     expect(
       stored?.stateVersion
     ).toBe(1);
+
+    const storedEvents =
+      await db
+        .select()
+        .from(auctionEvents);
+
+    expect(storedEvents).toHaveLength(1);
+    expect(storedEvents[0]).toMatchObject({
+      auctionSessionId,
+      eventType:
+        "SESSION_SUSPENDED",
+      suspensionReason:
+        "PIZZA_BREAK"
+    });
   });
 
   it("rejects reuse of commandId with different data", async () => {
@@ -285,7 +325,8 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       new AtomicAuctionSessionCommandExecutor(
         new SqliteAuctionSessionRepository(),
         new SqliteAuctionSessionStateRepository(),
-        new FailingCommandRegistryRepository()
+        new FailingCommandRegistryRepository(),
+        new SqliteAuctionEventRepository()
       );
 
     await expect(
@@ -311,5 +352,12 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       suspensionReason: null,
       stateVersion: 0
     });
+
+    const storedEvents =
+      await db
+        .select()
+        .from(auctionEvents);
+
+    expect(storedEvents).toHaveLength(0);
   });
 });
