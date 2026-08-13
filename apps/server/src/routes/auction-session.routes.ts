@@ -33,9 +33,9 @@ import type {
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
-import {
-  AuctionSessionOperationalCommandService
-} from "../services/auction-session-operational-command.service.js";
+import type {
+  AuctionSessionOperationalCommandCoordinator
+} from "../realtime/auction-session-operational-command-coordinator.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -114,9 +114,14 @@ const repository =
 const service =
   new AuctionSessionService(repository);
 
+type AuctionSessionOperationalCommandPort = Pick<
+  AuctionSessionOperationalCommandCoordinator,
+  "suspend" | "resume"
+>;
+
 export function auctionSessionRoutes(
   operationalCommandService:
-    AuctionSessionOperationalCommandService
+    AuctionSessionOperationalCommandPort
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{

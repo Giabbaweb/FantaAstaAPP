@@ -81,6 +81,12 @@ import {
   AuctionRealtimeDispatcher
 } from "./realtime/auction-realtime-dispatcher.js";
 import {
+  AuctionSessionOperationalCommandCoordinator
+} from "./realtime/auction-session-operational-command-coordinator.js";
+import {
+  AuctionSessionRealtimeDispatcher
+} from "./realtime/auction-session-realtime-dispatcher.js";
+import {
   AuctionSnapshotDispatcher
 } from "./realtime/auction-snapshot-dispatcher.js";
 import {
@@ -146,6 +152,11 @@ export async function buildApp() {
       realtimePublisher
     );
 
+  const auctionSessionRealtimeDispatcher =
+    new AuctionSessionRealtimeDispatcher(
+      realtimePublisher
+    );
+
   const auctionSnapshotDispatcher =
     new AuctionSnapshotDispatcher(
       realtimeSnapshotService,
@@ -182,6 +193,30 @@ export async function buildApp() {
   const auctionSessionOperationalCommandService =
     new AuctionSessionOperationalCommandService(
       atomicAuctionSessionCommandExecutor
+    );
+
+  const auctionSessionOperationalCommandCoordinator =
+    new AuctionSessionOperationalCommandCoordinator(
+      auctionSessionOperationalCommandService,
+      auctionSessionRealtimeDispatcher,
+      auctionSnapshotDispatcher,
+      ({
+        stage,
+        type,
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: stage,
+            eventType: type,
+            error
+          },
+          "Failed to publish auction session realtime event"
+        );
+      }
     );
 
   const confirmedAuctionAwardService =
@@ -257,7 +292,7 @@ export async function buildApp() {
   await app.register(dbHealthRoutes);
   await app.register(
     auctionSessionRoutes(
-      auctionSessionOperationalCommandService
+      auctionSessionOperationalCommandCoordinator
     )
   );
   await app.register(

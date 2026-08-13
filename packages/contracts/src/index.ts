@@ -635,7 +635,7 @@ export type RealtimeRegisteredPayload = z.infer<
   typeof realtimeRegisteredPayloadSchema
 >;
 
-export const realtimeAuctionEventTypeSchema = z.enum([
+export const realtimeAuctionCallEventTypeSchema = z.enum([
   "AUCTION_CALL_OPENED",
   "BID_PLACED",
   "TEAM_PASSED",
@@ -644,20 +644,73 @@ export const realtimeAuctionEventTypeSchema = z.enum([
   "AUCTION_CALL_CANCELLED"
 ]);
 
+export type RealtimeAuctionCallEventType = z.infer<
+  typeof realtimeAuctionCallEventTypeSchema
+>;
+
+export const realtimeAuctionSessionEventTypeSchema = z.enum([
+  "SESSION_SUSPENDED",
+  "SESSION_RESUMED"
+]);
+
+export type RealtimeAuctionSessionEventType = z.infer<
+  typeof realtimeAuctionSessionEventTypeSchema
+>;
+
+export const realtimeAuctionEventTypeSchema = z.union([
+  realtimeAuctionCallEventTypeSchema,
+  realtimeAuctionSessionEventTypeSchema
+]);
+
 export type RealtimeAuctionEventType = z.infer<
   typeof realtimeAuctionEventTypeSchema
 >;
 
-export const realtimeAuctionEventSchema = z.object({
-  type: realtimeAuctionEventTypeSchema,
+const realtimeAuctionEventCommonSchema = z.object({
   auctionSessionId: z.string().trim().min(1),
-  auctionCallId: z.string().trim().min(1),
   occurredAt: z.string().min(1),
   payload: z.record(
     z.string(),
     z.unknown()
   )
 });
+
+export const realtimeAuctionCallEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: realtimeAuctionCallEventTypeSchema,
+    auctionCallId: z.string().trim().min(1)
+  });
+
+export type RealtimeAuctionCallEvent = z.infer<
+  typeof realtimeAuctionCallEventSchema
+>;
+
+export const realtimeAuctionSessionSuspendedEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: z.literal("SESSION_SUSPENDED"),
+    auctionCallId: z.null()
+  });
+
+export const realtimeAuctionSessionResumedEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: z.literal("SESSION_RESUMED"),
+    auctionCallId: z.null()
+  });
+
+export const realtimeAuctionSessionEventSchema = z.union([
+  realtimeAuctionSessionSuspendedEventSchema,
+  realtimeAuctionSessionResumedEventSchema
+]);
+
+export type RealtimeAuctionSessionEvent = z.infer<
+  typeof realtimeAuctionSessionEventSchema
+>;
+
+export const realtimeAuctionEventSchema = z.union([
+  realtimeAuctionCallEventSchema,
+  realtimeAuctionSessionSuspendedEventSchema,
+  realtimeAuctionSessionResumedEventSchema
+]);
 
 export type RealtimeAuctionEvent = z.infer<
   typeof realtimeAuctionEventSchema
