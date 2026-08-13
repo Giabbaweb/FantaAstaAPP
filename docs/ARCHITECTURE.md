@@ -982,7 +982,7 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 La versione corrente è:
 
 ```text
-v0.9.0
+v0.10.0
 ```
 
 Sono operative:
@@ -1038,14 +1038,35 @@ Sono operative:
 - stato visuale della sessione e banner dedicato per `SUSPENDED`;
 - modalità Public Display `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
 - foglione elettronico delle rose con otto colonne, roster entries e slot liberi;
-- 33 file di test server e 236 test server verdi;
+- sospensione operativa persistente della sessione con causale;
+- causali `PIZZA_BREAK`, `TECHNICAL_BREAK`, `ORGANIZATIONAL_BREAK`, `NETWORK_ISSUE` e `OTHER`;
+- comandi atomici e idempotenti `SUSPEND_SESSION` e `RESUME_SESSION`;
+- controllo ottimistico dei comandi di sessione tramite `stateVersion`;
+- rifiuto server-side dei comandi d'asta durante `SUSPENDED`;
+- conservazione di chiamata, offerta, leader, turno, PASS ed esclusioni durante la pausa;
+- eventi persistenti di audit `SESSION_SUSPENDED` e `SESSION_RESUMED`;
+- audit della sospensione e ripresa nella stessa transazione del comando autorevole;
+- eventi realtime di sessione pubblicati esclusivamente dopo commit;
+- snapshot autorevole aggiornato dopo sospensione e ripresa;
+- causale della sospensione esposta nello snapshot e mostrata dal Public Display;
+- richiesta post-commit del backup alla sospensione tramite `AuctionBackupRequester`;
+- nessuna duplicazione di eventi realtime o richieste backup sui replay idempotenti;
+- isolamento degli errori del backup dalla sospensione già committata;
+- nessuna ripresa automatica dopo reconnect o ricostruzione del runtime;
+- resilienza dello stato persistito `SUSPENDED` verificata tramite test di ricostruzione;
+- 43 file di test server e 287 test server verdi;
 - 10 file di test domain e 86 test domain verdi;
 - typecheck e build completi del monorepo superati.
 
-La v0.9.0 completa quindi lo Schermo Pubblico realtime e read-only,
-alimentato esclusivamente dallo stato autoritativo del server, e introduce
-le viste operative necessarie al monitor condiviso dell'asta senza creare
-un secondo stato applicativo nel frontend.
+La v0.10.0 completa quindi la sospensione operativa della sessione
+mantenendo il server come unica fonte autoritativa. La pausa congela lo
+stato corrente dell'asta senza alterare la macchina a stati della chiamata,
+blocca i comandi operativi lato server, pubblica audit, eventi e snapshot
+solo dopo commit e richiede una ripresa esplicita del banditore.
+
+Il boundary di backup viene invocato dopo una sospensione committata,
+senza anticipare il sottosistema completo di backup e recovery previsto
+dalla v0.13.0.
 
 ---
 
@@ -1054,23 +1075,19 @@ un secondo stato applicativo nel frontend.
 La prossima milestone funzionale è:
 
 ```text
-v0.10.0 — Sospensione e resilienza
+v0.11.0 — Operazioni manuali e correzioni
 ```
-
-L'obiettivo sarà completare il comportamento operativo della sospensione,
-distinguendolo dalla sola rappresentazione visiva già disponibile nel
-Public Display.
 
 La milestone comprenderà:
 
-- sospensione completa della sessione;
-- blocco dei comandi operativi durante `SUSPENDED`;
-- telecomandi in sola lettura durante la pausa;
-- conservazione dello stato corrente di chiamata, offerta, leader e turno;
-- supporto a Pizza Break, pause tecniche e altre causali previste;
-- ripresa esclusivamente manuale da parte del banditore;
-- integrazione del boundary di backup previsto per la sospensione;
-- controlli di resilienza e ripresa coerenti con il server autoritativo.
+- assegnazioni manuali;
+- gestione manuale delle opzioni;
+- correzioni tecniche;
+- motivazioni obbligatorie;
+- audit completo delle operazioni manuali;
+- validazione del giocatore, dei crediti e degli slot;
+- rispetto dei limiti di rosa e della sostenibilità economica;
+- registrazione dell'operatore e della motivazione.
 
 Le decisioni architetturali significative continueranno a essere registrate in:
 

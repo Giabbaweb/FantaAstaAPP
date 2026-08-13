@@ -14,6 +14,58 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.10.0] - 2026-08-13
+
+### Added
+
+* Operational auction-session suspension and manual resume commands
+* Persisted suspension reasons:
+  * `PIZZA_BREAK`
+  * `TECHNICAL_BREAK`
+  * `ORGANIZATIONAL_BREAK`
+  * `NETWORK_ISSUE`
+  * `OTHER`
+* Atomic session-command execution with optimistic concurrency and idempotency
+* Persistent `SESSION_SUSPENDED` and `SESSION_RESUMED` domain audit events
+* Session-scoped realtime events for suspension and resume
+* Post-commit backup request after successful session suspension
+* Public Display presentation of the persisted suspension reason
+* Restart-resilience integration coverage for persisted suspended sessions
+
+### Changed
+
+* Auction commands are rejected server-side while the auction session is `SUSPENDED`
+* Session suspension preserves the current auction call, bid, leader, turn, PASS state and exclusions
+* Team controllers remain read-only while the session is suspended
+* Session suspend and resume commands now use the authoritative atomic command pipeline
+* Session audit events participate in the same transaction as the authoritative state transition
+* Realtime session events and snapshots are published only after a successful commit
+* Idempotent session-command replays do not duplicate realtime effects or backup requests
+* Suspension backup requests are isolated from the already committed session transition
+* A persisted `SUSPENDED` session remains suspended across server restart and reconnect
+* Session resume remains exclusively manual; no automatic resume path is introduced
+
+### Tested
+
+* Atomic suspend and resume command execution
+* Server-side rejection of auction commands during `SUSPENDED`
+* Preservation of current auction state throughout suspension
+* Persistent suspension reason
+* Transactional `SESSION_SUSPENDED` and `SESSION_RESUMED` audit events
+* Rollback behavior for failed session transitions
+* Idempotent replay without duplicate realtime publication
+* Session-scoped realtime event and authoritative snapshot publication
+* Backup request after successful suspension
+* No duplicate backup request on idempotent replay
+* Backup failure isolation from committed suspension
+* Persistence of `SUSPENDED` state across server restart
+* 43 automated server test files
+* 287 automated server tests
+* Full server type checking
+* Full server production build
+
+---
+
 ## [0.9.0] - 2026-08-12
 
 ### Added

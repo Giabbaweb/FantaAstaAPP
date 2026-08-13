@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.9.0
+v0.10.0
 ```
 
 Milestone completate:
@@ -92,8 +92,8 @@ Milestone completate:
 - stati visuali della sessione e banner `SUSPENDED`;
 - modalità `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
 - foglione elettronico delle rose con slot liberi;
-- 33 file di test server verdi;
-- 236 test server verdi;
+- 43 file di test server verdi;
+- 287 test server verdi;
 - 10 file di test domain verdi;
 - 86 test domain verdi;
 - typecheck e build completi del monorepo superati.
@@ -101,7 +101,7 @@ Milestone completate:
 Prossima milestone:
 
 ```text
-v0.10.0 — Sospensione e resilienza
+v0.11.0 — Operazioni manuali e correzioni
 ```
 
 ---
@@ -629,7 +629,7 @@ DARK
 
 # v0.10.0 — Sospensione e resilienza
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -662,7 +662,7 @@ OTHER
 
 # v0.11.0 — Operazioni manuali e correzioni
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 
