@@ -1,6 +1,6 @@
 import type {
-  RealtimeAuctionEvent,
-  RealtimeAuctionEventType
+  RealtimeAuctionCallEvent,
+  RealtimeAuctionCallEventType
 } from "@fantaastaapp/contracts";
 
 import type {
@@ -16,7 +16,7 @@ type AuctionEventPublisher = Pick<
 >;
 
 export type AuctionRealtimeDispatchInput = {
-  type: RealtimeAuctionEventType;
+  type: RealtimeAuctionCallEventType;
   aggregate: AuctionCallAggregate;
   payload?: Record<string, unknown>;
 };
@@ -33,7 +33,7 @@ export class AuctionRealtimeDispatcher {
   async dispatch(
     input: AuctionRealtimeDispatchInput
   ): Promise<void> {
-    const event: RealtimeAuctionEvent = {
+    const event: RealtimeAuctionCallEvent = {
       type: input.type,
       auctionSessionId:
         input.aggregate.call.auctionSessionId,

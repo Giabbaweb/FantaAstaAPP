@@ -255,6 +255,109 @@ describe("AtomicAuctionCommandExecutor", () => {
     });
   });
 
+  it("rejects reuse of a session commandId for an auction call command", async () => {
+    await db.insert(commandRegistry).values({
+      id: "session-command-registry-1",
+      auctionSessionId,
+      commandScope: "AUCTION_SESSION",
+      auctionCallId: null,
+      commandId: "command-1",
+      commandType: "SUSPEND_SESSION",
+      expectedStateVersion: 0,
+      resultStateVersion: 1,
+      requestFingerprint:
+        "suspend:PIZZA_BREAK",
+      resultPayload:
+        JSON.stringify({
+          id: auctionSessionId,
+          leagueId: "league-1",
+          season: "2026/2027",
+          editionNumber: 1,
+          status: "SUSPENDED",
+          suspensionReason:
+            "PIZZA_BREAK",
+          initialCredits: 330,
+          createdAt:
+            "2026-08-12T20:00:00.000Z",
+          updatedAt:
+            "2026-08-12T20:01:00.000Z"
+        })
+    });
+
+    const input = createInput();
+
+    await expect(
+      executor.execute(input)
+    ).rejects.toMatchObject({
+      code: "COMMAND_ID_CONFLICT"
+    });
+
+    expect(
+      input.apply
+    ).not.toHaveBeenCalled();
+  });
+
+  it("rejects a new auction call command while the session is suspended", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "SUSPENDED",
+        suspensionReason: "PIZZA_BREAK"
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    const input = createInput();
+
+    await expect(
+      executor.execute(input)
+    ).rejects.toMatchObject({
+      code: "AUCTION_SESSION_SUSPENDED"
+    });
+
+    expect(
+      input.apply
+    ).not.toHaveBeenCalled();
+  });
+
+  it("returns an idempotent replay while the session is suspended", async () => {
+    const firstInput = createInput();
+
+    const firstResult =
+      await executor.execute(firstInput);
+
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "SUSPENDED",
+        suspensionReason: "PIZZA_BREAK"
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    const retryInput = createInput();
+
+    const retryResult =
+      await executor.execute(retryInput);
+
+    expect(retryResult).toEqual({
+      ...firstResult,
+      idempotentReplay: true
+    });
+
+    expect(
+      retryInput.apply
+    ).not.toHaveBeenCalled();
+  });
+
   it("rejects a stale state version", async () => {
     await expect(
       executor.execute(

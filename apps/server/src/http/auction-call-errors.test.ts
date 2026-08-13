@@ -31,6 +31,10 @@ describe("mapAuctionCallError", () => {
       404
     ],
     [
+      "AUCTION_SESSION_SUSPENDED",
+      409
+    ],
+    [
       "STALE_STATE",
       409
     ],

@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.9.0-blue" alt="Version v0.9.0">
+  <img src="https://img.shields.io/badge/version-v0.10.0-blue" alt="Version v0.10.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -57,13 +57,13 @@ No Internet connection is required during the auction.
 - Offline-first architecture
 - Server-authoritative auction engine
 - Real-time synchronization via Socket.IO
-- Administrator Console
-- Team Remote Controllers
+- Server-side administrative auction commands
+- Team realtime command protocol (`BID`, `PASS`, `UNDO_PASS`)
 - Public Display mode
 - SQLite persistence
 - Complete audit trail
 - Automatic validation rules
-- Backup & Recovery
+- Post-commit backup request boundary
 - FMS import/export
 - Manual correction tools
 
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.9.0**
+**v0.10.0**
 
 Completed milestones
 
@@ -220,8 +220,17 @@ Completed milestones
 - ✅ Session status indicators and SUSPENDED banner
 - ✅ STANDARD, HIGH_CONTRAST_OUTDOOR, COMPACT and DARK display modes
 - ✅ Electronic roster overview with roster entries and free slots
-- ✅ 33 backend test files
-- ✅ 236 backend tests passing
+- ✅ Operational session suspension and explicit manual resume
+- ✅ Persisted suspension reasons including PIZZA_BREAK and technical pauses
+- ✅ Atomic and idempotent SUSPEND_SESSION / RESUME_SESSION command pipeline
+- ✅ Server-side rejection of auction commands while the session is SUSPENDED
+- ✅ Persistent SESSION_SUSPENDED and SESSION_RESUMED audit events
+- ✅ Post-commit realtime event and authoritative snapshot publication for session suspension
+- ✅ Post-commit backup request boundary on successful suspension
+- ✅ Restart resilience for persisted suspended sessions
+- ✅ Public Display suspension reason presentation
+- ✅ 43 backend test files
+- ✅ 287 backend tests passing
 - ✅ 10 domain test files
 - ✅ 86 domain tests passing
 - ✅ Full monorepo type checking
@@ -246,7 +255,7 @@ RUNNING
 
 Next milestone
 
-➡ **v0.10.0 — Sospensione e resilienza**
+➡ **v0.11.0 — Operazioni manuali e correzioni**
 
 ---
 
@@ -280,11 +289,11 @@ pnpm test
 
 ## Applications
 
-| Interface | Path |
-|-----------|------|
-| Administrator Console | `/admin` |
-| Team Remote Controller | `/remote` |
-| Public Display | `/public` |
+| Interface | Path | Current status |
+|-----------|------|----------------|
+| Administrator Console | `/admin` | Planned frontend |
+| Team Remote Controller | `/remote` | Planned frontend; realtime command protocol already available server-side |
+| Public Display | `/public` | Implemented |
 
 ---
 
@@ -303,6 +312,33 @@ Main capabilities:
 - session status indicators and a dedicated `SUSPENDED` banner;
 - `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` and `DARK` visual modes;
 - electronic roster overview with roster entries and free role slots.
+
+---
+
+## Suspension & Resilience
+
+Version v0.10.0 completes the operational suspension workflow for the authoritative auction session.
+
+Main capabilities:
+
+- explicit `SUSPEND_SESSION` and `RESUME_SESSION` commands;
+- persisted suspension reasons:
+  - `PIZZA_BREAK`
+  - `TECHNICAL_BREAK`
+  - `ORGANIZATIONAL_BREAK`
+  - `NETWORK_ISSUE`
+  - `OTHER`
+- atomic, idempotent session transitions protected by `stateVersion`;
+- server-side rejection of auction commands while the session is `SUSPENDED`;
+- preservation of the current auction call, bid, leader, turn, PASS state and exclusions during the pause;
+- persistent `SESSION_SUSPENDED` and `SESSION_RESUMED` audit events;
+- post-commit realtime event and authoritative snapshot publication;
+- suspension reason visible on the Public Display;
+- post-commit backup request through the existing backup boundary;
+- no duplicate realtime or backup side effects on idempotent replay;
+- no automatic resume after reconnect or runtime reconstruction.
+
+The complete backup and recovery subsystem remains planned for v0.13.0.
 
 ---
 
@@ -342,8 +378,8 @@ The `docs/` directory contains the complete project documentation.
 | v0.7 | ✅ Realtime Controllers |
 | v0.8 | ✅ Confirmed Awards & Transactions |
 | v0.9    | ✅ Public Display                  |
-| v0.10   | ⏭️ Suspension & Resilience         |
-| v0.11   | ⏳ Manual Operations & Corrections |
+| v0.10   | ✅ Suspension & Resilience              |
+| v0.11   | ⏭️ Manual Operations & Corrections      |
 | v0.12   | ⏳ FMS Import/Export               |
 | v0.13   | ⏳ Backup & Recovery               |
 | v0.14   | ⏳ Operational Validation          |

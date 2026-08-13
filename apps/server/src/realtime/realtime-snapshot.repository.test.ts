@@ -53,6 +53,7 @@ describe("realtime snapshot SQLite readers", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)

@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 9 completata
-- **Versione corrente:** v0.9.0
-- **Prossimo obiettivo:** Versione 0.10 – Sospensione e resilienza
+- **Stato:** Milestone 10 completata
+- **Versione corrente:** v0.10.0
+- **Prossimo obiettivo:** Versione 0.11 – Operazioni manuali e correzioni
 
 ## Regole immutabili
 
@@ -47,13 +47,19 @@ Pino
 Vitest
 ```
 
-Percorsi:
+Percorsi UI di riferimento:
 
 ```text
 /admin
 /remote
 /public
 ```
+
+Stato frontend corrente:
+
+- `/public`: implementato;
+- `/remote`: UI non ancora implementata; protocollo realtime e comandi di squadra già disponibili lato server;
+- `/admin`: percorso architetturale previsto dal progetto.
 
 Principio:
 
@@ -120,10 +126,10 @@ stateVersion
 
 ## UI
 
-- `/admin`: governo completo.
-- `/remote`: un operatore per squadra e osservatori read-only.
-- `/public`: crediti, P/D/C/A, posti liberi, chiamata corrente.
-- Modalità schermo: `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT`.
+- `/admin`: interfaccia amministrativa prevista dal progetto.
+- `/remote`: UI smartphone non ancora implementata; il backend realtime supporta già `OPERATOR` e `OBSERVER`, con comandi `BID`, `PASS` e `UNDO_PASS`.
+- `/public`: interfaccia fullscreen read-only implementata, con crediti, P/D/C/A, posti liberi e chiamata corrente.
+- Modalità schermo: `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`.
 
 ## Opzioni
 
@@ -163,8 +169,8 @@ Sono completati tutti gli elementi della v0.8.0 e inoltre:
 - modalità visuali `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
 - collaudo visivo degli overlay PASS/ESCLUSA in STANDARD, OUTDOOR e DARK;
 - collaudo visivo del banner SUSPENDED in STANDARD, OUTDOOR, DARK e COMPACT;
-- 33 file di test server;
-- 236 test server verdi;
+- 43 file di test server;
+- 287 test server verdi;
 - 10 file di test domain;
 - 86 test domain verdi;
 - typecheck completo del monorepo superato;
@@ -226,18 +232,32 @@ CANCEL
 
 La riconnessione richiede una nuova registrazione del dispositivo e produce un nuovo snapshot autorevole.
 
-## Prossimo obiettivo
+## Milestone 10 completata
 
 Versione 0.10 — Sospensione e resilienza:
 
-- introdurre la sospensione operativa completa della sessione;
-- supportare Pizza Break e pause tecniche;
-- bloccare i comandi durante `SUSPENDED`;
-- preservare lo stato corrente dell'asta;
-- mantenere i telecomandi in sola lettura durante la sospensione;
-- richiedere una ripresa esclusivamente manuale dal banditore;
-- predisporre le causali di sospensione previste dalla roadmap;
-- integrare il boundary di backup previsto per la sospensione.
+- sospensione operativa completa della sessione;
+- causali persistenti `PIZZA_BREAK`, `TECHNICAL_BREAK`, `ORGANIZATIONAL_BREAK`, `NETWORK_ISSUE` e `OTHER`;
+- comandi `SUSPEND_SESSION` e `RESUME_SESSION` atomici, idempotenti e soggetti a `stateVersion`;
+- blocco server-side dei comandi d'asta durante `SUSPENDED`;
+- preservazione dello stato corrente di chiamata, offerta, leader, turno, PASS ed esclusioni;
+- audit persistente `SESSION_SUSPENDED` e `SESSION_RESUMED`;
+- eventi realtime e snapshot pubblicati solo dopo commit;
+- Public Display aggiornato con stato e causale della sospensione;
+- richiesta backup post-commit alla sospensione senza duplicazione sui replay;
+- nessuna ripresa automatica;
+- resilienza dello stato `SUSPENDED` verificata dopo ricostruzione del runtime.
+
+## Prossimo obiettivo
+
+Versione 0.11 — Operazioni manuali e correzioni:
+
+- assegnazioni manuali;
+- gestione manuale delle opzioni;
+- correzioni tecniche;
+- motivazioni obbligatorie;
+- audit completo;
+- validazioni coerenti con crediti, slot, ruoli e sostenibilità economica.
 
 Fonte autoritativa completa:
 

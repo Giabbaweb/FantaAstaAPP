@@ -19,6 +19,7 @@ import type {
 export type AtomicAuctionCommandExecutorErrorCode =
   | "AUCTION_CALL_NOT_FOUND"
   | "AUCTION_SESSION_STATE_NOT_FOUND"
+  | "AUCTION_SESSION_SUSPENDED"
   | "STALE_STATE"
   | "COMMAND_ID_CONFLICT"
   | "AUCTION_CALL_SAVE_FAILED";
@@ -99,6 +100,16 @@ export class AtomicAuctionCommandExecutor {
           );
 
       if (existingCommand) {
+        if (
+          existingCommand.commandScope !==
+            "AUCTION_CALL"
+        ) {
+          throw new AtomicAuctionCommandExecutorError(
+            "COMMAND_ID_CONFLICT",
+            `Command ID "${input.commandId}" was already used with a different command scope`
+          );
+        }
+
         this.assertMatchingCommand(
           existingCommand,
           input
@@ -113,27 +124,34 @@ export class AtomicAuctionCommandExecutor {
         };
       }
 
-      const currentStateVersion =
+      const currentState =
         this.stateRepository
-          .getCurrentStateVersionWithExecutor(
+          .findByAuctionSessionIdWithExecutor(
             tx,
             auctionSessionId
           );
 
-      if (currentStateVersion === null) {
+      if (!currentState) {
         throw new AtomicAuctionCommandExecutorError(
           "AUCTION_SESSION_STATE_NOT_FOUND",
           `Auction session state "${auctionSessionId}" was not found`
         );
       }
 
+      if (currentState.status === "SUSPENDED") {
+        throw new AtomicAuctionCommandExecutorError(
+          "AUCTION_SESSION_SUSPENDED",
+          `Auction session "${auctionSessionId}" is suspended`
+        );
+      }
+
       if (
-        currentStateVersion !==
+        currentState.stateVersion !==
           input.expectedStateVersion
       ) {
         throw new AtomicAuctionCommandExecutorError(
           "STALE_STATE",
-          `Auction session "${auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentStateVersion}`
+          `Auction session "${auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentState.stateVersion}`
         );
       }
 

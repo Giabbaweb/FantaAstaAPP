@@ -1,0 +1,1 @@
+ALTER TABLE `auction_sessions` ADD `suspension_reason` text;

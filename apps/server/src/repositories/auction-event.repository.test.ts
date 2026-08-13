@@ -213,6 +213,167 @@ describe("SqliteAuctionEventRepository", () => {
   );
 
   it(
+    "creates and reads a suspended session event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name: "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "SESSION_SUSPENDED",
+            suspensionReason:
+              "PIZZA_BREAK"
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "SESSION_SUSPENDED",
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        suspensionReason:
+          "PIZZA_BREAK"
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
+    "creates and reads a resumed session event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name: "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "SESSION_RESUMED"
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "SESSION_RESUMED",
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        suspensionReason: null
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
+    "rejects an invalid session event shape",
+    () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name: "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      expect(() =>
+        db.insert(auctionEvents)
+          .values({
+            id:
+              "invalid-session-event",
+            auctionSessionId,
+            eventType:
+              "SESSION_RESUMED",
+            suspensionReason:
+              "PIZZA_BREAK"
+          })
+          .run()
+      ).toThrow();
+    }
+  );
+
+  it(
     "rejects an inconsistent credit balance",
     () => {
       db.insert(leagues)

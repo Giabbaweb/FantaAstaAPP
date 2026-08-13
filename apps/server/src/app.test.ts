@@ -116,6 +116,7 @@ describe("application integration", () => {
           season: string;
           editionNumber: number;
           status: string;
+          suspensionReason: string | null;
           initialCredits: number;
           createdAt: string;
           updatedAt: string;
@@ -131,6 +132,7 @@ describe("application integration", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
@@ -181,6 +183,7 @@ describe("application integration", () => {
       season: "2026/2027",
       editionNumber: 35,
       status: "READY",
+      suspensionReason: null,
       initialCredits: 330
     });
 
@@ -213,6 +216,7 @@ describe("application integration", () => {
       season: "2026/2027",
       editionNumber: 35,
       status: "READY",
+      suspensionReason: null,
       initialCredits: 330,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
@@ -303,6 +307,7 @@ describe("GET /api/auction-sessions", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
@@ -352,6 +357,7 @@ describe("GET /api/auction-sessions", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "SETUP",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
@@ -965,14 +971,18 @@ describe("GET /api/auction-sessions", () => {
           });
 
           const executeCommand = async (
-            command: string
+            command: string,
+            payload?: Record<string, unknown>
           ) =>
             app.inject({
               method: "POST",
               url:
                 "/api/auction-sessions/" +
                 "session-command-lifecycle/" +
-                `commands/${command}`
+                `commands/${command}`,
+              ...(payload
+                ? { payload }
+                : {})
             });
 
           const readyResponse =
@@ -1000,26 +1010,48 @@ describe("GET /api/auction-sessions", () => {
           });
 
           const suspendResponse =
-            await executeCommand("suspend");
+            await executeCommand(
+              "suspend",
+              {
+                commandId:
+                  "session-lifecycle-suspend",
+                stateVersion: 0,
+                reason: "PIZZA_BREAK"
+              }
+            );
 
           expect(suspendResponse.statusCode).toBe(200);
           expect(suspendResponse.json()).toEqual({
             data: expect.objectContaining({
               id: "session-command-lifecycle",
-              status: "SUSPENDED"
+              status: "SUSPENDED",
+              suspensionReason:
+                "PIZZA_BREAK"
             }),
+            stateVersion: 1,
+            idempotentReplay: false,
             error: null
           });
 
           const resumeResponse =
-            await executeCommand("resume");
+            await executeCommand(
+              "resume",
+              {
+                commandId:
+                  "session-lifecycle-resume",
+                stateVersion: 1
+              }
+            );
 
           expect(resumeResponse.statusCode).toBe(200);
           expect(resumeResponse.json()).toEqual({
             data: expect.objectContaining({
               id: "session-command-lifecycle",
-              status: "RUNNING"
+              status: "RUNNING",
+              suspensionReason: null
             }),
+            stateVersion: 2,
+            idempotentReplay: false,
             error: null
           });
 
@@ -1045,6 +1077,236 @@ describe("GET /api/auction-sessions", () => {
               status: "CLOSED"
             }),
             error: null
+          });
+        }
+      );
+
+      it(
+        "returns 400 for an invalid suspend payload",
+        async () => {
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-invalid-suspend-payload/" +
+              "commands/suspend",
+            payload: {
+              commandId:
+                "invalid-suspend-command",
+              stateVersion: 0
+            }
+          });
+
+          expect(response.statusCode).toBe(400);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"commandId", "stateVersion" and "reason" are required and must be valid'
+            }
+          });
+        }
+      );
+
+      it(
+        "returns 400 for an invalid resume payload",
+        async () => {
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-invalid-resume-payload/" +
+              "commands/resume",
+            payload: {
+              commandId:
+                "invalid-resume-command"
+            }
+          });
+
+          expect(response.statusCode).toBe(400);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+      );
+
+      it(
+        "returns an idempotent replay for an identical suspend command",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-command-suspend-replay",
+            name: "Suspend Replay League",
+            normalizedName:
+              "suspend replay league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: "session-command-suspend-replay",
+            leagueId:
+              "league-command-suspend-replay",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            status: "RUNNING",
+            stateVersion: 0
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              "session-command-suspend-replay/" +
+              "commands/suspend",
+            payload: {
+              commandId:
+                "suspend-replay-command",
+              stateVersion: 0,
+              reason: "PIZZA_BREAK"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(firstResponse.statusCode).toBe(200);
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(retryResponse.statusCode).toBe(200);
+
+          expect(retryResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id:
+                "session-command-suspend-replay",
+              status: "SUSPENDED",
+              suspensionReason:
+                "PIZZA_BREAK"
+            }),
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+        }
+      );
+
+      it(
+        "returns 409 for a stale suspend state version",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-command-suspend-stale",
+            name: "Suspend Stale League",
+            normalizedName:
+              "suspend stale league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: "session-command-suspend-stale",
+            leagueId:
+              "league-command-suspend-stale",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            status: "RUNNING",
+            stateVersion: 3
+          });
+
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-command-suspend-stale/" +
+              "commands/suspend",
+            payload: {
+              commandId:
+                "suspend-stale-command",
+              stateVersion: 2,
+              reason: "TECHNICAL_BREAK"
+            }
+          });
+
+          expect(response.statusCode).toBe(409);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code: "STALE_STATE"
+            })
+          });
+        }
+      );
+
+      it(
+        "returns 409 when a suspend commandId is reused with different data",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-command-suspend-conflict",
+            name: "Suspend Conflict League",
+            normalizedName:
+              "suspend conflict league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: "session-command-suspend-conflict",
+            leagueId:
+              "league-command-suspend-conflict",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            status: "RUNNING",
+            stateVersion: 0
+          });
+
+          const url =
+            "/api/auction-sessions/" +
+            "session-command-suspend-conflict/" +
+            "commands/suspend";
+
+          const firstResponse =
+            await app.inject({
+              method: "POST",
+              url,
+              payload: {
+                commandId:
+                  "suspend-conflict-command",
+                stateVersion: 0,
+                reason: "PIZZA_BREAK"
+              }
+            });
+
+          expect(firstResponse.statusCode).toBe(200);
+
+          const conflictingResponse =
+            await app.inject({
+              method: "POST",
+              url,
+              payload: {
+                commandId:
+                  "suspend-conflict-command",
+                stateVersion: 0,
+                reason: "NETWORK_ISSUE"
+              }
+            });
+
+          expect(
+            conflictingResponse.statusCode
+          ).toBe(409);
+
+          expect(
+            conflictingResponse.json()
+          ).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code: "COMMAND_ID_CONFLICT"
+            })
           });
         }
       );

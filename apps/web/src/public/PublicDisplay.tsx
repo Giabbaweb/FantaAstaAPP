@@ -261,6 +261,36 @@ export function PublicDisplay():
         auctionSessionTeamId
     ) ?? null;
 
+  const formatSuspensionReason = (
+    reason:
+      | "PIZZA_BREAK"
+      | "TECHNICAL_BREAK"
+      | "ORGANIZATIONAL_BREAK"
+      | "NETWORK_ISSUE"
+      | "OTHER"
+      | null
+  ): string => {
+    switch (reason) {
+      case "PIZZA_BREAK":
+        return "Pizza Break";
+
+      case "TECHNICAL_BREAK":
+        return "Pausa tecnica";
+
+      case "ORGANIZATIONAL_BREAK":
+        return "Pausa organizzativa";
+
+      case "NETWORK_ISSUE":
+        return "Problema di rete";
+
+      case "OTHER":
+        return "Pausa operativa";
+
+      default:
+        return "Pausa operativa";
+    }
+  };
+
   const formatExclusionReason = (
     reason: string | null | undefined
   ): string => {
@@ -388,10 +418,16 @@ export function PublicDisplay():
           </strong>
 
           <span>
-            La situazione dell'asta è stata congelata.
+            {
+              formatSuspensionReason(
+                snapshot.session
+                  .suspensionReason
+              )
+            }
           </span>
 
           <small>
+            La situazione dell'asta è stata congelata.
             La sessione riprenderà su indicazione del banditore.
           </small>
         </section>

@@ -18,6 +18,9 @@ import {
   SqliteAuctionEventRepository
 } from "./repositories/auction-event.repository.js";
 import {
+  SqliteAuctionSessionRepository
+} from "./repositories/auction-session.repository.js";
+import {
   SqliteAuctionSessionTeamRepository
 } from "./repositories/auction-session-team.repository.js";
 import {
@@ -60,6 +63,9 @@ import {
   AtomicAuctionCommandExecutor
 } from "./realtime/atomic-auction-command.executor.js";
 import {
+  AtomicAuctionSessionCommandExecutor
+} from "./realtime/atomic-auction-session-command.executor.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
@@ -74,6 +80,12 @@ import {
 import {
   AuctionRealtimeDispatcher
 } from "./realtime/auction-realtime-dispatcher.js";
+import {
+  AuctionSessionOperationalCommandCoordinator
+} from "./realtime/auction-session-operational-command-coordinator.js";
+import {
+  AuctionSessionRealtimeDispatcher
+} from "./realtime/auction-session-realtime-dispatcher.js";
 import {
   AuctionSnapshotDispatcher
 } from "./realtime/auction-snapshot-dispatcher.js";
@@ -98,14 +110,27 @@ import {
 import {
   NoopAuctionBackupRequester
 } from "./services/auction-backup-requester.js";
+import type {
+  AuctionBackupRequester
+} from "./services/auction-backup-requester.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
 import {
+  AuctionSessionOperationalCommandService
+} from "./services/auction-session-operational-command.service.js";
+import {
   ConfirmedAuctionAwardService
 } from "./services/confirmed-auction-award.service.js";
 
-export async function buildApp() {
+export type BuildAppOptions = {
+  auctionBackupRequester?:
+    AuctionBackupRequester;
+};
+
+export async function buildApp(
+  options: BuildAppOptions = {}
+) {
   const app = Fastify({
     logger: true
   });
@@ -137,6 +162,11 @@ export async function buildApp() {
       realtimePublisher
     );
 
+  const auctionSessionRealtimeDispatcher =
+    new AuctionSessionRealtimeDispatcher(
+      realtimePublisher
+    );
+
   const auctionSnapshotDispatcher =
     new AuctionSnapshotDispatcher(
       realtimeSnapshotService,
@@ -159,6 +189,51 @@ export async function buildApp() {
       new SqliteCommandRegistryRepository()
     );
 
+  const auctionSessionRepository =
+    new SqliteAuctionSessionRepository();
+
+  const atomicAuctionSessionCommandExecutor =
+    new AtomicAuctionSessionCommandExecutor(
+      auctionSessionRepository,
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      new SqliteAuctionEventRepository()
+    );
+
+  const auctionSessionOperationalCommandService =
+    new AuctionSessionOperationalCommandService(
+      atomicAuctionSessionCommandExecutor
+    );
+
+  const auctionBackupRequester =
+    options.auctionBackupRequester ??
+    new NoopAuctionBackupRequester();
+
+  const auctionSessionOperationalCommandCoordinator =
+    new AuctionSessionOperationalCommandCoordinator(
+      auctionSessionOperationalCommandService,
+      auctionSessionRealtimeDispatcher,
+      auctionSnapshotDispatcher,
+      auctionBackupRequester,
+      ({
+        stage,
+        type,
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: stage,
+            eventType: type,
+            error
+          },
+          "Failed to publish auction session realtime event"
+        );
+      }
+    );
+
   const confirmedAuctionAwardService =
     new ConfirmedAuctionAwardService(
       new SqliteAuctionSessionTeamRepository(),
@@ -179,7 +254,7 @@ export async function buildApp() {
       atomicAuctionCallCommandService,
       auctionRealtimeDispatcher,
       auctionSnapshotDispatcher,
-      new NoopAuctionBackupRequester(),
+      auctionBackupRequester,
       ({
         stage,
         type,
@@ -230,7 +305,11 @@ export async function buildApp() {
   );
 
   await app.register(dbHealthRoutes);
-  await app.register(auctionSessionRoutes);
+  await app.register(
+    auctionSessionRoutes(
+      auctionSessionOperationalCommandCoordinator
+    )
+  );
   await app.register(
     auctionCallRoutes(
       auctionCallService,

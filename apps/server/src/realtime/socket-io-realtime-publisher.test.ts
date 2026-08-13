@@ -86,6 +86,7 @@ describe("SocketIoRealtimePublisher", () => {
         season: "2026/2027",
         editionNumber: 35,
         status: "RUNNING",
+        suspensionReason: null,
         initialCredits: 330,
         createdAt:
           "2026-08-02T20:00:00.000Z",
@@ -153,6 +154,7 @@ describe("SocketIoRealtimePublisher", () => {
           season: "2026/2027",
           editionNumber: 35,
           status: "RUNNING",
+          suspensionReason: null,
           initialCredits: 330,
           createdAt:
             "2026-08-02T20:00:00.000Z",
