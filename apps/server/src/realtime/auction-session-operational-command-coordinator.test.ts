@@ -93,6 +93,14 @@ describe(
             )
       };
 
+      const backupRequester = {
+        requestSuspendedSessionBackup:
+          vi.fn()
+            .mockResolvedValue(
+              undefined
+            )
+      };
+
       const onDispatchFailure =
         vi.fn();
 
@@ -101,6 +109,7 @@ describe(
           service,
           dispatcher,
           snapshotDispatcher,
+          backupRequester,
           onDispatchFailure
         );
 
@@ -108,6 +117,7 @@ describe(
         service,
         dispatcher,
         snapshotDispatcher,
+        backupRequester,
         onDispatchFailure,
         coordinator
       };
@@ -312,6 +322,127 @@ describe(
         ).toHaveBeenCalledWith(
           "session-1"
         );
+      }
+    );
+
+    it(
+      "requests a backup after a suspended session",
+      async () => {
+        const {
+          backupRequester,
+          coordinator
+        } = createFixture();
+
+        await expect(
+          coordinator.suspend(
+            suspendInput
+          )
+        ).resolves.toEqual(
+          suspendResult
+        );
+
+        expect(
+          backupRequester
+            .requestSuspendedSessionBackup
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          backupRequester
+            .requestSuspendedSessionBackup
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-1"
+        });
+      }
+    );
+
+    it(
+      "does not request a backup for an idempotent suspend replay",
+      async () => {
+        const {
+          service,
+          backupRequester,
+          coordinator
+        } = createFixture();
+
+        service.suspend
+          .mockResolvedValueOnce({
+            ...suspendResult,
+            idempotentReplay: true
+          });
+
+        await expect(
+          coordinator.suspend(
+            suspendInput
+          )
+        ).resolves.toMatchObject({
+          idempotentReplay: true
+        });
+
+        expect(
+          backupRequester
+            .requestSuspendedSessionBackup
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "does not request a suspension backup on resume",
+      async () => {
+        const {
+          backupRequester,
+          coordinator
+        } = createFixture();
+
+        await coordinator.resume(
+          resumeInput
+        );
+
+        expect(
+          backupRequester
+            .requestSuspendedSessionBackup
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "reports backup failure without failing the suspended command",
+      async () => {
+        const {
+          backupRequester,
+          onDispatchFailure,
+          coordinator
+        } = createFixture();
+
+        const error =
+          new Error(
+            "Backup failed"
+          );
+
+        backupRequester
+          .requestSuspendedSessionBackup
+          .mockRejectedValueOnce(
+            error
+          );
+
+        await expect(
+          coordinator.suspend(
+            suspendInput
+          )
+        ).resolves.toEqual(
+          suspendResult
+        );
+
+        expect(
+          onDispatchFailure
+        ).toHaveBeenCalledWith({
+          stage: "BACKUP",
+          type:
+            "SESSION_SUSPENDED",
+          auctionSessionId:
+            "session-1",
+          error
+        });
       }
     );
 

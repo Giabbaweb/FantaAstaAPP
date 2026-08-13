@@ -3,6 +3,9 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import type {
+  AuctionBackupRequester
+} from "../services/auction-backup-requester.js";
+import type {
   AuctionSessionOperationalCommandService,
   ResumeAuctionSessionCommandInput,
   SuspendAuctionSessionCommandInput
@@ -32,8 +35,13 @@ type SessionSnapshotDispatcher = Pick<
   "dispatch"
 >;
 
+type SessionBackupRequester = Pick<
+  AuctionBackupRequester,
+  "requestSuspendedSessionBackup"
+>;
+
 export type AuctionSessionOperationalDispatchFailure = {
-  stage: "EVENT" | "SNAPSHOT";
+  stage: "EVENT" | "SNAPSHOT" | "BACKUP";
   type: RealtimeAuctionSessionEventType;
   auctionSessionId: string;
   error: unknown;
@@ -53,6 +61,8 @@ export class AuctionSessionOperationalCommandCoordinator {
       SessionRealtimeDispatcher,
     private readonly snapshotDispatcher:
       SessionSnapshotDispatcher,
+    private readonly backupRequester:
+      SessionBackupRequester,
     private readonly onDispatchFailure:
       AuctionSessionOperationalDispatchFailureHandler =
         () => {}
@@ -76,6 +86,22 @@ export class AuctionSessionOperationalCommandCoordinator {
           input.reason
       }
     );
+
+    try {
+      await this.backupRequester
+        .requestSuspendedSessionBackup({
+          auctionSessionId:
+            input.auctionSessionId
+        });
+    } catch (error) {
+      this.onDispatchFailure({
+        stage: "BACKUP",
+        type: "SESSION_SUSPENDED",
+        auctionSessionId:
+          input.auctionSessionId,
+        error
+      });
+    }
 
     return result;
   }

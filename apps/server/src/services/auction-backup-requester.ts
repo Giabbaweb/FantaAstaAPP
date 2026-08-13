@@ -8,9 +8,17 @@ export type ConfirmedAwardBackupRequest = {
   aggregate: AuctionCallAggregate;
 };
 
+export type SuspendedSessionBackupRequest = {
+  auctionSessionId: string;
+};
+
 export interface AuctionBackupRequester {
   requestConfirmedAwardBackup(
     request: ConfirmedAwardBackupRequest
+  ): Promise<void>;
+
+  requestSuspendedSessionBackup(
+    request: SuspendedSessionBackupRequest
   ): Promise<void>;
 }
 
@@ -19,6 +27,12 @@ export class NoopAuctionBackupRequester
 {
   async requestConfirmedAwardBackup(
     _request: ConfirmedAwardBackupRequest
+  ): Promise<void> {
+    return;
+  }
+
+  async requestSuspendedSessionBackup(
+    _request: SuspendedSessionBackupRequest
   ): Promise<void> {
     return;
   }

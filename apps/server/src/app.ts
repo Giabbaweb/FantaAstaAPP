@@ -110,6 +110,9 @@ import {
 import {
   NoopAuctionBackupRequester
 } from "./services/auction-backup-requester.js";
+import type {
+  AuctionBackupRequester
+} from "./services/auction-backup-requester.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
@@ -120,7 +123,14 @@ import {
   ConfirmedAuctionAwardService
 } from "./services/confirmed-auction-award.service.js";
 
-export async function buildApp() {
+export type BuildAppOptions = {
+  auctionBackupRequester?:
+    AuctionBackupRequester;
+};
+
+export async function buildApp(
+  options: BuildAppOptions = {}
+) {
   const app = Fastify({
     logger: true
   });
@@ -195,11 +205,16 @@ export async function buildApp() {
       atomicAuctionSessionCommandExecutor
     );
 
+  const auctionBackupRequester =
+    options.auctionBackupRequester ??
+    new NoopAuctionBackupRequester();
+
   const auctionSessionOperationalCommandCoordinator =
     new AuctionSessionOperationalCommandCoordinator(
       auctionSessionOperationalCommandService,
       auctionSessionRealtimeDispatcher,
       auctionSnapshotDispatcher,
+      auctionBackupRequester,
       ({
         stage,
         type,
@@ -239,7 +254,7 @@ export async function buildApp() {
       atomicAuctionCallCommandService,
       auctionRealtimeDispatcher,
       auctionSnapshotDispatcher,
-      new NoopAuctionBackupRequester(),
+      auctionBackupRequester,
       ({
         stage,
         type,
