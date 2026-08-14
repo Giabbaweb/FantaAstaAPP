@@ -1,4 +1,15 @@
 export {
+  assertManualInitialRosterEntryAllowed,
+  manualInitialRosterAllowedStatuses,
+  ManualInitialRosterEntryDomainError
+} from "./manual-initial-roster-entry.js";
+
+export type {
+  ManualInitialRosterEntryDomainErrorCode,
+  ManualInitialRosterEntryValidationInput
+} from "./manual-initial-roster-entry.js";
+
+export {
   assertRosterAcquisitionAllowed
 } from "./roster-acquisition.js";
 
