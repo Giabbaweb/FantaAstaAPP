@@ -177,12 +177,20 @@ describe(
 
         const service = createService();
 
-        service.execute({
+        const result = service.execute({
           auctionSessionId,
           auctionSessionTeamId,
           playerId,
           acquisitionCost: 25,
           contractYear: 2
+        });
+
+        expect(result).toMatchObject({
+          auctionSessionTeamId,
+          playerId,
+          acquisitionCost: 25,
+          contractYear: 2,
+          source: "INITIAL_ROSTER"
         });
 
         const storedEntry = db

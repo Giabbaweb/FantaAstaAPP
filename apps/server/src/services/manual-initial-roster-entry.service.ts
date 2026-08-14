@@ -2,7 +2,8 @@ import {
   assertManualInitialRosterEntryAllowed
 } from "@fantaastaapp/domain";
 import type {
-  ContractYear
+  ContractYear,
+  RosterEntry
 } from "@fantaastaapp/domain";
 
 import {
@@ -84,19 +85,19 @@ export class ManualInitialRosterEntryService {
 
   execute(
     input: ManualInitialRosterEntryInput
-  ): void {
-    db.transaction((tx) => {
+  ): RosterEntry {
+    return db.transaction((tx) =>
       this.executeWithExecutor(
         tx,
         input
-      );
-    });
+      )
+    );
   }
 
   executeWithExecutor(
     executor: DatabaseWriteExecutor,
     input: ManualInitialRosterEntryInput
-  ): void {
+  ): RosterEntry {
       const auctionSession =
         this.auctionSessionRepository
           .findByIdWithExecutor(
@@ -239,20 +240,21 @@ export class ManualInitialRosterEntryService {
           input.contractYear
       });
 
-      this.rosterEntryRepository
-        .createWithExecutor(
-          executor,
-          {
-            auctionSessionTeamId:
-              auctionSessionTeam.id,
-            playerId: player.id,
-            acquisitionCost:
-              input.acquisitionCost,
-            contractYear:
-              input.contractYear,
-            source: "INITIAL_ROSTER"
-          }
-        );
+      const createdRosterEntry =
+        this.rosterEntryRepository
+          .createWithExecutor(
+            executor,
+            {
+              auctionSessionTeamId:
+                auctionSessionTeam.id,
+              playerId: player.id,
+              acquisitionCost:
+                input.acquisitionCost,
+              contractYear:
+                input.contractYear,
+              source: "INITIAL_ROSTER"
+            }
+          );
 
       const updatedTeam =
         this.auctionSessionTeamRepository
@@ -284,5 +286,7 @@ export class ManualInitialRosterEntryService {
           `Failed to update player "${player.id}"`
         );
       }
+
+      return createdRosterEntry;
   }
 }
