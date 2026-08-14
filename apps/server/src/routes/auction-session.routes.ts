@@ -1,4 +1,5 @@
 import {
+  addManualInitialRosterEntryCommandSchema,
   createAuctionSessionSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
@@ -7,6 +8,7 @@ import {
 import type {
   AuctionSession,
   CreateAuctionSessionInput,
+  RosterEntry,
   UpdateAuctionSessionInput
 } from "@fantaastaapp/contracts";
 import {
@@ -31,11 +33,20 @@ import type {
   AuctionSessionOperationalCommandErrorResponse
 } from "../http/auction-session-errors.js";
 import {
+  mapManualInitialRosterError
+} from "../http/manual-initial-roster-errors.js";
+import type {
+  ManualInitialRosterErrorMapping
+} from "../http/manual-initial-roster-errors.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import type {
   AuctionSessionOperationalCommandCoordinator
 } from "../realtime/auction-session-operational-command-coordinator.js";
+import type {
+  AtomicManualInitialRosterCommandService
+} from "../realtime/atomic-manual-initial-roster-command.service.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -68,6 +79,12 @@ type AuctionSessionCommandBody = {
   commandId?: unknown;
   stateVersion?: unknown;
   reason?: unknown;
+  auctionSessionTeamId?: unknown;
+  playerId?: unknown;
+  acquisitionCost?: unknown;
+  contractYear?: unknown;
+  actor?: unknown;
+  comment?: unknown;
 };
 
 type CreateAuctionSessionResponse = {
@@ -87,6 +104,13 @@ type ExecuteAuctionSessionCommandResponse = {
 
 type ExecuteOperationalAuctionSessionCommandResponse = {
   data: AuctionSession;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+type ExecuteManualInitialRosterCommandResponse = {
+  data: RosterEntry;
   stateVersion: number;
   idempotentReplay: boolean;
   error: null;
@@ -119,9 +143,16 @@ type AuctionSessionOperationalCommandPort = Pick<
   "suspend" | "resume"
 >;
 
+type ManualInitialRosterCommandPort = Pick<
+  AtomicManualInitialRosterCommandService,
+  "add"
+>;
+
 export function auctionSessionRoutes(
   operationalCommandService:
-    AuctionSessionOperationalCommandPort
+    AuctionSessionOperationalCommandPort,
+  manualInitialRosterCommandService:
+    ManualInitialRosterCommandPort
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{
@@ -333,7 +364,9 @@ fastify.get<{
         | InvalidRequestResponse
         | AuctionSessionNotFoundResponse
         | AuctionSessionConflictResponse
-        | AuctionSessionOperationalCommandErrorResponse;
+        | AuctionSessionOperationalCommandErrorResponse
+        | ExecuteManualInitialRosterCommandResponse
+        | ManualInitialRosterErrorMapping["body"];
     }>(
       "/api/auction-sessions/:id/commands/:command",
       async (request, reply) => {
@@ -459,6 +492,75 @@ fastify.get<{
 
             const mapped =
               mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "add-manual-initial-roster-entry"
+        ) {
+          const validation =
+            addManualInitialRosterEntryCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Manual initial roster command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await manualInitialRosterCommandService.add(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  auctionSessionTeamId:
+                    validation.data
+                      .auctionSessionTeamId,
+                  playerId:
+                    validation.data.playerId,
+                  acquisitionCost:
+                    validation.data
+                      .acquisitionCost,
+                  contractYear:
+                    validation.data.contractYear
+                },
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.rosterEntry,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapManualInitialRosterError(
+                error
+              );
 
             if (mapped) {
               return reply

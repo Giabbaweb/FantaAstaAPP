@@ -6,6 +6,12 @@ import {
   db
 } from "../db/client.js";
 import type {
+  AuctionEventRepository
+} from "../repositories/auction-event.repository.js";
+import type {
+  AuctionSessionTeamTransactionalRepository
+} from "../repositories/auction-session-team.repository.js";
+import type {
   ManualInitialRosterEntryInput,
   ManualInitialRosterEntryService
 } from "../services/manual-initial-roster-entry.service.js";
@@ -46,6 +52,11 @@ export type ExecuteAtomicManualInitialRosterCommandInput = {
     RegisteredManualInitialRosterCommandType;
   expectedStateVersion: number;
   requestFingerprint: string;
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment?: string | null;
   entry: ManualInitialRosterEntryInput;
 };
 
@@ -62,7 +73,11 @@ export class AtomicManualInitialRosterCommandExecutor {
     private readonly commandRegistryRepository:
       CommandRegistryRepository,
     private readonly manualInitialRosterEntryService:
-      ManualInitialRosterEntryService
+      ManualInitialRosterEntryService,
+    private readonly auctionSessionTeamRepository:
+      AuctionSessionTeamTransactionalRepository,
+    private readonly auctionEventRepository:
+      AuctionEventRepository
   ) {}
 
   async execute(
@@ -131,12 +146,32 @@ export class AtomicManualInitialRosterCommandExecutor {
         );
       }
 
+      const auctionSessionTeam =
+        this.auctionSessionTeamRepository
+          .findByIdWithExecutor(
+            tx,
+            input.entry.auctionSessionTeamId
+          );
+
+      if (!auctionSessionTeam) {
+        throw new Error(
+          `Auction session team "${input.entry.auctionSessionTeamId}" was not found before manual roster mutation`
+        );
+      }
+
+      const creditsBefore =
+        auctionSessionTeam.remainingCredits;
+
       const rosterEntry =
         this.manualInitialRosterEntryService
           .executeWithExecutor(
             tx,
             input.entry
           );
+
+      const creditsAfter =
+        creditsBefore -
+        input.entry.acquisitionCost;
 
       const resultStateVersion =
         this.stateRepository
@@ -152,6 +187,32 @@ export class AtomicManualInitialRosterCommandExecutor {
           `Auction session "${auctionSessionId}" no longer matches state version ${input.expectedStateVersion}`
         );
       }
+
+      this.auctionEventRepository
+        .createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+            auctionSessionTeamId:
+              input.entry.auctionSessionTeamId,
+            playerId:
+              input.entry.playerId,
+            amount:
+              input.entry.acquisitionCost,
+            creditsBefore,
+            creditsAfter,
+            contractYear:
+              input.entry.contractYear,
+            actorName:
+              input.actorName,
+            actorRole:
+              input.actorRole,
+            comment:
+              input.comment ?? null
+          }
+        );
 
       const registeredCommand =
         this.commandRegistryRepository

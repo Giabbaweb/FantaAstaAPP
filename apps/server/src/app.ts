@@ -66,6 +66,12 @@ import {
   AtomicAuctionSessionCommandExecutor
 } from "./realtime/atomic-auction-session-command.executor.js";
 import {
+  AtomicManualInitialRosterCommandExecutor
+} from "./realtime/atomic-manual-initial-roster-command.executor.js";
+import {
+  AtomicManualInitialRosterCommandService
+} from "./realtime/atomic-manual-initial-roster-command.service.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
@@ -122,6 +128,9 @@ import {
 import {
   ConfirmedAuctionAwardService
 } from "./services/confirmed-auction-award.service.js";
+import {
+  ManualInitialRosterEntryService
+} from "./services/manual-initial-roster-entry.service.js";
 
 export type BuildAppOptions = {
   auctionBackupRequester?:
@@ -203,6 +212,28 @@ export async function buildApp(
   const auctionSessionOperationalCommandService =
     new AuctionSessionOperationalCommandService(
       atomicAuctionSessionCommandExecutor
+    );
+
+  const manualInitialRosterEntryService =
+    new ManualInitialRosterEntryService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicManualInitialRosterCommandExecutor =
+    new AtomicManualInitialRosterCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      manualInitialRosterEntryService,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicManualInitialRosterCommandService =
+    new AtomicManualInitialRosterCommandService(
+      atomicManualInitialRosterCommandExecutor
     );
 
   const auctionBackupRequester =
@@ -307,7 +338,8 @@ export async function buildApp(
   await app.register(dbHealthRoutes);
   await app.register(
     auctionSessionRoutes(
-      auctionSessionOperationalCommandCoordinator
+      auctionSessionOperationalCommandCoordinator,
+      atomicManualInitialRosterCommandService
     )
   );
   await app.register(

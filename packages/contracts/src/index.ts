@@ -422,6 +422,41 @@ export type ResumeAuctionSessionCommand =
     typeof resumeAuctionSessionCommandSchema
   >;
 
+export const manualInitialRosterCommandActorSchema =
+  z.object({
+    name: z.string().trim().min(1).max(100),
+    role: z.enum([
+      "ADMINISTRATOR",
+      "AUCTIONEER"
+    ])
+  });
+
+export type ManualInitialRosterCommandActor =
+  z.infer<
+    typeof manualInitialRosterCommandActorSchema
+  >;
+
+export const addManualInitialRosterEntryCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    auctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    playerId:
+      z.string().trim().min(1).max(100),
+    acquisitionCost:
+      z.number().int().positive(),
+    contractYear:
+      contractYearSchema,
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().max(500).nullable().optional()
+  });
+
+export type AddManualInitialRosterEntryCommand =
+  z.infer<
+    typeof addManualInitialRosterEntryCommandSchema
+  >;
+
 export const auctionCommandTypeSchema = z.enum([
   "OPEN",
   "BID",

@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../db/client.js";
 import {
+  auctionEvents,
   auctionSessions,
   auctionSessionTeams,
   commandRegistry,
@@ -16,6 +17,9 @@ import {
   rosterEntries,
   teams
 } from "../db/schema/index.js";
+import {
+  SqliteAuctionEventRepository
+} from "../repositories/auction-event.repository.js";
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
@@ -60,6 +64,7 @@ describe(
 
     beforeEach(() => {
       db.delete(commandRegistry).run();
+      db.delete(auctionEvents).run();
       db.delete(rosterEntries).run();
       db.delete(players).run();
       db.delete(auctionSessionTeams).run();
@@ -133,7 +138,9 @@ describe(
         new AtomicManualInitialRosterCommandExecutor(
           new SqliteAuctionSessionStateRepository(),
           new SqliteCommandRegistryRepository(),
-          manualService
+          manualService,
+          new SqliteAuctionSessionTeamRepository(),
+          new SqliteAuctionEventRepository()
         );
     });
 
@@ -155,6 +162,12 @@ describe(
         requestFingerprint:
           overrides.requestFingerprint ??
           "manual-roster:team:player:25:2",
+        actorName:
+          "Gianfranco",
+        actorRole:
+          "AUCTIONEER" as const,
+        comment:
+          "Inserimento manuale iniziale",
         entry: {
           auctionSessionId,
           auctionSessionTeamId,
@@ -257,6 +270,31 @@ describe(
           expectedStateVersion: 0,
           resultStateVersion: 1
         });
+
+        const storedEvents = db
+          .select()
+          .from(auctionEvents)
+          .all();
+
+        expect(storedEvents).toHaveLength(1);
+
+        expect(storedEvents[0]).toMatchObject({
+          auctionSessionId,
+          auctionCallId: null,
+          eventType:
+            "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+          auctionSessionTeamId,
+          playerId,
+          amount: 25,
+          creditsBefore: 100,
+          creditsAfter: 75,
+          contractYear: 2,
+          actorName: "Gianfranco",
+          actorRole: "AUCTIONEER",
+          comment:
+            "Inserimento manuale iniziale",
+          suspensionReason: null
+        });
       }
     );
 
@@ -314,6 +352,12 @@ describe(
         expect(
           storedTeam?.remainingCredits
         ).toBe(75);
+
+        expect(
+          db.select()
+            .from(auctionEvents)
+            .all()
+        ).toHaveLength(1);
       }
     );
 
@@ -408,7 +452,9 @@ describe(
           new AtomicManualInitialRosterCommandExecutor(
             new SqliteAuctionSessionStateRepository(),
             new FailingCommandRegistryRepository(),
-            manualService
+            manualService,
+            new SqliteAuctionSessionTeamRepository(),
+            new SqliteAuctionEventRepository()
           );
 
         await expect(
@@ -468,6 +514,12 @@ describe(
         expect(
           db.select()
             .from(commandRegistry)
+            .all()
+        ).toHaveLength(0);
+
+        expect(
+          db.select()
+            .from(auctionEvents)
             .all()
         ).toHaveLength(0);
       }
