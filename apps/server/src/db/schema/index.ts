@@ -516,7 +516,8 @@ export const commandRegistry = sqliteTable(
         "CONFIRM",
         "CANCEL",
         "SUSPEND_SESSION",
-        "RESUME_SESSION"
+        "RESUME_SESSION",
+        "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
       ]
     }).notNull(),
 

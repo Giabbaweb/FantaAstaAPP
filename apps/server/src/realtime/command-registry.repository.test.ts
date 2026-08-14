@@ -205,6 +205,68 @@ describe("SqliteCommandRegistryRepository", () => {
     expect(found).toEqual(created);
   });
 
+  it(
+    "stores and restores a manual initial roster command result",
+    async () => {
+      const result = {
+        id: "roster-entry-command-result-1",
+        auctionSessionTeamId:
+          "session-team-1",
+        playerId: "player-1",
+        acquisitionCost: 25,
+        contractYear: 2 as const,
+        source: "INITIAL_ROSTER" as const,
+        createdAt:
+          "2026-08-14T20:00:00.000Z",
+        updatedAt:
+          "2026-08-14T20:00:00.000Z"
+      };
+
+      const created =
+        await repository
+          .createManualInitialRosterCommand({
+            auctionSessionId:
+              "session-1",
+            commandId:
+              "manual-roster-command-1",
+            commandType:
+              "ADD_MANUAL_INITIAL_ROSTER_ENTRY",
+            expectedStateVersion: 0,
+            resultStateVersion: 1,
+            requestFingerprint:
+              "manual-roster:team-1:player-1:25:2",
+            result
+          });
+
+      expect(created).toEqual(
+        expect.objectContaining({
+          auctionSessionId:
+            "session-1",
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId: null,
+          commandId:
+            "manual-roster-command-1",
+          commandType:
+            "ADD_MANUAL_INITIAL_ROSTER_ENTRY",
+          expectedStateVersion: 0,
+          resultStateVersion: 1,
+          requestFingerprint:
+            "manual-roster:team-1:player-1:25:2",
+          result
+        })
+      );
+
+      const found =
+        await repository.findByCommandId(
+          "session-1",
+          "manual-roster-command-1"
+        );
+
+      expect(found).toEqual(created);
+    }
+  );
+
   it("returns null for an unknown command", async () => {
     await expect(
       repository.findByCommandId(

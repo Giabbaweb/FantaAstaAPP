@@ -101,6 +101,18 @@ export class AtomicAuctionSessionCommandExecutor {
           );
         }
 
+        if (
+          existingCommand.commandType !==
+            "SUSPEND_SESSION" &&
+          existingCommand.commandType !==
+            "RESUME_SESSION"
+        ) {
+          throw new AtomicAuctionSessionCommandExecutorError(
+            "COMMAND_ID_CONFLICT",
+            `Command ID "${input.commandId}" was already used with a different session command type`
+          );
+        }
+
         this.assertMatchingCommand(
           existingCommand,
           input

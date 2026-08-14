@@ -9,10 +9,12 @@ import {
 
 import {
   auctionSessionSchema,
-  realtimeOperationalAuctionCallSchema
+  realtimeOperationalAuctionCallSchema,
+  rosterEntrySchema
 } from "@fantaastaapp/contracts";
 import type {
-  AuctionSession
+  AuctionSession,
+  RosterEntry
 } from "@fantaastaapp/contracts";
 
 import {
@@ -39,6 +41,9 @@ export type RegisteredAuctionCommandType =
 export type RegisteredAuctionSessionCommandType =
   | "SUSPEND_SESSION"
   | "RESUME_SESSION";
+
+export type RegisteredManualInitialRosterCommandType =
+  "ADD_MANUAL_INITIAL_ROSTER_ENTRY";
 
 type RegisteredCommandBase = {
   id: string;
@@ -67,9 +72,19 @@ export type RegisteredAuctionSessionCommand =
     result: AuctionSession;
   };
 
+export type RegisteredManualInitialRosterCommand =
+  RegisteredCommandBase & {
+    commandScope: "AUCTION_SESSION";
+    auctionCallId: null;
+    commandType:
+      RegisteredManualInitialRosterCommandType;
+    result: RosterEntry;
+  };
+
 export type RegisteredCommand =
   | RegisteredAuctionCommand
-  | RegisteredAuctionSessionCommand;
+  | RegisteredAuctionSessionCommand
+  | RegisteredManualInitialRosterCommand;
 
 export type RegisterAuctionCommandInput = {
   auctionSessionId: string;
@@ -91,6 +106,17 @@ export type RegisterAuctionSessionCommandInput = {
   resultStateVersion: number;
   requestFingerprint: string;
   result: AuctionSession;
+};
+
+export type RegisterManualInitialRosterCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  commandType:
+    RegisteredManualInitialRosterCommandType;
+  expectedStateVersion: number;
+  resultStateVersion: number;
+  requestFingerprint: string;
+  result: RosterEntry;
 };
 
 export interface CommandRegistryRepository {
@@ -122,6 +148,15 @@ export interface CommandRegistryRepository {
     executor: DatabaseWriteExecutor,
     input: RegisterAuctionSessionCommandInput
   ): RegisteredAuctionSessionCommand;
+
+  createManualInitialRosterCommand(
+    input: RegisterManualInitialRosterCommandInput
+  ): Promise<RegisteredManualInitialRosterCommand>;
+
+  createManualInitialRosterCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterManualInitialRosterCommandInput
+  ): RegisteredManualInitialRosterCommand;
 }
 
 export class SqliteCommandRegistryRepository
@@ -271,9 +306,76 @@ export class SqliteCommandRegistryRepository
 
     const mapped = this.mapRecord(record);
 
-    if (mapped.commandScope !== "AUCTION_SESSION") {
+    if (
+      mapped.commandScope !== "AUCTION_SESSION" ||
+      (
+        mapped.commandType !== "SUSPEND_SESSION" &&
+        mapped.commandType !== "RESUME_SESSION"
+      )
+    ) {
       throw new Error(
-        `Command "${input.commandId}" has an invalid command scope`
+        `Command "${input.commandId}" has an invalid command type`
+      );
+    }
+
+    return mapped;
+  }
+
+  async createManualInitialRosterCommand(
+    input: RegisterManualInitialRosterCommandInput
+  ): Promise<RegisteredManualInitialRosterCommand> {
+    return this.createManualInitialRosterCommandWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createManualInitialRosterCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterManualInitialRosterCommandInput
+  ): RegisteredManualInitialRosterCommand {
+    const [record] = executor
+      .insert(commandRegistry)
+      .values({
+        id: randomUUID(),
+        auctionSessionId:
+          input.auctionSessionId,
+        commandScope:
+          "AUCTION_SESSION",
+        auctionCallId:
+          null,
+        commandId:
+          input.commandId,
+        commandType:
+          input.commandType,
+        expectedStateVersion:
+          input.expectedStateVersion,
+        resultStateVersion:
+          input.resultStateVersion,
+        requestFingerprint:
+          input.requestFingerprint,
+        resultPayload:
+          JSON.stringify(input.result)
+      })
+      .returning()
+      .all();
+
+    if (!record) {
+      throw new Error(
+        `Failed to register manual initial roster command "${input.commandId}"`
+      );
+    }
+
+    const mapped = this.mapRecord(record);
+
+    if (
+      mapped.commandScope !==
+        "AUCTION_SESSION" ||
+      mapped.commandType !==
+        "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
+    ) {
+      throw new Error(
+        `Command "${input.commandId}" has an invalid command type`
       );
     }
 
@@ -356,47 +458,85 @@ export class SqliteCommandRegistryRepository
         );
       }
 
-      const parsedResult =
-        auctionSessionSchema.safeParse(payload);
+      if (
+        record.commandType === "SUSPEND_SESSION" ||
+        record.commandType === "RESUME_SESSION"
+      ) {
+        const parsedResult =
+          auctionSessionSchema.safeParse(payload);
 
-      if (!parsedResult.success) {
-        throw new Error(
-          `Command "${record.commandId}" has an invalid auction session result`
-        );
+        if (!parsedResult.success) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid auction session result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId:
+            null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult.data,
+          createdAt:
+            record.createdAt
+        };
       }
 
       if (
-        record.commandType !== "SUSPEND_SESSION" &&
-        record.commandType !== "RESUME_SESSION"
+        record.commandType ===
+          "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
       ) {
-        throw new Error(
-          `Command "${record.commandId}" has an invalid auction session command type`
-        );
+        const parsedResult =
+          rosterEntrySchema.safeParse(payload);
+
+        if (!parsedResult.success) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid manual initial roster result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId:
+            null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult.data,
+          createdAt:
+            record.createdAt
+        };
       }
 
-      return {
-        id: record.id,
-        auctionSessionId:
-          record.auctionSessionId,
-        commandScope:
-          "AUCTION_SESSION",
-        auctionCallId:
-          null,
-        commandId:
-          record.commandId,
-        commandType:
-          record.commandType,
-        expectedStateVersion:
-          record.expectedStateVersion,
-        resultStateVersion:
-          record.resultStateVersion,
-        requestFingerprint:
-          record.requestFingerprint,
-        result:
-          parsedResult.data,
-        createdAt:
-          record.createdAt
-      };
+      throw new Error(
+        `Command "${record.commandId}" has an invalid auction session command type`
+      );
     }
 
     throw new Error(
