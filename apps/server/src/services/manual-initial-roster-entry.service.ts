@@ -9,6 +9,9 @@ import {
   db
 } from "../db/client.js";
 import type {
+  DatabaseWriteExecutor
+} from "../db/client.js";
+import type {
   AuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import type {
@@ -83,10 +86,21 @@ export class ManualInitialRosterEntryService {
     input: ManualInitialRosterEntryInput
   ): void {
     db.transaction((tx) => {
+      this.executeWithExecutor(
+        tx,
+        input
+      );
+    });
+  }
+
+  executeWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: ManualInitialRosterEntryInput
+  ): void {
       const auctionSession =
         this.auctionSessionRepository
           .findByIdWithExecutor(
-            tx,
+            executor,
             input.auctionSessionId
           );
 
@@ -100,7 +114,7 @@ export class ManualInitialRosterEntryService {
       const auctionSessionTeam =
         this.auctionSessionTeamRepository
           .findByIdWithExecutor(
-            tx,
+            executor,
             input.auctionSessionTeamId
           );
 
@@ -124,7 +138,7 @@ export class ManualInitialRosterEntryService {
       const player =
         this.playerRepository
           .findByIdWithExecutor(
-            tx,
+            executor,
             input.playerId
           );
 
@@ -158,7 +172,7 @@ export class ManualInitialRosterEntryService {
       const existingRosterEntry =
         this.rosterEntryRepository
           .findByPlayerIdWithExecutor(
-            tx,
+            executor,
             player.id
           );
 
@@ -172,14 +186,14 @@ export class ManualInitialRosterEntryService {
       const roster =
         this.rosterEntryRepository
           .findByAuctionSessionTeamIdWithExecutor(
-            tx,
+            executor,
             auctionSessionTeam.id
           );
 
       const rosterPlayers =
         this.playerRepository
           .findByIdsWithExecutor(
-            tx,
+            executor,
             roster.map(
               (entry) => entry.playerId
             )
@@ -227,7 +241,7 @@ export class ManualInitialRosterEntryService {
 
       this.rosterEntryRepository
         .createWithExecutor(
-          tx,
+          executor,
           {
             auctionSessionTeamId:
               auctionSessionTeam.id,
@@ -243,7 +257,7 @@ export class ManualInitialRosterEntryService {
       const updatedTeam =
         this.auctionSessionTeamRepository
           .updateRemainingCreditsWithExecutor(
-            tx,
+            executor,
             auctionSessionTeam.id,
             auctionSessionTeam.remainingCredits -
               input.acquisitionCost
@@ -259,7 +273,7 @@ export class ManualInitialRosterEntryService {
       const updatedPlayer =
         this.playerRepository
           .updateAvailabilityStatusWithExecutor(
-            tx,
+            executor,
             player.id,
             "ROSTERED"
           );
@@ -270,6 +284,5 @@ export class ManualInitialRosterEntryService {
           `Failed to update player "${player.id}"`
         );
       }
-    });
   }
 }
