@@ -596,6 +596,7 @@ export const auctionEvents = sqliteTable(
       enum: [
         "AUCTION_AWARD_CONFIRMED",
         "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+        "MANUAL_ROSTER_ASSIGNMENT_ADDED",
         "SESSION_SUSPENDED",
         "SESSION_RESUMED"
       ]
@@ -644,6 +645,18 @@ export const auctionEvents = sqliteTable(
       "comment"
     ),
 
+    manualAssignmentReason: text(
+      "manual_assignment_reason",
+      {
+        enum: [
+          "OPTION_EXERCISED_MANUALLY",
+          "OPTION_NO_EXTERNAL_BID",
+          "TECHNICAL_CORRECTION",
+          "OTHER"
+        ]
+      }
+    ),
+
     suspensionReason: text(
       "suspension_reason",
       {
@@ -684,6 +697,7 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorName} IS NULL
           AND ${table.actorRole} IS NULL
           AND ${table.comment} IS NULL
+          AND ${table.manualAssignmentReason} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR
@@ -698,6 +712,22 @@ export const auctionEvents = sqliteTable(
           AND ${table.contractYear} IS NOT NULL
           AND ${table.actorName} IS NOT NULL
           AND ${table.actorRole} IS NOT NULL
+          AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'MANUAL_ROSTER_ASSIGNMENT_ADDED'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NOT NULL
+          AND ${table.playerId} IS NOT NULL
+          AND ${table.amount} IS NOT NULL
+          AND ${table.creditsBefore} IS NOT NULL
+          AND ${table.creditsAfter} IS NOT NULL
+          AND ${table.contractYear} IS NOT NULL
+          AND ${table.actorName} IS NOT NULL
+          AND ${table.actorRole} IS NOT NULL
+          AND ${table.manualAssignmentReason} IS NOT NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR
@@ -713,6 +743,7 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorName} IS NULL
           AND ${table.actorRole} IS NULL
           AND ${table.comment} IS NULL
+          AND ${table.manualAssignmentReason} IS NULL
           AND ${table.suspensionReason} IS NOT NULL
         )
         OR
@@ -728,6 +759,7 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorName} IS NULL
           AND ${table.actorRole} IS NULL
           AND ${table.comment} IS NULL
+          AND ${table.manualAssignmentReason} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
       )`

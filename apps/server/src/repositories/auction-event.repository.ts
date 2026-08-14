@@ -20,6 +20,7 @@ import {
 export type AuctionEventType =
   | "AUCTION_AWARD_CONFIRMED"
   | "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY"
+  | "MANUAL_ROSTER_ASSIGNMENT_ADDED"
   | "SESSION_SUSPENDED"
   | "SESSION_RESUMED";
 
@@ -37,6 +38,7 @@ export type AuctionAwardConfirmedEvent = {
   actorName: null;
   actorRole: null;
   comment: null;
+  manualAssignmentReason: null;
   suspensionReason: null;
   createdAt: string;
 };
@@ -58,6 +60,33 @@ export type ManualInitialRosterEntryAddedEvent = {
     | "ADMINISTRATOR"
     | "AUCTIONEER";
   comment: string | null;
+  manualAssignmentReason: null;
+  suspensionReason: null;
+  createdAt: string;
+};
+
+export type ManualRosterAssignmentAddedEvent = {
+  id: string;
+  auctionSessionId: string;
+  auctionCallId: null;
+  eventType:
+    "MANUAL_ROSTER_ASSIGNMENT_ADDED";
+  auctionSessionTeamId: string;
+  playerId: string;
+  amount: number;
+  creditsBefore: number;
+  creditsAfter: number;
+  contractYear: 1 | 2 | 3;
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment: string | null;
+  manualAssignmentReason:
+    | "OPTION_EXERCISED_MANUALLY"
+    | "OPTION_NO_EXTERNAL_BID"
+    | "TECHNICAL_CORRECTION"
+    | "OTHER";
   suspensionReason: null;
   createdAt: string;
 };
@@ -76,6 +105,7 @@ export type AuctionSessionSuspendedEvent = {
   actorName: null;
   actorRole: null;
   comment: null;
+  manualAssignmentReason: null;
   suspensionReason:
     | "PIZZA_BREAK"
     | "TECHNICAL_BREAK"
@@ -99,6 +129,7 @@ export type AuctionSessionResumedEvent = {
   actorName: null;
   actorRole: null;
   comment: null;
+  manualAssignmentReason: null;
   suspensionReason: null;
   createdAt: string;
 };
@@ -106,6 +137,7 @@ export type AuctionSessionResumedEvent = {
 export type AuctionEvent =
   | AuctionAwardConfirmedEvent
   | ManualInitialRosterEntryAddedEvent
+  | ManualRosterAssignmentAddedEvent
   | AuctionSessionSuspendedEvent
   | AuctionSessionResumedEvent;
 
@@ -137,6 +169,27 @@ export type CreateManualInitialRosterEntryAddedEventInput = {
   comment?: string | null;
 };
 
+export type CreateManualRosterAssignmentAddedEventInput = {
+  auctionSessionId: string;
+  eventType:
+    "MANUAL_ROSTER_ASSIGNMENT_ADDED";
+  auctionSessionTeamId: string;
+  playerId: string;
+  amount: number;
+  creditsBefore: number;
+  creditsAfter: number;
+  contractYear: 1 | 2 | 3;
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment?: string | null;
+  manualAssignmentReason:
+    ManualRosterAssignmentAddedEvent[
+      "manualAssignmentReason"
+    ];
+};
+
 export type CreateAuctionSessionSuspendedEventInput = {
   auctionSessionId: string;
   eventType: "SESSION_SUSPENDED";
@@ -152,6 +205,7 @@ export type CreateAuctionSessionResumedEventInput = {
 export type CreateAuctionEventInput =
   | CreateAuctionAwardConfirmedEventInput
   | CreateManualInitialRosterEntryAddedEventInput
+  | CreateManualRosterAssignmentAddedEventInput
   | CreateAuctionSessionSuspendedEventInput
   | CreateAuctionSessionResumedEventInput;
 
@@ -174,6 +228,7 @@ function mapAuctionEvent(
         record.actorName !== null ||
         record.actorRole !== null ||
         record.comment !== null ||
+        record.manualAssignmentReason !== null ||
         record.suspensionReason !== null
       ) {
         throw new Error(
@@ -201,6 +256,7 @@ function mapAuctionEvent(
         actorName: null,
         actorRole: null,
         comment: null,
+        manualAssignmentReason: null,
         suspensionReason: null
       };
     }
@@ -225,6 +281,7 @@ function mapAuctionEvent(
           record.actorRole !== "ADMINISTRATOR" &&
           record.actorRole !== "AUCTIONEER"
         ) ||
+        record.manualAssignmentReason !== null ||
         record.suspensionReason !== null
       ) {
         throw new Error(
@@ -255,6 +312,64 @@ function mapAuctionEvent(
           record.actorRole,
         comment:
           record.comment,
+        manualAssignmentReason: null,
+        suspensionReason: null
+      };
+    }
+
+    case "MANUAL_ROSTER_ASSIGNMENT_ADDED": {
+      if (
+        record.auctionCallId !== null ||
+        record.auctionSessionTeamId === null ||
+        record.playerId === null ||
+        record.amount === null ||
+        record.creditsBefore === null ||
+        record.creditsAfter === null ||
+        record.contractYear === null ||
+        (
+          record.contractYear !== 1 &&
+          record.contractYear !== 2 &&
+          record.contractYear !== 3
+        ) ||
+        record.actorName === null ||
+        record.actorName.length === 0 ||
+        (
+          record.actorRole !== "ADMINISTRATOR" &&
+          record.actorRole !== "AUCTIONEER"
+        ) ||
+        record.manualAssignmentReason === null ||
+        record.suspensionReason !== null
+      ) {
+        throw new Error(
+          `Invalid MANUAL_ROSTER_ASSIGNMENT_ADDED event "${record.id}"`
+        );
+      }
+
+      return {
+        ...record,
+        eventType:
+          "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+        auctionCallId: null,
+        auctionSessionTeamId:
+          record.auctionSessionTeamId,
+        playerId:
+          record.playerId,
+        amount:
+          record.amount,
+        creditsBefore:
+          record.creditsBefore,
+        creditsAfter:
+          record.creditsAfter,
+        contractYear:
+          record.contractYear,
+        actorName:
+          record.actorName,
+        actorRole:
+          record.actorRole,
+        comment:
+          record.comment,
+        manualAssignmentReason:
+          record.manualAssignmentReason,
         suspensionReason: null
       };
     }
@@ -271,6 +386,7 @@ function mapAuctionEvent(
         record.actorName !== null ||
         record.actorRole !== null ||
         record.comment !== null ||
+        record.manualAssignmentReason !== null ||
         record.suspensionReason === null
       ) {
         throw new Error(
@@ -292,6 +408,7 @@ function mapAuctionEvent(
         actorName: null,
         actorRole: null,
         comment: null,
+        manualAssignmentReason: null,
         suspensionReason:
           record.suspensionReason
       };
@@ -309,6 +426,7 @@ function mapAuctionEvent(
         record.actorName !== null ||
         record.actorRole !== null ||
         record.comment !== null ||
+        record.manualAssignmentReason !== null ||
         record.suspensionReason !== null
       ) {
         throw new Error(
@@ -330,6 +448,7 @@ function mapAuctionEvent(
         actorName: null,
         actorRole: null,
         comment: null,
+        manualAssignmentReason: null,
         suspensionReason: null
       };
     }
@@ -401,6 +520,7 @@ export class SqliteAuctionEventRepository
             actorName: null,
             actorRole: null,
             comment: null,
+            manualAssignmentReason: null,
             suspensionReason: null
           }
         : input.eventType ===
@@ -430,6 +550,38 @@ export class SqliteAuctionEventRepository
                 input.actorRole,
               comment:
                 input.comment ?? null,
+              manualAssignmentReason: null,
+              suspensionReason: null
+            }
+        : input.eventType ===
+            "MANUAL_ROSTER_ASSIGNMENT_ADDED"
+          ? {
+              id,
+              auctionSessionId:
+                input.auctionSessionId,
+              auctionCallId: null,
+              eventType:
+                input.eventType,
+              auctionSessionTeamId:
+                input.auctionSessionTeamId,
+              playerId:
+                input.playerId,
+              amount:
+                input.amount,
+              creditsBefore:
+                input.creditsBefore,
+              creditsAfter:
+                input.creditsAfter,
+              contractYear:
+                input.contractYear,
+              actorName:
+                input.actorName,
+              actorRole:
+                input.actorRole,
+              comment:
+                input.comment ?? null,
+              manualAssignmentReason:
+                input.manualAssignmentReason,
               suspensionReason: null
             }
         : input.eventType ===
@@ -450,6 +602,7 @@ export class SqliteAuctionEventRepository
               actorName: null,
               actorRole: null,
               comment: null,
+              manualAssignmentReason: null,
               suspensionReason:
                 input.suspensionReason
             }
@@ -469,6 +622,7 @@ export class SqliteAuctionEventRepository
               actorName: null,
               actorRole: null,
               comment: null,
+              manualAssignmentReason: null,
               suspensionReason: null
             };
 

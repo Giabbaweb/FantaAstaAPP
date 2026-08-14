@@ -317,6 +317,120 @@ describe("SqliteAuctionEventRepository", () => {
   );
 
   it(
+    "creates and reads a manual roster assignment event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name: "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      db.insert(teams)
+        .values({
+          id: teamId,
+          leagueId,
+          name: "Auction Event Test Team"
+        })
+        .run();
+
+      db.insert(auctionSessionTeams)
+        .values({
+          id: auctionSessionTeamId,
+          auctionSessionId,
+          teamId,
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 300
+        })
+        .run();
+
+      db.insert(players)
+        .values({
+          id: playerId,
+          auctionSessionId,
+          fmsCode:
+            "AUDIT-MANUAL-ASSIGNMENT-001",
+          name:
+            "Manual Assignment Audit Player",
+          normalizedName:
+            "manual assignment audit player",
+          role: "A",
+          availabilityStatus:
+            "ROSTERED"
+        })
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+            auctionSessionTeamId,
+            playerId,
+            amount: 30,
+            creditsBefore: 330,
+            creditsAfter: 300,
+            contractYear: 3,
+            actorName: "Gianfranco",
+            actorRole: "AUCTIONEER",
+            manualAssignmentReason:
+              "OPTION_EXERCISED_MANUALLY",
+            comment:
+              "Opzione registrata manualmente"
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+        auctionSessionTeamId,
+        playerId,
+        amount: 30,
+        creditsBefore: 330,
+        creditsAfter: 300,
+        contractYear: 3,
+        actorName: "Gianfranco",
+        actorRole: "AUCTIONEER",
+        manualAssignmentReason:
+          "OPTION_EXERCISED_MANUALLY",
+        comment:
+          "Opzione registrata manualmente",
+        suspensionReason: null
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
     "creates and reads a suspended session event",
     async () => {
       db.insert(leagues)
