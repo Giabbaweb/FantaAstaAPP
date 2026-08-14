@@ -213,6 +213,110 @@ describe("SqliteAuctionEventRepository", () => {
   );
 
   it(
+    "creates and reads a manually added initial roster event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name: "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      db.insert(teams)
+        .values({
+          id: teamId,
+          leagueId,
+          name: "Auction Event Test Team"
+        })
+        .run();
+
+      db.insert(auctionSessionTeams)
+        .values({
+          id: auctionSessionTeamId,
+          auctionSessionId,
+          teamId,
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 305
+        })
+        .run();
+
+      db.insert(players)
+        .values({
+          id: playerId,
+          auctionSessionId,
+          fmsCode: "AUDIT-MANUAL-001",
+          name: "Manual Audit Player",
+          normalizedName:
+            "manual audit player",
+          role: "C",
+          availabilityStatus: "ROSTERED"
+        })
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+            auctionSessionTeamId,
+            playerId,
+            amount: 25,
+            creditsBefore: 330,
+            creditsAfter: 305,
+            contractYear: 2,
+            actorName: "Gianfranco",
+            actorRole: "ADMINISTRATOR"
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+        auctionSessionTeamId,
+        playerId,
+        amount: 25,
+        creditsBefore: 330,
+        creditsAfter: 305,
+        contractYear: 2,
+        actorName: "Gianfranco",
+        actorRole: "ADMINISTRATOR",
+        comment: null,
+        suspensionReason: null
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
     "creates and reads a suspended session event",
     async () => {
       db.insert(leagues)
