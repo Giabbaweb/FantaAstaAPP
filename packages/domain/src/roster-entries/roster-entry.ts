@@ -47,7 +47,8 @@ export type RosterEntryDomainErrorCode =
   | "INVALID_CONTRACT_YEAR"
   | "ROSTER_ROLE_LIMIT_EXCEEDED"
   | "ROSTER_SIZE_LIMIT_EXCEEDED"
-  | "INSUFFICIENT_CREDITS";
+  | "INSUFFICIENT_CREDITS"
+  | "INSUFFICIENT_CREDITS_TO_COMPLETE_ROSTER";
 
 export class RosterEntryDomainError extends Error {
   readonly code: RosterEntryDomainErrorCode;

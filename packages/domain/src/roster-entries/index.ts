@@ -1,4 +1,12 @@
 export {
+  assertRosterAcquisitionAllowed
+} from "./roster-acquisition.js";
+
+export type {
+  RosterAcquisitionValidationInput
+} from "./roster-acquisition.js";
+
+export {
   RosterEntryDomainError,
   assertAcquisitionCostAllowed,
   assertContractYearAllowed,
