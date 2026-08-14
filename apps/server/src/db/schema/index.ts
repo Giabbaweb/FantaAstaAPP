@@ -68,6 +68,11 @@ export const auctionSessions = sqliteTable(
       .notNull()
       .default(330),
 
+    maximumInitialRosterEntries:
+      integer("maximum_initial_roster_entries")
+        .notNull()
+        .default(11),
+
     stateVersion: integer("state_version")
       .notNull()
       .default(0),
@@ -92,6 +97,10 @@ export const auctionSessions = sqliteTable(
     check(
       "auction_sessions_initial_credits_nonnegative",
       sql`${table.initialCredits} >= 0`
+    ),
+    check(
+      "auction_sessions_maximum_initial_roster_entries_range",
+      sql`${table.maximumInitialRosterEntries} >= 0 AND ${table.maximumInitialRosterEntries} <= 24`
     )
   ]
 );

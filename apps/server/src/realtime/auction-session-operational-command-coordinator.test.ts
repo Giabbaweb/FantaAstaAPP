@@ -24,6 +24,7 @@ describe(
       status: "SUSPENDED",
       suspensionReason: "PIZZA_BREAK",
       initialCredits: 330,
+      maximumInitialRosterEntries: 11,
       createdAt:
         "2026-08-13T18:00:00.000Z",
       updatedAt:

@@ -198,6 +198,8 @@ export const auctionSessionSchema = z.object({
   suspensionReason:
     auctionSessionSuspensionReasonSchema.nullable(),
   initialCredits: z.number().int().nonnegative(),
+  maximumInitialRosterEntries:
+    z.number().int().min(0).max(24),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1)
 });
@@ -208,7 +210,9 @@ export const createAuctionSessionSchema = z.object({
   leagueId: z.string().min(1),
   season: z.string().trim().min(1),
   editionNumber: z.number().int().positive(),
-  initialCredits: z.number().int().nonnegative().default(330)
+  initialCredits: z.number().int().nonnegative().default(330),
+  maximumInitialRosterEntries:
+    z.number().int().min(0).max(24).default(11)
 });
 
 export type CreateAuctionSessionInput = z.infer<
@@ -220,7 +224,9 @@ export const updateAuctionSessionSchema = z
     leagueId: z.string().min(1).optional(),
     season: z.string().trim().min(1).optional(),
     editionNumber: z.number().int().positive().optional(),
-    initialCredits: z.number().int().nonnegative().optional()
+    initialCredits: z.number().int().nonnegative().optional(),
+    maximumInitialRosterEntries:
+      z.number().int().min(0).max(24).optional()
   })
   .refine(
     (value) => Object.values(value).some((field) => field !== undefined),

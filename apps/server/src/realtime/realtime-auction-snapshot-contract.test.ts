@@ -67,6 +67,7 @@ describe("realtime auction snapshot contracts", () => {
         status: "RUNNING",
         suspensionReason: null,
         initialCredits: 330,
+        maximumInitialRosterEntries: 11,
         createdAt:
           "2026-08-02T19:00:00.000Z",
         updatedAt:
@@ -120,6 +121,7 @@ describe("realtime auction snapshot contracts", () => {
           status: "READY",
           suspensionReason: null,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           createdAt:
             "2026-08-02T19:00:00.000Z",
           updatedAt:
@@ -155,6 +157,7 @@ describe("realtime auction snapshot contracts", () => {
           status: "RUNNING",
           suspensionReason: null,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           createdAt:
             "2026-08-02T19:00:00.000Z",
           updatedAt:

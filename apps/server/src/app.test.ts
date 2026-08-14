@@ -134,6 +134,7 @@ describe("application integration", () => {
         status: "SETUP",
         suspensionReason: null,
         initialCredits: 330,
+        maximumInitialRosterEntries: 11,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -218,6 +219,7 @@ describe("application integration", () => {
       status: "READY",
       suspensionReason: null,
       initialCredits: 330,
+      maximumInitialRosterEntries: 11,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });
@@ -309,6 +311,7 @@ describe("GET /api/auction-sessions", () => {
         status: "SETUP",
         suspensionReason: null,
         initialCredits: 330,
+        maximumInitialRosterEntries: 11,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -359,6 +362,7 @@ describe("GET /api/auction-sessions", () => {
         status: "SETUP",
         suspensionReason: null,
         initialCredits: 330,
+        maximumInitialRosterEntries: 11,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -373,6 +377,68 @@ describe("GET /api/auction-sessions", () => {
       expect(stored?.leagueId).toBe("league-sfl92");
       expect(stored?.season).toBe("2026/2027");
     });
+
+    it(
+      "creates a session with a custom maximum initial roster entries value",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-custom-initial-roster-limit",
+          name: "Custom Initial Roster Limit League",
+          normalizedName:
+            "custom initial roster limit league"
+        });
+
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId:
+              "league-custom-initial-roster-limit",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            maximumInitialRosterEntries: 8
+          }
+        });
+
+        expect(response.statusCode).toBe(201);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            leagueId:
+              "league-custom-initial-roster-limit",
+            maximumInitialRosterEntries: 8
+          }),
+          error: null
+        });
+      }
+    );
+
+    it.each([-1, 25])(
+      "returns 400 when maximum initial roster entries is %i",
+      async (maximumInitialRosterEntries) => {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/auction-sessions",
+          payload: {
+            leagueId: "league-sfl92",
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            maximumInitialRosterEntries
+          }
+        });
+
+        expect(response.statusCode).toBe(400);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "INVALID_REQUEST"
+          })
+        });
+      }
+    );
 
     it("returns 400 for an empty payload", async () => {
       const response = await app.inject({
@@ -612,6 +678,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "SETUP"
         });
 
@@ -635,6 +702,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2027/2028",
             editionNumber: 36,
             initialCredits: 350,
+            maximumInitialRosterEntries: 11,
             status: "SETUP"
           }),
           error: null
@@ -702,6 +770,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "READY"
         });
 
@@ -742,6 +811,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "READY"
         });
 
@@ -760,9 +830,96 @@ describe("GET /api/auction-sessions", () => {
           data: expect.objectContaining({
             id: "session-patch-ready-credits",
             initialCredits: 360,
+            maximumInitialRosterEntries: 11,
             status: "READY"
           }),
           error: null
+        });
+      }
+    );
+
+    it(
+      "updates maximum initial roster entries while the session is READY",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-ready-roster-limit",
+          name: "Patch Ready Roster Limit League",
+          normalizedName:
+            "patch ready roster limit league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-ready-roster-limit",
+          leagueId:
+            "league-patch-ready-roster-limit",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          maximumInitialRosterEntries: 11,
+          status: "READY"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-ready-roster-limit",
+          payload: {
+            maximumInitialRosterEntries: 9
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            id:
+              "session-patch-ready-roster-limit",
+            maximumInitialRosterEntries: 9,
+            status: "READY"
+          }),
+          error: null
+        });
+      }
+    );
+
+    it(
+      "rejects maximum initial roster entries changes while the session is RUNNING",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-running-roster-limit",
+          name: "Patch Running Roster Limit League",
+          normalizedName:
+            "patch running roster limit league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id:
+            "session-patch-running-roster-limit",
+          leagueId:
+            "league-patch-running-roster-limit",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          maximumInitialRosterEntries: 11,
+          status: "RUNNING"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-running-roster-limit",
+          payload: {
+            maximumInitialRosterEntries: 9
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "STRUCTURAL_FIELDS_LOCKED"
+          })
         });
       }
     );
@@ -783,6 +940,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "RUNNING"
         });
 
@@ -801,6 +959,7 @@ describe("GET /api/auction-sessions", () => {
           data: expect.objectContaining({
             id: "session-patch-running",
             initialCredits: 360,
+            maximumInitialRosterEntries: 11,
             status: "RUNNING"
           }),
           error: null
@@ -824,6 +983,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "COMPLETED"
         });
 
@@ -863,6 +1023,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "SETUP"
         });
 
@@ -920,6 +1081,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           status: "READY"
         });
 
@@ -967,6 +1129,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
+            maximumInitialRosterEntries: 11,
             status: "SETUP"
           });
 
@@ -1155,6 +1318,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
+            maximumInitialRosterEntries: 11,
             status: "RUNNING",
             stateVersion: 0
           });
@@ -1215,6 +1379,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
+            maximumInitialRosterEntries: 11,
             status: "RUNNING",
             stateVersion: 3
           });
@@ -1261,6 +1426,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
+            maximumInitialRosterEntries: 11,
             status: "RUNNING",
             stateVersion: 0
           });
@@ -1375,6 +1541,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
+            maximumInitialRosterEntries: 11,
             status: "SETUP"
           });
 
@@ -1415,6 +1582,7 @@ describe("GET /api/auction-sessions", () => {
               season: "2025/2026",
               editionNumber: 34,
               initialCredits: 330,
+              maximumInitialRosterEntries: 11,
               status: "READY"
             },
             {
@@ -1424,6 +1592,7 @@ describe("GET /api/auction-sessions", () => {
               season: "2026/2027",
               editionNumber: 35,
               initialCredits: 330,
+              maximumInitialRosterEntries: 11,
               status: "SETUP"
             }
           ]);

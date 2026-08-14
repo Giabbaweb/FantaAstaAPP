@@ -126,6 +126,7 @@ describe("Socket.IO server", () => {
       season: "2026/2027",
       editionNumber: 1,
       initialCredits: 330,
+      maximumInitialRosterEntries: 11,
       stateVersion: input.stateVersion ?? 0
     });
 
@@ -641,6 +642,7 @@ describe("Socket.IO server", () => {
         status: "SETUP",
         suspensionReason: null,
         initialCredits: 330,
+        maximumInitialRosterEntries: 11,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });

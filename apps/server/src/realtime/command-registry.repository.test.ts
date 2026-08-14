@@ -77,6 +77,7 @@ describe("SqliteCommandRegistryRepository", () => {
       season: "2026/2027",
       editionNumber: 1,
       initialCredits: 330,
+      maximumInitialRosterEntries: 11,
       stateVersion: 1
     });
 
@@ -161,6 +162,7 @@ describe("SqliteCommandRegistryRepository", () => {
       status: "SUSPENDED" as const,
       suspensionReason: "PIZZA_BREAK" as const,
       initialCredits: 330,
+      maximumInitialRosterEntries: 11,
       createdAt:
         "2026-08-12T20:00:00.000Z",
       updatedAt:

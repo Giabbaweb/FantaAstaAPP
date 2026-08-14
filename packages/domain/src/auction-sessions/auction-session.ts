@@ -135,6 +135,17 @@ export function assertAuctionSessionUpdateAllowed(
       `Initial credits cannot be changed in status "${session.status}"`
     );
   }
+
+  if (
+    input.maximumInitialRosterEntries !== undefined &&
+    session.status !== "SETUP" &&
+    session.status !== "READY"
+  ) {
+    throw new AuctionSessionDomainError(
+      "STRUCTURAL_FIELDS_LOCKED",
+      `Maximum initial roster entries cannot be changed in status "${session.status}"`
+    );
+  }
 }
 
 export function assertAuctionSessionDeletionAllowed(
