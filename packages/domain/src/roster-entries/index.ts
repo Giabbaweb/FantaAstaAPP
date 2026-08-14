@@ -10,6 +10,18 @@ export type {
 } from "./manual-initial-roster-entry.js";
 
 export {
+  assertManualRosterAssignmentAllowed,
+  manualRosterAssignmentReasons,
+  ManualRosterAssignmentDomainError
+} from "./manual-roster-assignment.js";
+
+export type {
+  ManualRosterAssignmentDomainErrorCode,
+  ManualRosterAssignmentReason,
+  ManualRosterAssignmentValidationInput
+} from "./manual-roster-assignment.js";
+
+export {
   assertRosterAcquisitionAllowed
 } from "./roster-acquisition.js";
 

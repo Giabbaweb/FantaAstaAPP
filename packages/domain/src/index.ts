@@ -95,9 +95,12 @@ export type {
 
 export {
   assertManualInitialRosterEntryAllowed,
+  assertManualRosterAssignmentAllowed,
   assertRosterAcquisitionAllowed,
   manualInitialRosterAllowedStatuses,
+  manualRosterAssignmentReasons,
   ManualInitialRosterEntryDomainError,
+  ManualRosterAssignmentDomainError,
   RosterEntryDomainError,
   assertAcquisitionCostAllowed,
   assertContractYearAllowed,
@@ -114,6 +117,9 @@ export type {
   ContractYear,
   ManualInitialRosterEntryDomainErrorCode,
   ManualInitialRosterEntryValidationInput,
+  ManualRosterAssignmentDomainErrorCode,
+  ManualRosterAssignmentReason,
+  ManualRosterAssignmentValidationInput,
   RosterAcquisitionValidationInput,
   RosterEntry,
   RosterEntryDomainErrorCode,
