@@ -1,5 +1,6 @@
 import {
   addManualInitialRosterEntryCommandSchema,
+  addManualRosterAssignmentCommandSchema,
   createAuctionSessionSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
@@ -39,6 +40,12 @@ import type {
   ManualInitialRosterErrorMapping
 } from "../http/manual-initial-roster-errors.js";
 import {
+  mapManualRosterAssignmentError
+} from "../http/manual-roster-assignment-errors.js";
+import type {
+  ManualRosterAssignmentErrorMapping
+} from "../http/manual-roster-assignment-errors.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import type {
@@ -47,6 +54,9 @@ import type {
 import type {
   AtomicManualInitialRosterCommandService
 } from "../realtime/atomic-manual-initial-roster-command.service.js";
+import type {
+  AtomicManualRosterAssignmentCommandService
+} from "../realtime/atomic-manual-roster-assignment-command.service.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -85,6 +95,7 @@ type AuctionSessionCommandBody = {
   contractYear?: unknown;
   actor?: unknown;
   comment?: unknown;
+  manualAssignmentReason?: unknown;
 };
 
 type CreateAuctionSessionResponse = {
@@ -110,6 +121,13 @@ type ExecuteOperationalAuctionSessionCommandResponse = {
 };
 
 type ExecuteManualInitialRosterCommandResponse = {
+  data: RosterEntry;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+type ExecuteManualRosterAssignmentCommandResponse = {
   data: RosterEntry;
   stateVersion: number;
   idempotentReplay: boolean;
@@ -148,11 +166,18 @@ type ManualInitialRosterCommandPort = Pick<
   "add"
 >;
 
+type ManualRosterAssignmentCommandPort = Pick<
+  AtomicManualRosterAssignmentCommandService,
+  "add"
+>;
+
 export function auctionSessionRoutes(
   operationalCommandService:
     AuctionSessionOperationalCommandPort,
   manualInitialRosterCommandService:
-    ManualInitialRosterCommandPort
+    ManualInitialRosterCommandPort,
+  manualRosterAssignmentCommandService:
+    ManualRosterAssignmentCommandPort
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{
@@ -559,6 +584,77 @@ fastify.get<{
           } catch (error) {
             const mapped =
               mapManualInitialRosterError(
+                error
+              );
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "add-manual-roster-assignment"
+        ) {
+          const validation =
+            addManualRosterAssignmentCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Manual roster assignment command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await manualRosterAssignmentCommandService.add(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  auctionSessionTeamId:
+                    validation.data
+                      .auctionSessionTeamId,
+                  playerId:
+                    validation.data.playerId,
+                  acquisitionCost:
+                    validation.data
+                      .acquisitionCost,
+                  contractYear:
+                    validation.data.contractYear
+                },
+                validation.data
+                  .manualAssignmentReason,
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.rosterEntry,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapManualRosterAssignmentError(
                 error
               );
 

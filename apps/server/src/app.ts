@@ -72,6 +72,12 @@ import {
   AtomicManualInitialRosterCommandService
 } from "./realtime/atomic-manual-initial-roster-command.service.js";
 import {
+  AtomicManualRosterAssignmentCommandExecutor
+} from "./realtime/atomic-manual-roster-assignment-command.executor.js";
+import {
+  AtomicManualRosterAssignmentCommandService
+} from "./realtime/atomic-manual-roster-assignment-command.service.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
@@ -131,6 +137,9 @@ import {
 import {
   ManualInitialRosterEntryService
 } from "./services/manual-initial-roster-entry.service.js";
+import {
+  ManualRosterAssignmentService
+} from "./services/manual-roster-assignment.service.js";
 
 export type BuildAppOptions = {
   auctionBackupRequester?:
@@ -236,6 +245,28 @@ export async function buildApp(
       atomicManualInitialRosterCommandExecutor
     );
 
+  const manualRosterAssignmentService =
+    new ManualRosterAssignmentService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicManualRosterAssignmentCommandExecutor =
+    new AtomicManualRosterAssignmentCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      manualRosterAssignmentService,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicManualRosterAssignmentCommandService =
+    new AtomicManualRosterAssignmentCommandService(
+      atomicManualRosterAssignmentCommandExecutor
+    );
+
   const auctionBackupRequester =
     options.auctionBackupRequester ??
     new NoopAuctionBackupRequester();
@@ -339,7 +370,8 @@ export async function buildApp(
   await app.register(
     auctionSessionRoutes(
       auctionSessionOperationalCommandCoordinator,
-      atomicManualInitialRosterCommandService
+      atomicManualInitialRosterCommandService,
+      atomicManualRosterAssignmentCommandService
     )
   );
   await app.register(

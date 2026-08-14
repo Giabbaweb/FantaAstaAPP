@@ -2091,6 +2091,573 @@ describe("GET /api/auction-sessions", () => {
     }
   );
 
+  describe(
+    "POST /api/auction-sessions/:id/commands/add-manual-roster-assignment",
+    () => {
+      it(
+        "adds a manual roster assignment atomically and replays the same command idempotently",
+        async () => {
+          const leagueId =
+            "league-manual-assignment-http";
+          const sessionId =
+            "session-manual-assignment-http";
+          const teamId =
+            "team-manual-assignment-http";
+          const sessionTeamId =
+            "session-team-manual-assignment-http";
+          const playerId =
+            "player-manual-assignment-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Manual Assignment HTTP League",
+            normalizedName:
+              "manual assignment http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 38,
+            initialCredits: 330,
+            maximumInitialRosterEntries: 11,
+            status: "READY",
+            stateVersion: 0
+          });
+
+          await db.insert(teams).values({
+            id: teamId,
+            leagueId,
+            name:
+              "Manual Assignment HTTP Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id: sessionTeamId,
+              auctionSessionId: sessionId,
+              teamId,
+              tableOrder: 1,
+              remainingCredits: 330,
+              renewalCredits: 0
+            });
+
+          await db.insert(players).values({
+            id: playerId,
+            auctionSessionId: sessionId,
+            fmsCode:
+              "manual-assignment-http-001",
+            name:
+              "Manual Assignment HTTP Player",
+            normalizedName:
+              "manual assignment http player",
+            role: "A",
+            availabilityStatus:
+              "AVAILABLE"
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/add-manual-roster-assignment",
+            payload: {
+              commandId:
+                "manual-assignment-http-command",
+              stateVersion: 0,
+              auctionSessionTeamId:
+                sessionTeamId,
+              playerId,
+              acquisitionCost: 30,
+              contractYear: 3,
+              manualAssignmentReason:
+                "OPTION_EXERCISED_MANUALLY",
+              actor: {
+                name:
+                  "Integration Tester",
+                role:
+                  "AUCTIONEER"
+              },
+              comment:
+                "Opzione esercitata manualmente"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            firstResponse.json()
+          ).toEqual({
+            data:
+              expect.objectContaining({
+                auctionSessionTeamId:
+                  sessionTeamId,
+                playerId,
+                acquisitionCost: 30,
+                contractYear: 3,
+                source:
+                  "MANUAL_ASSIGNMENT"
+              }),
+            stateVersion: 1,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(
+            retryResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            retryResponse.json()
+          ).toEqual({
+            data:
+              expect.objectContaining({
+                auctionSessionTeamId:
+                  sessionTeamId,
+                playerId,
+                acquisitionCost: 30,
+                contractYear: 3,
+                source:
+                  "MANUAL_ASSIGNMENT"
+              }),
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const matchingRosterEntries =
+            (
+              await db
+                .select()
+                .from(rosterEntries)
+            ).filter(
+              (entry) =>
+                entry.auctionSessionTeamId ===
+                  sessionTeamId &&
+                entry.playerId ===
+                  playerId
+            );
+
+          expect(
+            matchingRosterEntries
+          ).toHaveLength(1);
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "MANUAL_ROSTER_ASSIGNMENT_ADDED"
+            );
+
+          expect(
+            matchingEvents
+          ).toHaveLength(1);
+
+          expect(
+            matchingEvents[0]
+          ).toEqual(
+            expect.objectContaining({
+              auctionSessionTeamId:
+                sessionTeamId,
+              playerId,
+              amount: 30,
+              creditsBefore: 330,
+              creditsAfter: 300,
+              contractYear: 3,
+              actorName:
+                "Integration Tester",
+              actorRole:
+                "AUCTIONEER",
+              manualAssignmentReason:
+                "OPTION_EXERCISED_MANUALLY",
+              comment:
+                "Opzione esercitata manualmente"
+            })
+          );
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "manual-assignment-http-command"
+            );
+
+          expect(
+            matchingCommands
+          ).toHaveLength(1);
+
+          expect(
+            matchingCommands[0]
+          ).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "ADD_MANUAL_ROSTER_ASSIGNMENT",
+              expectedStateVersion: 0,
+              resultStateVersion: 1
+            })
+          );
+
+          const [updatedSession] =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.id,
+                  sessionId
+                )
+              );
+
+          expect(
+            updatedSession?.stateVersion
+          ).toBe(1);
+
+          const [updatedSessionTeam] =
+            await db
+              .select()
+              .from(auctionSessionTeams)
+              .where(
+                eq(
+                  auctionSessionTeams.id,
+                  sessionTeamId
+                )
+              );
+
+          expect(
+            updatedSessionTeam
+              ?.remainingCredits
+          ).toBe(300);
+
+          const [updatedPlayer] =
+            await db
+              .select()
+              .from(players)
+              .where(
+                eq(
+                  players.id,
+                  playerId
+                )
+              );
+
+          expect(
+            updatedPlayer
+              ?.availabilityStatus
+          ).toBe("ROSTERED");
+        }
+      );
+
+      it(
+        "rejects a manual roster assignment without the mandatory comment",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-manual-assignment-invalid" +
+                "/commands/add-manual-roster-assignment",
+              payload: {
+                commandId:
+                  "manual-assignment-invalid-command",
+                stateVersion: 0,
+                auctionSessionTeamId:
+                  "session-team-invalid",
+                playerId:
+                  "player-invalid",
+                acquisitionCost: 10,
+                contractYear: 1,
+                manualAssignmentReason:
+                  "OTHER",
+                actor: {
+                  name:
+                    "Integration Tester",
+                  role:
+                    "ADMINISTRATOR"
+                }
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(400);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code:
+                  "INVALID_REQUEST"
+              })
+          });
+        }
+      );
+
+      it(
+        "rejects a stale manual roster assignment command",
+        async () => {
+          const leagueId =
+            "league-manual-assignment-stale";
+          const sessionId =
+            "session-manual-assignment-stale";
+          const teamId =
+            "team-manual-assignment-stale";
+          const sessionTeamId =
+            "session-team-manual-assignment-stale";
+          const playerId =
+            "player-manual-assignment-stale";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Manual Assignment Stale League",
+            normalizedName:
+              "manual assignment stale league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 39,
+            initialCredits: 330,
+            status: "READY",
+            stateVersion: 1
+          });
+
+          await db.insert(teams).values({
+            id: teamId,
+            leagueId,
+            name:
+              "Manual Assignment Stale Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id: sessionTeamId,
+              auctionSessionId: sessionId,
+              teamId,
+              tableOrder: 1,
+              remainingCredits: 330,
+              renewalCredits: 0
+            });
+
+          await db.insert(players).values({
+            id: playerId,
+            auctionSessionId: sessionId,
+            fmsCode:
+              "manual-assignment-stale-001",
+            name:
+              "Manual Assignment Stale Player",
+            normalizedName:
+              "manual assignment stale player",
+            role: "D",
+            availabilityStatus:
+              "AVAILABLE"
+          });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                sessionId +
+                "/commands/add-manual-roster-assignment",
+              payload: {
+                commandId:
+                  "manual-assignment-stale-command",
+                stateVersion: 0,
+                auctionSessionTeamId:
+                  sessionTeamId,
+                playerId,
+                acquisitionCost: 10,
+                contractYear: 1,
+                manualAssignmentReason:
+                  "OTHER",
+                actor: {
+                  name:
+                    "Integration Tester",
+                  role:
+                    "ADMINISTRATOR"
+                },
+                comment:
+                  "Test stale state"
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code:
+                  "STALE_STATE"
+              })
+          });
+        }
+      );
+
+      it(
+        "rejects reuse of a manual assignment command id when the reason changes",
+        async () => {
+          const leagueId =
+            "league-manual-assignment-conflict";
+          const sessionId =
+            "session-manual-assignment-conflict";
+          const teamId =
+            "team-manual-assignment-conflict";
+          const sessionTeamId =
+            "session-team-manual-assignment-conflict";
+          const playerId =
+            "player-manual-assignment-conflict";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Manual Assignment Conflict League",
+            normalizedName:
+              "manual assignment conflict league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 40,
+            initialCredits: 330,
+            status: "READY",
+            stateVersion: 0
+          });
+
+          await db.insert(teams).values({
+            id: teamId,
+            leagueId,
+            name:
+              "Manual Assignment Conflict Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id: sessionTeamId,
+              auctionSessionId: sessionId,
+              teamId,
+              tableOrder: 1,
+              remainingCredits: 330,
+              renewalCredits: 0
+            });
+
+          await db.insert(players).values({
+            id: playerId,
+            auctionSessionId: sessionId,
+            fmsCode:
+              "manual-assignment-conflict-001",
+            name:
+              "Manual Assignment Conflict Player",
+            normalizedName:
+              "manual assignment conflict player",
+            role: "C",
+            availabilityStatus:
+              "AVAILABLE"
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/add-manual-roster-assignment",
+            payload: {
+              commandId:
+                "manual-assignment-conflict-command",
+              stateVersion: 0,
+              auctionSessionTeamId:
+                sessionTeamId,
+              playerId,
+              acquisitionCost: 10,
+              contractYear: 1,
+              manualAssignmentReason:
+                "OPTION_NO_EXTERNAL_BID",
+              actor: {
+                name:
+                  "Integration Tester",
+                role:
+                  "AUCTIONEER"
+              },
+              comment:
+                "Motivazione invariata"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          const conflictResponse =
+            await app.inject({
+              ...request,
+              payload: {
+                ...request.payload,
+                manualAssignmentReason:
+                  "OTHER"
+              }
+            });
+
+          expect(
+            conflictResponse.statusCode
+          ).toBe(409);
+
+          expect(
+            conflictResponse.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code:
+                  "COMMAND_ID_CONFLICT"
+              })
+          });
+        }
+      );
+    }
+  );
+
   describe("POST /api/player-import/archive", () => {
     const validArchiveContent = [
       "Archivio giocatori FMS ReVo",

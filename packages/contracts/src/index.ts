@@ -457,6 +457,42 @@ export type AddManualInitialRosterEntryCommand =
     typeof addManualInitialRosterEntryCommandSchema
   >;
 
+export const manualRosterAssignmentReasonSchema =
+  z.enum([
+    "OPTION_EXERCISED_MANUALLY",
+    "OPTION_NO_EXTERNAL_BID",
+    "TECHNICAL_CORRECTION",
+    "OTHER"
+  ]);
+
+export type ManualRosterAssignmentReason =
+  z.infer<
+    typeof manualRosterAssignmentReasonSchema
+  >;
+
+export const addManualRosterAssignmentCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    auctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    playerId:
+      z.string().trim().min(1).max(100),
+    acquisitionCost:
+      z.number().int().positive(),
+    contractYear:
+      contractYearSchema,
+    manualAssignmentReason:
+      manualRosterAssignmentReasonSchema,
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().min(1).max(500)
+  });
+
+export type AddManualRosterAssignmentCommand =
+  z.infer<
+    typeof addManualRosterAssignmentCommandSchema
+  >;
+
 export const auctionCommandTypeSchema = z.enum([
   "OPEN",
   "BID",
