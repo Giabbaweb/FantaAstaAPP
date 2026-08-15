@@ -128,6 +128,44 @@ describe("SqliteAuctionSessionStateRepository", () => {
     });
   });
 
+  it("reopens a closed session as completed and increments stateVersion atomically", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "CLOSED",
+        suspensionReason: null,
+        stateVersion: 8
+      });
+
+    const result =
+      await repository.updateOperationalStateIfMatches(
+        auctionSessionId,
+        8,
+        {
+          status: "COMPLETED",
+          suspensionReason: null
+        }
+      );
+
+    expect(result).toEqual({
+      auctionSessionId,
+      status: "COMPLETED",
+      suspensionReason: null,
+      stateVersion: 9
+    });
+
+    await expect(
+      repository.findByAuctionSessionId(
+        auctionSessionId
+      )
+    ).resolves.toEqual({
+      auctionSessionId,
+      status: "COMPLETED",
+      suspensionReason: null,
+      stateVersion: 9
+    });
+  });
+
   it("does not change operational state from a stale version", async () => {
     const result =
       await repository.updateOperationalStateIfMatches(

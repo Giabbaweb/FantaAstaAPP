@@ -25,6 +25,12 @@ export type ResumeAuctionSessionCommandInput = {
   expectedStateVersion: number;
 };
 
+export type ReopenAuctionSessionCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  expectedStateVersion: number;
+};
+
 export class AuctionSessionOperationalCommandService {
   constructor(
     private readonly executor:
@@ -97,6 +103,39 @@ export class AuctionSessionOperationalCommandService {
         transitionAuctionSessionStatus(
           session.status,
           "resume"
+        );
+      }
+    });
+  }
+
+  async reopen(
+    input: ReopenAuctionSessionCommandInput
+  ): Promise<ExecuteAtomicAuctionSessionCommandResult> {
+    return this.executor.execute({
+      auctionSessionId:
+        input.auctionSessionId,
+      commandId:
+        input.commandId,
+      commandType:
+        "REOPEN_SESSION",
+      expectedStateVersion:
+        input.expectedStateVersion,
+      requestFingerprint:
+        "REOPEN_SESSION",
+      update: {
+        status: "COMPLETED",
+        suspensionReason: null
+      },
+      auditEvent: {
+        auctionSessionId:
+          input.auctionSessionId,
+        eventType:
+          "SESSION_REOPENED"
+      },
+      validate: (session) => {
+        transitionAuctionSessionStatus(
+          session.status,
+          "reopen"
         );
       }
     });

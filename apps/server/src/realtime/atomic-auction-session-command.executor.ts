@@ -105,7 +105,9 @@ export class AtomicAuctionSessionCommandExecutor {
           existingCommand.commandType !==
             "SUSPEND_SESSION" &&
           existingCommand.commandType !==
-            "RESUME_SESSION"
+            "RESUME_SESSION" &&
+          existingCommand.commandType !==
+            "REOPEN_SESSION"
         ) {
           throw new AtomicAuctionSessionCommandExecutorError(
             "COMMAND_ID_CONFLICT",
