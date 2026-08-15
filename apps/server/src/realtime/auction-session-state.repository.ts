@@ -33,6 +33,10 @@ export type AuctionSessionOperationalStateUpdate =
   | {
       status: "RUNNING";
       suspensionReason: null;
+    }
+  | {
+      status: "COMPLETED";
+      suspensionReason: null;
     };
 
 export interface AuctionSessionStateRepository {

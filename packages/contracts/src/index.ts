@@ -198,6 +198,8 @@ export const auctionSessionSchema = z.object({
   suspensionReason:
     auctionSessionSuspensionReasonSchema.nullable(),
   initialCredits: z.number().int().nonnegative(),
+  maximumInitialRosterEntries:
+    z.number().int().min(0).max(24),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1)
 });
@@ -208,7 +210,9 @@ export const createAuctionSessionSchema = z.object({
   leagueId: z.string().min(1),
   season: z.string().trim().min(1),
   editionNumber: z.number().int().positive(),
-  initialCredits: z.number().int().nonnegative().default(330)
+  initialCredits: z.number().int().nonnegative().default(330),
+  maximumInitialRosterEntries:
+    z.number().int().min(0).max(24).default(11)
 });
 
 export type CreateAuctionSessionInput = z.infer<
@@ -220,7 +224,9 @@ export const updateAuctionSessionSchema = z
     leagueId: z.string().min(1).optional(),
     season: z.string().trim().min(1).optional(),
     editionNumber: z.number().int().positive().optional(),
-    initialCredits: z.number().int().nonnegative().optional()
+    initialCredits: z.number().int().nonnegative().optional(),
+    maximumInitialRosterEntries:
+      z.number().int().min(0).max(24).optional()
   })
   .refine(
     (value) => Object.values(value).some((field) => field !== undefined),
@@ -414,6 +420,108 @@ export const resumeAuctionSessionCommandSchema =
 export type ResumeAuctionSessionCommand =
   z.infer<
     typeof resumeAuctionSessionCommandSchema
+  >;
+
+export const reopenAuctionSessionCommandSchema =
+  realtimeCommandMetadataSchema;
+
+export type ReopenAuctionSessionCommand =
+  z.infer<
+    typeof reopenAuctionSessionCommandSchema
+  >;
+
+export const manualInitialRosterCommandActorSchema =
+  z.object({
+    name: z.string().trim().min(1).max(100),
+    role: z.enum([
+      "ADMINISTRATOR",
+      "AUCTIONEER"
+    ])
+  });
+
+export type ManualInitialRosterCommandActor =
+  z.infer<
+    typeof manualInitialRosterCommandActorSchema
+  >;
+
+export const addManualInitialRosterEntryCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    auctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    playerId:
+      z.string().trim().min(1).max(100),
+    acquisitionCost:
+      z.number().int().positive(),
+    contractYear:
+      contractYearSchema,
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().max(500).nullable().optional()
+  });
+
+export type AddManualInitialRosterEntryCommand =
+  z.infer<
+    typeof addManualInitialRosterEntryCommandSchema
+  >;
+
+export const manualRosterAssignmentReasonSchema =
+  z.enum([
+    "OPTION_EXERCISED_MANUALLY",
+    "OPTION_NO_EXTERNAL_BID",
+    "TECHNICAL_CORRECTION",
+    "OTHER"
+  ]);
+
+export type ManualRosterAssignmentReason =
+  z.infer<
+    typeof manualRosterAssignmentReasonSchema
+  >;
+
+export const addManualRosterAssignmentCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    auctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    playerId:
+      z.string().trim().min(1).max(100),
+    acquisitionCost:
+      z.number().int().positive(),
+    contractYear:
+      contractYearSchema,
+    manualAssignmentReason:
+      manualRosterAssignmentReasonSchema,
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().min(1).max(500)
+  });
+
+export type AddManualRosterAssignmentCommand =
+  z.infer<
+    typeof addManualRosterAssignmentCommandSchema
+  >;
+
+export const technicalRosterCorrectionCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    rosterEntryId:
+      z.string().trim().min(1).max(100),
+    targetAuctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    targetPlayerId:
+      z.string().trim().min(1).max(100),
+    targetAcquisitionCost:
+      z.number().int().positive(),
+    targetContractYear:
+      contractYearSchema,
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().min(1).max(500)
+  });
+
+export type TechnicalRosterCorrectionCommand =
+  z.infer<
+    typeof technicalRosterCorrectionCommandSchema
   >;
 
 export const auctionCommandTypeSchema = z.enum([
@@ -650,7 +758,8 @@ export type RealtimeAuctionCallEventType = z.infer<
 
 export const realtimeAuctionSessionEventTypeSchema = z.enum([
   "SESSION_SUSPENDED",
-  "SESSION_RESUMED"
+  "SESSION_RESUMED",
+  "SESSION_REOPENED"
 ]);
 
 export type RealtimeAuctionSessionEventType = z.infer<
@@ -697,9 +806,16 @@ export const realtimeAuctionSessionResumedEventSchema =
     auctionCallId: z.null()
   });
 
+export const realtimeAuctionSessionReopenedEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: z.literal("SESSION_REOPENED"),
+    auctionCallId: z.null()
+  });
+
 export const realtimeAuctionSessionEventSchema = z.union([
   realtimeAuctionSessionSuspendedEventSchema,
-  realtimeAuctionSessionResumedEventSchema
+  realtimeAuctionSessionResumedEventSchema,
+  realtimeAuctionSessionReopenedEventSchema
 ]);
 
 export type RealtimeAuctionSessionEvent = z.infer<
@@ -709,7 +825,8 @@ export type RealtimeAuctionSessionEvent = z.infer<
 export const realtimeAuctionEventSchema = z.union([
   realtimeAuctionCallEventSchema,
   realtimeAuctionSessionSuspendedEventSchema,
-  realtimeAuctionSessionResumedEventSchema
+  realtimeAuctionSessionResumedEventSchema,
+  realtimeAuctionSessionReopenedEventSchema
 ]);
 
 export type RealtimeAuctionEvent = z.infer<

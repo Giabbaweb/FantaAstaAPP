@@ -22,6 +22,8 @@ const auctionSessionPublicSelection = {
   status: auctionSessions.status,
   suspensionReason: auctionSessions.suspensionReason,
   initialCredits: auctionSessions.initialCredits,
+  maximumInitialRosterEntries:
+    auctionSessions.maximumInitialRosterEntries,
   createdAt: auctionSessions.createdAt,
   updatedAt: auctionSessions.updatedAt
 };
@@ -117,7 +119,9 @@ export class SqliteAuctionSessionRepository
         leagueId: input.leagueId,
         season: input.season,
         editionNumber: input.editionNumber,
-        initialCredits: input.initialCredits
+        initialCredits: input.initialCredits,
+        maximumInitialRosterEntries:
+          input.maximumInitialRosterEntries
       })
       .returning(
         auctionSessionPublicSelection

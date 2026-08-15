@@ -3444,3 +3444,490 @@ Questa decisione integra:
 La decisione riguarda esclusivamente la sospensione operativa e la ripresa controllata della sessione.
 
 Il sottosistema completo di backup e recovery rimane previsto dalla Milestone 13.
+
+# ADR-048 — Autorità amministrativa, operazioni manuali e correzioni tecniche
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Operazioni amministrative, assegnazioni manuali, correzioni e audit
+
+## Contesto
+
+FantaAstaAPP utilizza un server autoritativo e una pipeline atomica per tutte le operazioni che modificano lo stato dell'asta.
+
+Le milestone precedenti hanno introdotto:
+
+- `commandId`;
+- `stateVersion`;
+- optimistic concurrency;
+- command registry persistente;
+- idempotenza;
+- transazioni SQLite atomiche;
+- audit di dominio persistente tramite `auction_events`;
+- pubblicazione realtime esclusivamente dopo commit;
+- snapshot autorevole;
+- aggiornamento atomico di rosa, crediti e disponibilità del giocatore.
+
+La versione 1.0 deve inoltre consentire al banditore e all'amministratore di intervenire manualmente per:
+
+- completare la configurazione delle rose iniziali;
+- registrare acquisizioni avvenute fuori dal normale motore d'asta;
+- registrare il risultato finale delle opzioni gestite manualmente;
+- correggere errori tecnici o operativi già persistiti.
+
+Il banditore rappresenta l'autorità operativa finale dell'asta e deve poter correggere errori come:
+
+- assegnazione avvenuta ma non registrata;
+- costo di acquisizione errato;
+- squadra assegnataria errata;
+- giocatore registrato errato;
+- contratto errato;
+- combinazioni dei casi precedenti.
+
+Questa autorità non può però aggirare le invarianti del dominio.
+
+Una correzione che produrrebbe uno stato finale non valido deve essere rifiutata.
+
+La gestione automatica completa delle opzioni rimane esclusa dalla versione 1.0 ed è prevista per la v1.1.0.
+
+Il sottosistema completo di backup e recovery rimane previsto dalla v0.13.0.
+
+## Decisione
+
+### Autorità amministrative
+
+Vengono distinti i ruoli centrali:
+
+```text
+ADMINISTRATOR
+AUCTIONEER
+```
+
+Entrambi possono eseguire operazioni manuali e correzioni tecniche.
+
+I ruoli:
+
+```text
+OPERATOR
+OBSERVER
+```
+
+rimangono ruoli associati ai dispositivi delle fantasquadre e non autorizzano operazioni amministrative o correttive.
+
+Una stessa persona fisica può ricoprire più ruoli contemporaneamente.
+
+Per la versione 1.0 non viene introdotto un sistema utenti complesso con account, password, ACL o autenticazione personale.
+
+L'identità dell'attore delle operazioni amministrative viene rappresentata in modo semplice mediante almeno:
+
+```text
+actorName
+actorRole
+```
+
+dove `actorRole` è:
+
+```text
+ADMINISTRATOR
+AUCTIONEER
+```
+
+L'attore non deve necessariamente essere un `Owner` della lega.
+
+### Tipi di operazione manuale
+
+La versione 1.0 distingue tre categorie concettuali.
+
+#### 1. Inserimento manuale nella rosa iniziale
+
+Un giocatore confermato può entrare nella rosa iniziale:
+
+- tramite import FMS ReVo;
+- tramite inserimento manuale dell'amministratore.
+
+Entrambi i percorsi producono lo stesso stato autorevole e utilizzano:
+
+```text
+source = INITIAL_ROSTER
+```
+
+L'inserimento manuale non viene classificato come correzione tecnica soltanto perché è stato effettuato manualmente.
+
+#### 2. `MANUAL_ASSIGNMENT`
+
+`MANUAL_ASSIGNMENT` registra una nuova acquisizione che non è passata dal normale motore d'asta.
+
+Comprende almeno:
+
+- risultato finale di un'opzione gestita manualmente;
+- assegnazione realmente avvenuta ma non registrata dal sistema;
+- altra acquisizione amministrativa eccezionale consentita.
+
+Le causali previste dalla specifica rimangono:
+
+```text
+OPTION_EXERCISED_MANUALLY
+OPTION_NO_EXTERNAL_BID
+TECHNICAL_CORRECTION
+OTHER
+```
+
+Il risultato finale della procedura manuale delle opzioni viene registrato nel sistema senza automatizzare nella versione 1.0:
+
+- il diritto di opzione;
+- la partecipazione o esclusione automatica del titolare;
+- l'asta competitiva tra gli altri partecipanti;
+- il diritto automatico di trattenere a offerta vincente + 1;
+- il rilevamento automatico dell'assenza di offerte.
+
+Questi automatismi rimangono previsti per la v1.1.0.
+
+#### 3. Correzione tecnica di un'assegnazione esistente
+
+Una correzione tecnica può rettificare atomicamente un'assegnazione già persistita.
+
+Deve poter correggere almeno:
+
+- costo;
+- squadra assegnataria;
+- giocatore;
+- anno di contratto;
+- combinazioni coerenti dei campi precedenti.
+
+La correzione deve aggiornare nello stesso confine transazionale tutte le entità coinvolte, comprese quando necessario:
+
+- `roster_entries`;
+- crediti residui delle squadre interessate;
+- disponibilità dei giocatori;
+- audit di dominio;
+- `stateVersion`;
+- `command_registry`.
+
+Non sono ammesse sequenze intenzionalmente incoerenti nelle quali il sistema viene lasciato temporaneamente in uno stato invalido per essere corretto con un comando successivo.
+
+### Stati della sessione
+
+Le operazioni manuali e correttive sono consentite nei seguenti stati:
+
+```text
+SETUP
+READY
+SUSPENDED
+COMPLETED
+```
+
+Non sono consentite in:
+
+```text
+RUNNING
+CLOSED
+```
+
+Durante una sessione operativa, una correzione richiede quindi il flusso:
+
+```text
+RUNNING
+  ↓ SUSPEND_SESSION
+SUSPENDED
+  ↓ operazione manuale o correzione
+SUSPENDED
+  ↓ RESUME_SESSION
+RUNNING
+```
+
+La presenza o assenza di una chiamata corrente non modifica questa regola.
+
+In `RUNNING` non è consentita alcuna correzione.
+
+### Invarianti obbligatorie
+
+Ogni operazione manuale o correttiva deve lasciare il sistema in uno stato valido.
+
+Devono essere verificate almeno:
+
+- appartenenza del giocatore alla sessione;
+- appartenenza della squadra alla sessione;
+- unicità del giocatore nella rosa della sessione;
+- coerenza dello stato di disponibilità del giocatore;
+- limiti di ruolo;
+- limite complessivo della rosa;
+- crediti mai negativi;
+- sostenibilità economica e completabilità della rosa;
+- validità del costo;
+- validità dell'anno di contratto;
+- stato della sessione compatibile con l'operazione.
+
+L'autorità amministrativa non può disabilitare o forzare il superamento di queste invarianti.
+
+### Motivazione e audit
+
+Ogni correzione tecnica deve avere un commento testuale obbligatorio, non vuoto e persistito nell'audit.
+
+Il commento deve permettere di comprendere in futuro il motivo della correzione.
+
+Quando esiste uno stato precedente, l'audit deve conservare informazioni sufficienti a ricostruire semanticamente:
+
+```text
+BEFORE
+AFTER
+```
+
+L'audit deve registrare almeno:
+
+```text
+actorName
+actorRole
+comment
+```
+
+oltre ai dati necessari a identificare l'operazione e le entità interessate.
+
+Per le assegnazioni manuali vengono conservate anche le causali previste dalla specifica.
+
+Il logging tecnico Pino, il `command_registry` e l'audit di dominio rimangono responsabilità separate.
+
+### Pipeline autorevole
+
+Le operazioni manuali e correttive non costituiscono un percorso privilegiato verso il database.
+
+Devono utilizzare le stesse garanzie architetturali degli altri comandi autorevoli:
+
+```text
+Command
+↓
+runtime validation
+↓
+authorization / application validation
+↓
+idempotency check
+↓
+stateVersion check
+↓
+domain validation
+↓
+SQLite transaction
+↓
+authoritative state mutations
+↓
+domain audit
+↓
+stateVersion increment
+↓
+command_registry
+↓
+COMMIT
+↓
+realtime event
+↓
+authoritative snapshot
+↓
+eventuali side effect post-commit
+```
+
+Un replay idempotente non deve duplicare:
+
+- modifiche allo stato;
+- eventi di audit;
+- eventi realtime;
+- snapshot;
+- eventuali side effect post-commit.
+
+Le operazioni manuali non possono essere implementate mediante modifiche dirette al database esterne alla pipeline autorevole.
+
+## Conseguenze
+
+### Positive
+
+- Il banditore e l'amministratore possono risolvere gli errori operativi reali senza modifiche manuali al database.
+- Le correzioni mantengono le stesse garanzie di consistenza costruite nelle milestone precedenti.
+- Lo storico delle modifiche rimane ricostruibile.
+- La gestione degli utenti rimane semplice e proporzionata all'uso locale in LAN.
+- Import e inserimento manuale delle rose iniziali convergono sullo stesso stato autorevole.
+- La versione 1.0 può gestire manualmente le opzioni senza anticipare il motore automatico della v1.1.0.
+- Le correzioni durante l'asta avvengono in una fase operativa esplicitamente controllata tramite `SUSPENDED`.
+
+### Negative
+
+- Le correzioni complesse richiedono logica transazionale dedicata.
+- `auction_events` deve evolvere per registrare attore, motivazione e informazioni prima/dopo.
+- Il command registry deve supportare i nuovi comandi amministrativi.
+- Alcune operazioni che il banditore vorrebbe forzare possono essere rifiutate quando violano le invarianti.
+- Il flusso operativo richiede la sospensione esplicita della sessione prima di correggere durante l'asta.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-002 per il server autoritativo;
+- ADR-009 per la separazione del dominio dall'infrastruttura;
+- ADR-010 per la validazione runtime;
+- ADR-029 per `roster_entries` e relativa origine;
+- ADR-033 per la sostenibilità economica;
+- ADR-041 per lo snapshot autorevole;
+- ADR-042 per `stateVersion`, idempotenza e command registry;
+- ADR-043 per la pipeline atomica e la pubblicazione post-commit;
+- ADR-045 per la separazione dell'audit di dominio dal command registry;
+- ADR-047 per la sospensione operativa della sessione.
+
+La riapertura di una sessione `CLOSED` è disciplinata separatamente da ADR-049.
+
+---
+
+# ADR-049 — Riapertura amministrativa controllata delle sessioni chiuse
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Ciclo di vita della sessione, correzioni amministrative e immutabilità storica
+
+## Contesto
+
+ADR-019 ha definito un ciclo di vita rigido delle sessioni d'asta.
+
+ADR-022 ha stabilito che le sessioni `COMPLETED` e `CLOSED` siano permanenti e in sola lettura e che una sessione chiusa non possa essere riaperta.
+
+La gestione operativa reale richiede tuttavia la possibilità di correggere errori scoperti dopo la chiusura formale della sessione.
+
+Consentire modifiche dirette a una sessione `CLOSED` indebolirebbe il significato dello stato e renderebbe meno chiaro quando lo storico sia effettivamente bloccato.
+
+È quindi necessario mantenere `CLOSED` come stato protetto, introducendo una sola azione amministrativa esplicita che permetta di tornare alla fase correttiva.
+
+## Decisione
+
+Viene introdotto il comando amministrativo:
+
+```text
+REOPEN_SESSION
+```
+
+che consente esclusivamente la transizione:
+
+```text
+CLOSED
+  ↓ REOPEN_SESSION
+COMPLETED
+```
+
+La macchina a stati della sessione diventa quindi:
+
+```text
+SETUP
+  ↓ ready
+READY
+  ↓ start
+RUNNING
+  ├─ suspend → SUSPENDED
+  │               ↓ resume
+  │             RUNNING
+  └─ complete → COMPLETED
+                    ↓ close
+                  CLOSED
+                    ↓ reopen
+                  COMPLETED
+```
+
+Non vengono introdotte altre transizioni inverse.
+
+In particolare non sono consentite transizioni dirette:
+
+```text
+CLOSED → RUNNING
+CLOSED → SUSPENDED
+CLOSED → READY
+CLOSED → SETUP
+COMPLETED → RUNNING
+```
+
+`CLOSED` rimane in sola lettura per tutte le normali operazioni.
+
+Per eseguire una correzione su una sessione chiusa il flusso è:
+
+```text
+CLOSED
+  ↓ REOPEN_SESSION
+COMPLETED
+  ↓ operazione manuale o correzione
+COMPLETED
+  ↓ close
+CLOSED
+```
+
+La riapertura non annulla, modifica o cancella automaticamente alcun dato storico.
+
+Produce esclusivamente la transizione controllata della sessione da `CLOSED` a `COMPLETED`.
+
+`REOPEN_SESSION` è riservato alle autorità amministrative previste da ADR-048:
+
+```text
+ADMINISTRATOR
+AUCTIONEER
+```
+
+Il comando deve utilizzare:
+
+```text
+commandId
+stateVersion
+```
+
+e partecipare alla pipeline autorevole.
+
+La transizione, l'incremento di `stateVersion`, l'audit e la registrazione nel `command_registry` devono essere atomici.
+
+Eventi realtime e snapshot autorevole vengono pubblicati esclusivamente dopo commit.
+
+Un replay idempotente non ripete la transizione né gli effetti post-commit.
+
+La riapertura deve produrre un evento di audit persistente dedicato che consenta di ricostruire l'azione amministrativa.
+
+## Modifica delle decisioni precedenti
+
+ADR-049 modifica ADR-019 esclusivamente nella parte in cui il ciclo di vita non consentiva alcuna transizione da `CLOSED`.
+
+La nuova eccezione ammessa è soltanto:
+
+```text
+CLOSED → COMPLETED
+```
+
+tramite `REOPEN_SESSION`.
+
+ADR-049 modifica ADR-022 esclusivamente nella parte in cui una sessione `CLOSED` era dichiarata definitivamente non riapribile.
+
+Rimangono valide le altre protezioni di ADR-022:
+
+- una sessione `CLOSED` è normalmente in sola lettura;
+- i campi strutturali non diventano modificabili;
+- la riapertura non autorizza modifiche generiche tramite `PATCH`;
+- le correzioni avvengono esclusivamente attraverso comandi amministrativi dedicati;
+- la sessione non può essere cancellata.
+
+Tutte le altre parti di ADR-019 e ADR-022 rimangono attive.
+
+## Conseguenze
+
+### Positive
+
+- Gli errori scoperti dopo la chiusura possono essere corretti senza modificare direttamente il database.
+- `CLOSED` conserva un significato forte di stato protetto.
+- La riapertura è deliberata, esplicita, auditata e idempotente.
+- Non vengono introdotte riaperture arbitrarie verso stati operativi.
+- La sessione può essere nuovamente chiusa dopo le correzioni.
+- Il comportamento rimane compatibile con la pipeline autoritativa esistente.
+
+### Negative
+
+- Il lifecycle della sessione non è più strettamente unidirezionale.
+- Il dominio, i contratti, il command registry e i test devono supportare `REOPEN_SESSION`.
+- L'audit deve distinguere chiaramente chi ha riaperto la sessione e perché.
+- Le interfacce amministrative devono evitare riaperture accidentali.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-019 per il ciclo di vita della sessione;
+- ADR-022 per l'immutabilità storica;
+- ADR-042 per `stateVersion`, idempotenza e command registry;
+- ADR-043 per la pipeline atomica e la pubblicazione post-commit;
+- ADR-045 per l'audit di dominio;
+- ADR-048 per autorità amministrative e correzioni.

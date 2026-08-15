@@ -94,6 +94,15 @@ export type {
 } from "./players/index.js";
 
 export {
+  assertManualInitialRosterEntryAllowed,
+  assertManualRosterAssignmentAllowed,
+  assertTechnicalRosterCorrectionAllowed,
+  assertRosterAcquisitionAllowed,
+  manualInitialRosterAllowedStatuses,
+  manualRosterAssignmentReasons,
+  ManualInitialRosterEntryDomainError,
+  ManualRosterAssignmentDomainError,
+  TechnicalRosterCorrectionDomainError,
   RosterEntryDomainError,
   assertAcquisitionCostAllowed,
   assertContractYearAllowed,
@@ -108,6 +117,14 @@ export {
 
 export type {
   ContractYear,
+  ManualInitialRosterEntryDomainErrorCode,
+  ManualInitialRosterEntryValidationInput,
+  ManualRosterAssignmentDomainErrorCode,
+  ManualRosterAssignmentReason,
+  ManualRosterAssignmentValidationInput,
+  TechnicalRosterCorrectionDomainErrorCode,
+  TechnicalRosterCorrectionValidationInput,
+  RosterAcquisitionValidationInput,
   RosterEntry,
   RosterEntryDomainErrorCode,
   RosterEntrySource

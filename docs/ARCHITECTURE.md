@@ -982,7 +982,7 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 La versione corrente è:
 
 ```text
-v0.10.0
+v0.11.0
 ```
 
 Sono operative:
@@ -1054,19 +1054,34 @@ Sono operative:
 - isolamento degli errori del backup dalla sospensione già committata;
 - nessuna ripresa automatica dopo reconnect o ricostruzione del runtime;
 - resilienza dello stato persistito `SUSPENDED` verificata tramite test di ricostruzione;
-- 43 file di test server e 287 test server verdi;
-- 10 file di test domain e 86 test domain verdi;
+- autorità amministrativa `ADMINISTRATOR` e `AUCTIONEER`;
+- assegnazioni manuali delle rose iniziali;
+- assegnazioni manuali alle rose;
+- correzioni tecniche di squadra, giocatore, costo e anno contrattuale;
+- motivazione e identità dell'operatore persistite nell'audit;
+- validazione delle invarianti economiche e di rosa;
+- divieto delle correzioni tecniche durante `RUNNING`;
+- protezione amministrativa dello stato `CLOSED`;
+- transizione controllata `CLOSED -> COMPLETED`;
+- comando atomico e idempotente `REOPEN_SESSION`;
+- controllo ottimistico della riapertura tramite `stateVersion`;
+- evento persistente `SESSION_REOPENED`;
+- evento realtime `SESSION_REOPENED`;
+- pubblicazione di evento e snapshot esclusivamente dopo commit;
+- 52 file di test server e 364 test server verdi;
+- 12 file di test domain e 135 test domain verdi;
 - typecheck e build completi del monorepo superati.
 
-La v0.10.0 completa quindi la sospensione operativa della sessione
-mantenendo il server come unica fonte autoritativa. La pausa congela lo
-stato corrente dell'asta senza alterare la macchina a stati della chiamata,
-blocca i comandi operativi lato server, pubblica audit, eventi e snapshot
-solo dopo commit e richiede una ripresa esplicita del banditore.
+La v0.11.0 completa quindi il livello amministrativo necessario per
+correggere errori operativi senza aggirare le invarianti del dominio.
+Le operazioni manuali e le correzioni passano dalla pipeline autoritativa,
+sono atomiche, auditabili e protette da `commandId` e `stateVersion`.
 
-Il boundary di backup viene invocato dopo una sospensione committata,
-senza anticipare il sottosistema completo di backup e recovery previsto
-dalla v0.13.0.
+Durante `RUNNING` le correzioni tecniche non sono consentite. Una sessione
+`CLOSED` rimane inoltre protetta: per intervenire deve essere riaperta
+esplicitamente tramite `REOPEN_SESSION`, che applica la transizione
+`CLOSED -> COMPLETED`, registra `SESSION_REOPENED` nella stessa transazione
+e pubblica gli effetti realtime soltanto dopo il commit.
 
 ---
 
@@ -1075,19 +1090,17 @@ dalla v0.13.0.
 La prossima milestone funzionale è:
 
 ```text
-v0.11.0 — Operazioni manuali e correzioni
+v0.12.0 — Import/export FMS
 ```
 
 La milestone comprenderà:
 
-- assegnazioni manuali;
-- gestione manuale delle opzioni;
-- correzioni tecniche;
-- motivazioni obbligatorie;
-- audit completo delle operazioni manuali;
-- validazione del giocatore, dei crediti e degli slot;
-- rispetto dei limiti di rosa e della sostenibilità economica;
-- registrazione dell'operatore e della motivazione.
+- completamento della compatibilità con FMS ReVo;
+- export finale delle rose;
+- riutilizzo del tracciato compatibile con il flusso di import;
+- esclusione del terzo portiere dall'export;
+- validazione dell'integrità dell'output;
+- verifica del ciclo FMS ReVo → FantaAstaAPP → FMS ReVo.
 
 Le decisioni architetturali significative continueranno a essere registrate in:
 

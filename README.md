@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.10.0-blue" alt="Version v0.10.0">
+  <img src="https://img.shields.io/badge/version-v0.11.0-blue" alt="Version v0.11.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.10.0**
+**v0.11.0**
 
 Completed milestones
 
@@ -229,10 +229,24 @@ Completed milestones
 - ✅ Post-commit backup request boundary on successful suspension
 - ✅ Restart resilience for persisted suspended sessions
 - ✅ Public Display suspension reason presentation
-- ✅ 43 backend test files
-- ✅ 287 backend tests passing
-- ✅ 10 domain test files
-- ✅ 86 domain tests passing
+- ✅ Administrative authority for ADMINISTRATOR and AUCTIONEER
+- ✅ Manual initial-roster assignments
+- ✅ Manual roster assignments
+- ✅ Technical corrections for team, player, acquisition cost and contract year
+- ✅ Mandatory operator identity and correction reason/comment
+- ✅ Persistent audit trail for administrative roster operations
+- ✅ Atomic and idempotent administrative command execution
+- ✅ Domain-invariant validation for manual assignments and corrections
+- ✅ Technical corrections blocked while the session is RUNNING
+- ✅ CLOSED session protection
+- ✅ Controlled CLOSED → COMPLETED session reopening
+- ✅ Atomic and idempotent REOPEN_SESSION command
+- ✅ Persistent SESSION_REOPENED audit event
+- ✅ Realtime SESSION_REOPENED event and post-commit snapshot publication
+- ✅ 52 backend test files
+- ✅ 364 backend tests passing
+- ✅ 12 domain test files
+- ✅ 135 domain tests passing
 - ✅ Full monorepo type checking
 - ✅ Full monorepo production build
 
@@ -250,12 +264,17 @@ RUNNING
   └─ complete → COMPLETED
                     ↓ close
                   CLOSED
+                    │
+                    └─ reopen → COMPLETED
 
 ```
 
+Administrative corrections require a non-running session. A closed
+session must first be explicitly reopened to `COMPLETED`.
+
 Next milestone
 
-➡ **v0.11.0 — Operazioni manuali e correzioni**
+➡ **v0.12.0 — Import/export FMS**
 
 ---
 

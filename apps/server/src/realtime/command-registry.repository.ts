@@ -9,10 +9,12 @@ import {
 
 import {
   auctionSessionSchema,
-  realtimeOperationalAuctionCallSchema
+  realtimeOperationalAuctionCallSchema,
+  rosterEntrySchema
 } from "@fantaastaapp/contracts";
 import type {
-  AuctionSession
+  AuctionSession,
+  RosterEntry
 } from "@fantaastaapp/contracts";
 
 import {
@@ -38,7 +40,31 @@ export type RegisteredAuctionCommandType =
 
 export type RegisteredAuctionSessionCommandType =
   | "SUSPEND_SESSION"
-  | "RESUME_SESSION";
+  | "RESUME_SESSION"
+  | "REOPEN_SESSION";
+
+export type RegisteredManualRosterCommandType =
+  | "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
+  | "ADD_MANUAL_ROSTER_ASSIGNMENT"
+  | "TECHNICAL_ROSTER_CORRECTION";
+
+export type RegisteredManualInitialRosterCommandType =
+  Extract<
+    RegisteredManualRosterCommandType,
+    "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
+  >;
+
+export type RegisteredManualRosterAssignmentCommandType =
+  Extract<
+    RegisteredManualRosterCommandType,
+    "ADD_MANUAL_ROSTER_ASSIGNMENT"
+  >;
+
+export type RegisteredTechnicalRosterCorrectionCommandType =
+  Extract<
+    RegisteredManualRosterCommandType,
+    "TECHNICAL_ROSTER_CORRECTION"
+  >;
 
 type RegisteredCommandBase = {
   id: string;
@@ -67,9 +93,53 @@ export type RegisteredAuctionSessionCommand =
     result: AuctionSession;
   };
 
+export type RegisteredManualInitialRosterCommand =
+  RegisteredCommandBase & {
+    commandScope: "AUCTION_SESSION";
+    auctionCallId: null;
+    commandType:
+      RegisteredManualInitialRosterCommandType;
+    result: RosterEntry;
+  };
+
+export type RegisteredManualRosterAssignmentCommand =
+  RegisteredCommandBase & {
+    commandScope: "AUCTION_SESSION";
+    auctionCallId: null;
+    commandType:
+      RegisteredManualRosterAssignmentCommandType;
+    result: RosterEntry;
+  };
+
+export type RegisteredTechnicalRosterCorrectionSnapshot = {
+  rosterEntry: RosterEntry;
+  auctionSessionTeamId: string;
+  playerId: string;
+  acquisitionCost: number;
+  contractYear: 1 | 2 | 3;
+};
+
+export type RegisteredTechnicalRosterCorrectionResult = {
+  before: RegisteredTechnicalRosterCorrectionSnapshot;
+  after: RegisteredTechnicalRosterCorrectionSnapshot;
+};
+
+export type RegisteredTechnicalRosterCorrectionCommand =
+  RegisteredCommandBase & {
+    commandScope: "AUCTION_SESSION";
+    auctionCallId: null;
+    commandType:
+      RegisteredTechnicalRosterCorrectionCommandType;
+    result:
+      RegisteredTechnicalRosterCorrectionResult;
+  };
+
 export type RegisteredCommand =
   | RegisteredAuctionCommand
-  | RegisteredAuctionSessionCommand;
+  | RegisteredAuctionSessionCommand
+  | RegisteredManualInitialRosterCommand
+  | RegisteredManualRosterAssignmentCommand
+  | RegisteredTechnicalRosterCorrectionCommand;
 
 export type RegisterAuctionCommandInput = {
   auctionSessionId: string;
@@ -92,6 +162,132 @@ export type RegisterAuctionSessionCommandInput = {
   requestFingerprint: string;
   result: AuctionSession;
 };
+
+export type RegisterManualInitialRosterCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  commandType:
+    RegisteredManualInitialRosterCommandType;
+  expectedStateVersion: number;
+  resultStateVersion: number;
+  requestFingerprint: string;
+  result: RosterEntry;
+};
+
+export type RegisterManualRosterAssignmentCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  commandType:
+    RegisteredManualRosterAssignmentCommandType;
+  expectedStateVersion: number;
+  resultStateVersion: number;
+  requestFingerprint: string;
+  result: RosterEntry;
+};
+
+export type RegisterTechnicalRosterCorrectionCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  commandType:
+    RegisteredTechnicalRosterCorrectionCommandType;
+  expectedStateVersion: number;
+  resultStateVersion: number;
+  requestFingerprint: string;
+  result:
+    RegisteredTechnicalRosterCorrectionResult;
+};
+
+function parseTechnicalRosterCorrectionSnapshot(
+  payload: unknown
+): RegisteredTechnicalRosterCorrectionSnapshot | null {
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    return null;
+  }
+
+  const candidate =
+    payload as Record<string, unknown>;
+
+  const parsedRosterEntry =
+    rosterEntrySchema.safeParse(
+      candidate.rosterEntry
+    );
+
+  if (!parsedRosterEntry.success) {
+    return null;
+  }
+
+  const contractYear =
+    candidate.contractYear;
+
+  if (
+    typeof candidate.auctionSessionTeamId !==
+      "string" ||
+    candidate.auctionSessionTeamId.length === 0 ||
+    typeof candidate.playerId !== "string" ||
+    candidate.playerId.length === 0 ||
+    typeof candidate.acquisitionCost !==
+      "number" ||
+    !Number.isInteger(
+      candidate.acquisitionCost
+    ) ||
+    candidate.acquisitionCost <= 0 ||
+    (
+      contractYear !== 1 &&
+      contractYear !== 2 &&
+      contractYear !== 3
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    rosterEntry:
+      parsedRosterEntry.data,
+    auctionSessionTeamId:
+      candidate.auctionSessionTeamId,
+    playerId:
+      candidate.playerId,
+    acquisitionCost:
+      candidate.acquisitionCost,
+    contractYear
+  };
+}
+
+function parseTechnicalRosterCorrectionResult(
+  payload: unknown
+): RegisteredTechnicalRosterCorrectionResult | null {
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    return null;
+  }
+
+  const candidate =
+    payload as Record<string, unknown>;
+
+  const before =
+    parseTechnicalRosterCorrectionSnapshot(
+      candidate.before
+    );
+
+  const after =
+    parseTechnicalRosterCorrectionSnapshot(
+      candidate.after
+    );
+
+  if (!before || !after) {
+    return null;
+  }
+
+  return {
+    before,
+    after
+  };
+}
 
 export interface CommandRegistryRepository {
   findByCommandId(
@@ -122,6 +318,33 @@ export interface CommandRegistryRepository {
     executor: DatabaseWriteExecutor,
     input: RegisterAuctionSessionCommandInput
   ): RegisteredAuctionSessionCommand;
+
+  createManualInitialRosterCommand(
+    input: RegisterManualInitialRosterCommandInput
+  ): Promise<RegisteredManualInitialRosterCommand>;
+
+  createManualInitialRosterCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterManualInitialRosterCommandInput
+  ): RegisteredManualInitialRosterCommand;
+
+  createManualRosterAssignmentCommand(
+    input: RegisterManualRosterAssignmentCommandInput
+  ): Promise<RegisteredManualRosterAssignmentCommand>;
+
+  createManualRosterAssignmentCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterManualRosterAssignmentCommandInput
+  ): RegisteredManualRosterAssignmentCommand;
+
+  createTechnicalRosterCorrectionCommand(
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): Promise<RegisteredTechnicalRosterCorrectionCommand>;
+
+  createTechnicalRosterCorrectionCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): RegisteredTechnicalRosterCorrectionCommand;
 }
 
 export class SqliteCommandRegistryRepository
@@ -271,9 +494,198 @@ export class SqliteCommandRegistryRepository
 
     const mapped = this.mapRecord(record);
 
-    if (mapped.commandScope !== "AUCTION_SESSION") {
+    if (
+      mapped.commandScope !== "AUCTION_SESSION" ||
+      (
+        mapped.commandType !== "SUSPEND_SESSION" &&
+        mapped.commandType !== "RESUME_SESSION" &&
+        mapped.commandType !== "REOPEN_SESSION"
+      )
+    ) {
       throw new Error(
-        `Command "${input.commandId}" has an invalid command scope`
+        `Command "${input.commandId}" has an invalid command type`
+      );
+    }
+
+    return mapped;
+  }
+
+  async createManualInitialRosterCommand(
+    input: RegisterManualInitialRosterCommandInput
+  ): Promise<RegisteredManualInitialRosterCommand> {
+    return this.createManualInitialRosterCommandWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createManualInitialRosterCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterManualInitialRosterCommandInput
+  ): RegisteredManualInitialRosterCommand {
+    const [record] = executor
+      .insert(commandRegistry)
+      .values({
+        id: randomUUID(),
+        auctionSessionId:
+          input.auctionSessionId,
+        commandScope:
+          "AUCTION_SESSION",
+        auctionCallId:
+          null,
+        commandId:
+          input.commandId,
+        commandType:
+          input.commandType,
+        expectedStateVersion:
+          input.expectedStateVersion,
+        resultStateVersion:
+          input.resultStateVersion,
+        requestFingerprint:
+          input.requestFingerprint,
+        resultPayload:
+          JSON.stringify(input.result)
+      })
+      .returning()
+      .all();
+
+    if (!record) {
+      throw new Error(
+        `Failed to register manual initial roster command "${input.commandId}"`
+      );
+    }
+
+    const mapped = this.mapRecord(record);
+
+    if (
+      mapped.commandScope !==
+        "AUCTION_SESSION" ||
+      mapped.commandType !==
+        "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
+    ) {
+      throw new Error(
+        `Command "${input.commandId}" has an invalid command type`
+      );
+    }
+
+    return mapped;
+  }
+
+  async createManualRosterAssignmentCommand(
+    input: RegisterManualRosterAssignmentCommandInput
+  ): Promise<RegisteredManualRosterAssignmentCommand> {
+    return this.createManualRosterAssignmentCommandWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createManualRosterAssignmentCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterManualRosterAssignmentCommandInput
+  ): RegisteredManualRosterAssignmentCommand {
+    const [record] = executor
+      .insert(commandRegistry)
+      .values({
+        id: randomUUID(),
+        auctionSessionId:
+          input.auctionSessionId,
+        commandScope:
+          "AUCTION_SESSION",
+        auctionCallId:
+          null,
+        commandId:
+          input.commandId,
+        commandType:
+          input.commandType,
+        expectedStateVersion:
+          input.expectedStateVersion,
+        resultStateVersion:
+          input.resultStateVersion,
+        requestFingerprint:
+          input.requestFingerprint,
+        resultPayload:
+          JSON.stringify(input.result)
+      })
+      .returning()
+      .all();
+
+    if (!record) {
+      throw new Error(
+        `Failed to register manual roster assignment command "${input.commandId}"`
+      );
+    }
+
+    const mapped = this.mapRecord(record);
+
+    if (
+      mapped.commandScope !==
+        "AUCTION_SESSION" ||
+      mapped.commandType !==
+        "ADD_MANUAL_ROSTER_ASSIGNMENT"
+    ) {
+      throw new Error(
+        `Command "${input.commandId}" has an invalid command type`
+      );
+    }
+
+    return mapped;
+  }
+
+  async createTechnicalRosterCorrectionCommand(
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): Promise<RegisteredTechnicalRosterCorrectionCommand> {
+    return this.createTechnicalRosterCorrectionCommandWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createTechnicalRosterCorrectionCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): RegisteredTechnicalRosterCorrectionCommand {
+    const [record] = executor
+      .insert(commandRegistry)
+      .values({
+        id: randomUUID(),
+        auctionSessionId:
+          input.auctionSessionId,
+        commandScope:
+          "AUCTION_SESSION",
+        auctionCallId: null,
+        commandId:
+          input.commandId,
+        commandType:
+          input.commandType,
+        expectedStateVersion:
+          input.expectedStateVersion,
+        resultStateVersion:
+          input.resultStateVersion,
+        requestFingerprint:
+          input.requestFingerprint,
+        resultPayload:
+          JSON.stringify(input.result)
+      })
+      .returning()
+      .all();
+
+    if (!record) {
+      throw new Error(
+        `Failed to register technical roster correction command "${input.commandId}"`
+      );
+    }
+
+    const mapped = this.mapRecord(record);
+
+    if (
+      mapped.commandScope !==
+        "AUCTION_SESSION" ||
+      mapped.commandType !==
+        "TECHNICAL_ROSTER_CORRECTION"
+    ) {
+      throw new Error(
+        `Command "${input.commandId}" has an invalid command type`
       );
     }
 
@@ -356,47 +768,127 @@ export class SqliteCommandRegistryRepository
         );
       }
 
-      const parsedResult =
-        auctionSessionSchema.safeParse(payload);
+      if (
+        record.commandType === "SUSPEND_SESSION" ||
+        record.commandType === "RESUME_SESSION" ||
+        record.commandType === "REOPEN_SESSION"
+      ) {
+        const parsedResult =
+          auctionSessionSchema.safeParse(payload);
 
-      if (!parsedResult.success) {
-        throw new Error(
-          `Command "${record.commandId}" has an invalid auction session result`
-        );
+        if (!parsedResult.success) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid auction session result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId:
+            null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult.data,
+          createdAt:
+            record.createdAt
+        };
       }
 
       if (
-        record.commandType !== "SUSPEND_SESSION" &&
-        record.commandType !== "RESUME_SESSION"
+        record.commandType ===
+          "ADD_MANUAL_INITIAL_ROSTER_ENTRY" ||
+        record.commandType ===
+          "ADD_MANUAL_ROSTER_ASSIGNMENT"
       ) {
-        throw new Error(
-          `Command "${record.commandId}" has an invalid auction session command type`
-        );
+        const parsedResult =
+          rosterEntrySchema.safeParse(payload);
+
+        if (!parsedResult.success) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid manual roster result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId:
+            null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult.data,
+          createdAt:
+            record.createdAt
+        };
       }
 
-      return {
-        id: record.id,
-        auctionSessionId:
-          record.auctionSessionId,
-        commandScope:
-          "AUCTION_SESSION",
-        auctionCallId:
-          null,
-        commandId:
-          record.commandId,
-        commandType:
-          record.commandType,
-        expectedStateVersion:
-          record.expectedStateVersion,
-        resultStateVersion:
-          record.resultStateVersion,
-        requestFingerprint:
-          record.requestFingerprint,
-        result:
-          parsedResult.data,
-        createdAt:
-          record.createdAt
-      };
+      if (
+        record.commandType ===
+          "TECHNICAL_ROSTER_CORRECTION"
+      ) {
+        const parsedResult =
+          parseTechnicalRosterCorrectionResult(
+            payload
+          );
+
+        if (!parsedResult) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid technical roster correction result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId: null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult,
+          createdAt:
+            record.createdAt
+        };
+      }
+
+      throw new Error(
+        `Command "${record.commandId}" has an invalid auction session command type`
+      );
     }
 
     throw new Error(

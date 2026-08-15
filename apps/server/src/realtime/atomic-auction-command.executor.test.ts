@@ -277,6 +277,7 @@ describe("AtomicAuctionCommandExecutor", () => {
           suspensionReason:
             "PIZZA_BREAK",
           initialCredits: 330,
+          maximumInitialRosterEntries: 11,
           createdAt:
             "2026-08-12T20:00:00.000Z",
           updatedAt:

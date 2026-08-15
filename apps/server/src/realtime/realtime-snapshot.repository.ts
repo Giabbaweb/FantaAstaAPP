@@ -127,6 +127,8 @@ export class SqliteRealtimeSnapshotSessionReader
           auctionSessions.suspensionReason,
         initialCredits:
           auctionSessions.initialCredits,
+        maximumInitialRosterEntries:
+          auctionSessions.maximumInitialRosterEntries,
         stateVersion:
           auctionSessions.stateVersion,
         createdAt: auctionSessions.createdAt,

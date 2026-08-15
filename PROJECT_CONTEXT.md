@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 10 completata
-- **Versione corrente:** v0.10.0
-- **Prossimo obiettivo:** Versione 0.11 – Operazioni manuali e correzioni
+- **Stato:** Milestone 11 completata
+- **Versione corrente:** v0.11.0
+- **Prossimo obiettivo:** Versione 0.12 – Import/export FMS
 
 ## Regole immutabili
 
@@ -144,9 +144,9 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 Nessuna intestazione. Terzo portiere escluso.
 
-## Stato implementativo della v0.9.0
+## Stato implementativo della v0.11.0
 
-Sono completati tutti gli elementi della v0.8.0 e inoltre:
+Sono completati tutti gli elementi delle milestone precedenti e inoltre:
 
 - ruolo realtime `PUBLIC_DISPLAY` read-only di sessione;
 - registrazione Public Display senza `auctionSessionTeamId`;
@@ -169,10 +169,25 @@ Sono completati tutti gli elementi della v0.8.0 e inoltre:
 - modalità visuali `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
 - collaudo visivo degli overlay PASS/ESCLUSA in STANDARD, OUTDOOR e DARK;
 - collaudo visivo del banner SUSPENDED in STANDARD, OUTDOOR, DARK e COMPACT;
-- 43 file di test server;
-- 287 test server verdi;
-- 10 file di test domain;
-- 86 test domain verdi;
+- sospensione e ripresa operative della sessione con causale persistente;
+- autorità amministrativa `ADMINISTRATOR` e `AUCTIONEER`;
+- inserimento manuale nelle rose iniziali;
+- assegnazione manuale alle rose;
+- correzioni tecniche di squadra, giocatore, costo e anno contrattuale;
+- identità dell'operatore e motivazione persistite nell'audit;
+- validazione delle invarianti economiche e di rosa durante le correzioni;
+- correzioni tecniche vietate durante `RUNNING`;
+- sessioni `CLOSED` protette dalle correzioni dirette;
+- transizione amministrativa `CLOSED -> COMPLETED`;
+- comando `REOPEN_SESSION` atomico e idempotente;
+- controllo `stateVersion` anche sulla riapertura;
+- evento persistente `SESSION_REOPENED`;
+- evento realtime `SESSION_REOPENED`;
+- pubblicazione post-commit di evento e snapshot dopo la riapertura;
+- 52 file di test server;
+- 364 test server verdi;
+- 12 file di test domain;
+- 135 test domain verdi;
 - typecheck completo del monorepo superato;
 - build completa del monorepo superata.
 

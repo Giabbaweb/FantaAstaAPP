@@ -176,6 +176,172 @@ describe(
       });
     });
 
+    it("reopens a closed session as completed", async () => {
+      await db
+        .update(auctionSessions)
+        .set({
+          status: "CLOSED",
+          suspensionReason: null,
+          stateVersion: 6
+        });
+
+      const result =
+        await service.reopen({
+          auctionSessionId,
+          commandId:
+            "reopen-command-1",
+          expectedStateVersion: 6
+        });
+
+      expect(result).toMatchObject({
+        stateVersion: 7,
+        idempotentReplay: false,
+        session: {
+          id: auctionSessionId,
+          status: "COMPLETED",
+          suspensionReason: null
+        }
+      });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+
+      expect(events[0]).toMatchObject({
+        auctionSessionId,
+        eventType:
+          "SESSION_REOPENED",
+        suspensionReason: null,
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null
+      });
+    });
+
+    it("returns an idempotent replay for an identical reopen retry", async () => {
+      await db
+        .update(auctionSessions)
+        .set({
+          status: "CLOSED",
+          suspensionReason: null,
+          stateVersion: 8
+        });
+
+      const input = {
+        auctionSessionId,
+        commandId:
+          "reopen-command-retry",
+        expectedStateVersion: 8
+      };
+
+      const first =
+        await service.reopen(input);
+
+      const retry =
+        await service.reopen(input);
+
+      expect(retry).toEqual({
+        ...first,
+        idempotentReplay: true
+      });
+
+      expect(first).toMatchObject({
+        stateVersion: 9,
+        session: {
+          status: "COMPLETED",
+          suspensionReason: null
+        }
+      });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+
+      expect(events[0]).toMatchObject({
+        eventType:
+          "SESSION_REOPENED"
+      });
+    });
+
+    it("rejects reuse of a reopen command id with different command data", async () => {
+      await db
+        .update(auctionSessions)
+        .set({
+          status: "CLOSED",
+          suspensionReason: null,
+          stateVersion: 10
+        });
+
+      await service.reopen({
+        auctionSessionId,
+        commandId:
+          "reopen-command-conflict",
+        expectedStateVersion: 10
+      });
+
+      await expect(
+        service.reopen({
+          auctionSessionId,
+          commandId:
+            "reopen-command-conflict",
+          expectedStateVersion: 11
+        })
+      ).rejects.toMatchObject({
+        code:
+          "COMMAND_ID_CONFLICT"
+      });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+
+      expect(events[0]).toMatchObject({
+        eventType:
+          "SESSION_REOPENED"
+      });
+    });
+
+    it("rejects reopening a session that is not closed", async () => {
+      await expect(
+        service.reopen({
+          auctionSessionId,
+          commandId:
+            "reopen-command-invalid",
+          expectedStateVersion: 0
+        })
+      ).rejects.toMatchObject({
+        code:
+          "INVALID_STATUS_TRANSITION"
+      });
+    });
+
     it("rejects an invalid operational transition", async () => {
       await db
         .update(auctionSessions)

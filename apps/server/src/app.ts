@@ -66,6 +66,24 @@ import {
   AtomicAuctionSessionCommandExecutor
 } from "./realtime/atomic-auction-session-command.executor.js";
 import {
+  AtomicManualInitialRosterCommandExecutor
+} from "./realtime/atomic-manual-initial-roster-command.executor.js";
+import {
+  AtomicManualInitialRosterCommandService
+} from "./realtime/atomic-manual-initial-roster-command.service.js";
+import {
+  AtomicManualRosterAssignmentCommandExecutor
+} from "./realtime/atomic-manual-roster-assignment-command.executor.js";
+import {
+  AtomicManualRosterAssignmentCommandService
+} from "./realtime/atomic-manual-roster-assignment-command.service.js";
+import {
+  AtomicTechnicalRosterCorrectionCommandExecutor
+} from "./realtime/atomic-technical-roster-correction-command.executor.js";
+import {
+  AtomicTechnicalRosterCorrectionCommandService
+} from "./realtime/atomic-technical-roster-correction-command.service.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
@@ -122,6 +140,15 @@ import {
 import {
   ConfirmedAuctionAwardService
 } from "./services/confirmed-auction-award.service.js";
+import {
+  ManualInitialRosterEntryService
+} from "./services/manual-initial-roster-entry.service.js";
+import {
+  ManualRosterAssignmentService
+} from "./services/manual-roster-assignment.service.js";
+import {
+  TechnicalRosterCorrectionService
+} from "./services/technical-roster-correction.service.js";
 
 export type BuildAppOptions = {
   auctionBackupRequester?:
@@ -203,6 +230,71 @@ export async function buildApp(
   const auctionSessionOperationalCommandService =
     new AuctionSessionOperationalCommandService(
       atomicAuctionSessionCommandExecutor
+    );
+
+  const manualInitialRosterEntryService =
+    new ManualInitialRosterEntryService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicManualInitialRosterCommandExecutor =
+    new AtomicManualInitialRosterCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      manualInitialRosterEntryService,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicManualInitialRosterCommandService =
+    new AtomicManualInitialRosterCommandService(
+      atomicManualInitialRosterCommandExecutor
+    );
+
+  const manualRosterAssignmentService =
+    new ManualRosterAssignmentService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicManualRosterAssignmentCommandExecutor =
+    new AtomicManualRosterAssignmentCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      manualRosterAssignmentService,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicManualRosterAssignmentCommandService =
+    new AtomicManualRosterAssignmentCommandService(
+      atomicManualRosterAssignmentCommandExecutor
+    );
+
+  const technicalRosterCorrectionService =
+    new TechnicalRosterCorrectionService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicTechnicalRosterCorrectionCommandExecutor =
+    new AtomicTechnicalRosterCorrectionCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      technicalRosterCorrectionService,
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicTechnicalRosterCorrectionCommandService =
+    new AtomicTechnicalRosterCorrectionCommandService(
+      atomicTechnicalRosterCorrectionCommandExecutor
     );
 
   const auctionBackupRequester =
@@ -307,7 +399,10 @@ export async function buildApp(
   await app.register(dbHealthRoutes);
   await app.register(
     auctionSessionRoutes(
-      auctionSessionOperationalCommandCoordinator
+      auctionSessionOperationalCommandCoordinator,
+      atomicManualInitialRosterCommandService,
+      atomicManualRosterAssignmentCommandService,
+      atomicTechnicalRosterCorrectionCommandService
     )
   );
   await app.register(

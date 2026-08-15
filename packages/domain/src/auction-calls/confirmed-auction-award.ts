@@ -1,17 +1,13 @@
 import {
-  assertAcquisitionCostAllowed,
-  assertRosterRoleLimitAllowed,
-  assertRosterSizeLimitAllowed,
-  assertSufficientCredits,
-  rosterSizeLimit
+  assertRosterAcquisitionAllowed,
+  RosterEntryDomainError
 } from "../roster-entries/index.js";
 import type {
   PlayerRole
 } from "../players/index.js";
 
 import {
-  MaximumBidDomainError,
-  calculateMaximumBid
+  MaximumBidDomainError
 } from "./maximum-bid.js";
 
 export type ConfirmedAuctionAwardInput = {
@@ -25,44 +21,20 @@ export type ConfirmedAuctionAwardInput = {
 export function assertConfirmedAuctionAwardAllowed(
   input: ConfirmedAuctionAwardInput
 ): void {
-  const {
-    playerRole,
-    currentRosterSize,
-    currentRoleCount,
-    remainingCredits,
-    acquisitionCost
-  } = input;
+  try {
+    assertRosterAcquisitionAllowed(input);
+  } catch (error) {
+    if (
+      error instanceof RosterEntryDomainError &&
+      error.code ===
+        "INSUFFICIENT_CREDITS_TO_COMPLETE_ROSTER"
+    ) {
+      throw new MaximumBidDomainError(
+        "INSUFFICIENT_CREDITS_TO_COMPLETE_ROSTER",
+        error.message
+      );
+    }
 
-  assertAcquisitionCostAllowed(
-    acquisitionCost
-  );
-
-  assertRosterSizeLimitAllowed(
-    currentRosterSize
-  );
-
-  assertRosterRoleLimitAllowed(
-    playerRole,
-    currentRoleCount
-  );
-
-  assertSufficientCredits(
-    remainingCredits,
-    acquisitionCost
-  );
-
-  const remainingRosterSlots =
-    rosterSizeLimit - currentRosterSize;
-
-  const maximumBid = calculateMaximumBid({
-    remainingCredits,
-    remainingRosterSlots
-  });
-
-  if (acquisitionCost > maximumBid) {
-    throw new MaximumBidDomainError(
-      "INSUFFICIENT_CREDITS_TO_COMPLETE_ROSTER",
-      `Acquisition cost "${acquisitionCost}" exceeds maximum sustainable bid "${maximumBid}"`
-    );
+    throw error;
   }
 }

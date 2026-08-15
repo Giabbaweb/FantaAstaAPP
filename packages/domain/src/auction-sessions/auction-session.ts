@@ -10,7 +10,8 @@ export const auctionSessionCommands = [
   "suspend",
   "resume",
   "complete",
-  "close"
+  "close",
+  "reopen"
 ] as const;
 
 export type AuctionSessionCommand =
@@ -57,7 +58,9 @@ const statusTransitions: Record<
   COMPLETED: {
     close: "CLOSED"
   },
-  CLOSED: {}
+  CLOSED: {
+    reopen: "COMPLETED"
+  }
 };
 
 const operationalStatuses: ReadonlySet<AuctionSessionStatus> =
@@ -133,6 +136,17 @@ export function assertAuctionSessionUpdateAllowed(
     throw new AuctionSessionDomainError(
       "INITIAL_CREDITS_LOCKED",
       `Initial credits cannot be changed in status "${session.status}"`
+    );
+  }
+
+  if (
+    input.maximumInitialRosterEntries !== undefined &&
+    session.status !== "SETUP" &&
+    session.status !== "READY"
+  ) {
+    throw new AuctionSessionDomainError(
+      "STRUCTURAL_FIELDS_LOCKED",
+      `Maximum initial roster entries cannot be changed in status "${session.status}"`
     );
   }
 }

@@ -14,6 +14,64 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.11.0] - 2026-08-16
+
+### Added
+
+* Administrative authority model for manual roster operations
+* Manual initial-roster entry command
+* Manual roster-assignment command
+* Technical roster correction command
+* Persistent audit events for manual assignments and technical corrections
+* Mandatory operator identity and reason/comment for administrative corrections
+* Atomic and idempotent execution of administrative roster commands
+* Technical correction support for:
+  * team
+  * player
+  * acquisition cost
+  * contract year
+* Controlled `REOPEN_SESSION` command for reopening a closed auction session
+* Domain transition `CLOSED -> COMPLETED`
+* Persistent `SESSION_REOPENED` audit event
+* Session-scoped realtime `SESSION_REOPENED` event
+
+### Changed
+
+* Administrative roster operations are restricted to `ADMINISTRATOR` and `AUCTIONEER`
+* Technical corrections preserve all roster and economic domain invariants
+* Manual operations validate player availability, credits, roster capacity, role limits and roster sustainability
+* Technical corrections are forbidden while the auction session is `RUNNING`
+* Corrections are allowed only in administrative-safe session states
+* A `CLOSED` session remains protected until explicitly reopened
+* Reopening a session uses the authoritative atomic command pipeline with optimistic concurrency and idempotency
+* Reopening increments `stateVersion` and returns the session to `COMPLETED`
+* Reopen audit persistence participates in the same transaction as the authoritative state transition
+* Realtime event and authoritative snapshot publication occur only after a successful reopen commit
+* Idempotent reopen retries do not duplicate audit or realtime effects
+
+### Tested
+
+* Manual initial-roster assignments
+* Manual roster assignments
+* Technical corrections of team, player, acquisition cost and contract year
+* Mandatory administrative actor and correction reason/comment validation
+* Credit, roster-capacity, role-limit and economic-sustainability invariants
+* Rejection of technical corrections during `RUNNING`
+* Protection of `CLOSED` sessions from direct correction
+* Domain transition `CLOSED -> COMPLETED`
+* Atomic and idempotent `REOPEN_SESSION`
+* Persistent `SESSION_REOPENED` audit event
+* Realtime and snapshot dispatch after session reopening
+* Command-ID conflict and stale-state protection
+* 52 automated server test files
+* 364 automated server tests
+* 12 automated domain test files
+* 135 automated domain tests
+* Full monorepo type checking
+* Full monorepo production build
+
+---
+
 ## [0.10.0] - 2026-08-13
 
 ### Added

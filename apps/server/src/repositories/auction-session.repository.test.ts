@@ -60,6 +60,7 @@ describe("SqliteAuctionSessionRepository", () => {
       status: "SUSPENDED",
       suspensionReason: "PIZZA_BREAK",
       initialCredits: 330,
+      maximumInitialRosterEntries: 11,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });

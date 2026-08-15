@@ -1,5 +1,9 @@
 import {
+  addManualInitialRosterEntryCommandSchema,
+  addManualRosterAssignmentCommandSchema,
+  technicalRosterCorrectionCommandSchema,
   createAuctionSessionSchema,
+  reopenAuctionSessionCommandSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
   updateAuctionSessionSchema
@@ -7,6 +11,7 @@ import {
 import type {
   AuctionSession,
   CreateAuctionSessionInput,
+  RosterEntry,
   UpdateAuctionSessionInput
 } from "@fantaastaapp/contracts";
 import {
@@ -31,11 +36,38 @@ import type {
   AuctionSessionOperationalCommandErrorResponse
 } from "../http/auction-session-errors.js";
 import {
+  mapManualInitialRosterError
+} from "../http/manual-initial-roster-errors.js";
+import type {
+  ManualInitialRosterErrorMapping
+} from "../http/manual-initial-roster-errors.js";
+import {
+  mapManualRosterAssignmentError
+} from "../http/manual-roster-assignment-errors.js";
+import type {
+  ManualRosterAssignmentErrorMapping
+} from "../http/manual-roster-assignment-errors.js";
+import {
+  mapTechnicalRosterCorrectionError
+} from "../http/technical-roster-correction-errors.js";
+import type {
+  TechnicalRosterCorrectionErrorMapping
+} from "../http/technical-roster-correction-errors.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import type {
   AuctionSessionOperationalCommandCoordinator
 } from "../realtime/auction-session-operational-command-coordinator.js";
+import type {
+  AtomicManualInitialRosterCommandService
+} from "../realtime/atomic-manual-initial-roster-command.service.js";
+import type {
+  AtomicManualRosterAssignmentCommandService
+} from "../realtime/atomic-manual-roster-assignment-command.service.js";
+import type {
+  AtomicTechnicalRosterCorrectionCommandService
+} from "../realtime/atomic-technical-roster-correction-command.service.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -68,6 +100,18 @@ type AuctionSessionCommandBody = {
   commandId?: unknown;
   stateVersion?: unknown;
   reason?: unknown;
+  auctionSessionTeamId?: unknown;
+  playerId?: unknown;
+  acquisitionCost?: unknown;
+  contractYear?: unknown;
+  actor?: unknown;
+  comment?: unknown;
+  manualAssignmentReason?: unknown;
+  rosterEntryId?: unknown;
+  targetAuctionSessionTeamId?: unknown;
+  targetPlayerId?: unknown;
+  targetAcquisitionCost?: unknown;
+  targetContractYear?: unknown;
 };
 
 type CreateAuctionSessionResponse = {
@@ -87,6 +131,30 @@ type ExecuteAuctionSessionCommandResponse = {
 
 type ExecuteOperationalAuctionSessionCommandResponse = {
   data: AuctionSession;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+type ExecuteManualInitialRosterCommandResponse = {
+  data: RosterEntry;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+type ExecuteManualRosterAssignmentCommandResponse = {
+  data: RosterEntry;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+type ExecuteTechnicalRosterCorrectionCommandResponse = {
+  data: {
+    before: unknown;
+    after: unknown;
+  };
   stateVersion: number;
   idempotentReplay: boolean;
   error: null;
@@ -116,12 +184,33 @@ const service =
 
 type AuctionSessionOperationalCommandPort = Pick<
   AuctionSessionOperationalCommandCoordinator,
-  "suspend" | "resume"
+  "suspend" | "resume" | "reopen"
+>;
+
+type ManualInitialRosterCommandPort = Pick<
+  AtomicManualInitialRosterCommandService,
+  "add"
+>;
+
+type ManualRosterAssignmentCommandPort = Pick<
+  AtomicManualRosterAssignmentCommandService,
+  "add"
+>;
+
+type TechnicalRosterCorrectionCommandPort = Pick<
+  AtomicTechnicalRosterCorrectionCommandService,
+  "correct"
 >;
 
 export function auctionSessionRoutes(
   operationalCommandService:
-    AuctionSessionOperationalCommandPort
+    AuctionSessionOperationalCommandPort,
+  manualInitialRosterCommandService:
+    ManualInitialRosterCommandPort,
+  manualRosterAssignmentCommandService:
+    ManualRosterAssignmentCommandPort,
+  technicalRosterCorrectionCommandService:
+    TechnicalRosterCorrectionCommandPort
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{
@@ -333,7 +422,13 @@ fastify.get<{
         | InvalidRequestResponse
         | AuctionSessionNotFoundResponse
         | AuctionSessionConflictResponse
-        | AuctionSessionOperationalCommandErrorResponse;
+        | AuctionSessionOperationalCommandErrorResponse
+        | ExecuteManualInitialRosterCommandResponse
+        | ManualInitialRosterErrorMapping["body"]
+        | ExecuteManualRosterAssignmentCommandResponse
+        | ManualRosterAssignmentErrorMapping["body"]
+        | ExecuteTechnicalRosterCorrectionCommandResponse
+        | TechnicalRosterCorrectionErrorMapping["body"];
     }>(
       "/api/auction-sessions/:id/commands/:command",
       async (request, reply) => {
@@ -459,6 +554,281 @@ fastify.get<{
 
             const mapped =
               mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (command === "reopen") {
+          const validation =
+            reopenAuctionSessionCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  '"commandId" and "stateVersion" are required and must be valid'
+              }
+            });
+          }
+
+          try {
+            const result =
+              await operationalCommandService.reopen({
+                auctionSessionId: id,
+                commandId:
+                  validation.data.commandId,
+                expectedStateVersion:
+                  validation.data.stateVersion
+              });
+
+            return reply.code(200).send({
+              data: result.session,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const operationalMapped =
+              mapAuctionSessionOperationalCommandError(
+                error
+              );
+
+            if (operationalMapped) {
+              return reply
+                .code(
+                  operationalMapped.statusCode
+                )
+                .send(
+                  operationalMapped.body
+                );
+            }
+
+            const mapped =
+              mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "add-manual-initial-roster-entry"
+        ) {
+          const validation =
+            addManualInitialRosterEntryCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Manual initial roster command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await manualInitialRosterCommandService.add(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  auctionSessionTeamId:
+                    validation.data
+                      .auctionSessionTeamId,
+                  playerId:
+                    validation.data.playerId,
+                  acquisitionCost:
+                    validation.data
+                      .acquisitionCost,
+                  contractYear:
+                    validation.data.contractYear
+                },
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.rosterEntry,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapManualInitialRosterError(
+                error
+              );
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "add-manual-roster-assignment"
+        ) {
+          const validation =
+            addManualRosterAssignmentCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Manual roster assignment command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await manualRosterAssignmentCommandService.add(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  auctionSessionTeamId:
+                    validation.data
+                      .auctionSessionTeamId,
+                  playerId:
+                    validation.data.playerId,
+                  acquisitionCost:
+                    validation.data
+                      .acquisitionCost,
+                  contractYear:
+                    validation.data.contractYear
+                },
+                validation.data
+                  .manualAssignmentReason,
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.rosterEntry,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapManualRosterAssignmentError(
+                error
+              );
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "technical-roster-correction"
+        ) {
+          const validation =
+            technicalRosterCorrectionCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Technical roster correction command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await technicalRosterCorrectionCommandService.correct(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  rosterEntryId:
+                    validation.data.rosterEntryId,
+                  auctionSessionTeamId:
+                    validation.data
+                      .targetAuctionSessionTeamId,
+                  playerId:
+                    validation.data.targetPlayerId,
+                  acquisitionCost:
+                    validation.data
+                      .targetAcquisitionCost,
+                  contractYear:
+                    validation.data
+                      .targetContractYear
+                },
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.correction,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapTechnicalRosterCorrectionError(
+                error
+              );
 
             if (mapped) {
               return reply
