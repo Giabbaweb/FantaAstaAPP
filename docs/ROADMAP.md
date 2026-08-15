@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.10.0
+v0.11.0
 ```
 
 Milestone completate:
@@ -92,16 +92,30 @@ Milestone completate:
 - stati visuali della sessione e banner `SUSPENDED`;
 - modalità `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`;
 - foglione elettronico delle rose con slot liberi;
-- 43 file di test server verdi;
-- 287 test server verdi;
-- 10 file di test domain verdi;
-- 86 test domain verdi;
+- autorità amministrativa per `ADMINISTRATOR` e `AUCTIONEER`;
+- assegnazioni manuali delle rose iniziali;
+- assegnazioni manuali alle rose;
+- correzioni tecniche di squadra, giocatore, costo e anno contrattuale;
+- motivazione e identità dell'operatore nelle operazioni amministrative;
+- audit persistente delle assegnazioni e delle correzioni;
+- esecuzione atomica e idempotente dei comandi amministrativi;
+- rispetto di crediti, slot, limiti di ruolo, dimensione rosa e sostenibilità economica;
+- divieto delle correzioni tecniche durante `RUNNING`;
+- protezione delle sessioni `CLOSED`;
+- riapertura amministrativa controllata `CLOSED -> COMPLETED`;
+- comando atomico e idempotente `REOPEN_SESSION`;
+- evento persistente `SESSION_REOPENED`;
+- evento realtime `SESSION_REOPENED`;
+- 52 file di test server verdi;
+- 364 test server verdi;
+- 12 file di test domain verdi;
+- 135 test domain verdi;
 - typecheck e build completi del monorepo superati.
 
 Prossima milestone:
 
 ```text
-v0.11.0 — Operazioni manuali e correzioni
+v0.12.0 — Import/export FMS
 ```
 
 ---
@@ -662,40 +676,49 @@ OTHER
 
 # v0.11.0 — Operazioni manuali e correzioni
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
-## Obiettivi
+## Obiettivi completati
 
-- assegnazioni manuali;
-- gestione manuale delle opzioni;
+- assegnazioni manuali delle rose iniziali;
+- assegnazioni manuali alle rose;
 - correzioni tecniche;
 - motivazioni obbligatorie;
-- audit completo.
+- identità dell'operatore;
+- audit persistente completo delle operazioni amministrative;
+- riapertura controllata delle sessioni chiuse.
 
-## Causali previste
+## Correzioni supportate
 
 ```text
-OPTION_EXERCISED_MANUALLY
-OPTION_NO_EXTERNAL_BID
-TECHNICAL_CORRECTION
-OTHER
+TEAM
+PLAYER
+ACQUISITION_COST
+CONTRACT_YEAR
 ```
 
 ## Regole principali
 
+- operazioni amministrative riservate a `ADMINISTRATOR` e `AUCTIONEER`;
 - validazione del giocatore;
-- validazione crediti;
-- validazione slot;
-- rispetto dei limiti di rosa;
+- validazione dei crediti;
+- validazione degli slot;
+- rispetto dei limiti di ruolo e della dimensione della rosa;
 - sostenibilità economica;
-- registrazione dell’operatore;
-- registrazione della motivazione.
+- registrazione dell'operatore;
+- motivazione/commento obbligatorio per le correzioni;
+- correzioni tecniche vietate durante `RUNNING`;
+- sessione `CLOSED` protetta dalle correzioni dirette;
+- riapertura esplicita `CLOSED -> COMPLETED`;
+- `REOPEN_SESSION` atomico, idempotente e protetto da `stateVersion`;
+- audit `SESSION_REOPENED`;
+- pubblicazione realtime soltanto dopo commit.
 
 ---
 
 # v0.12.0 — Import/export FMS
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 
