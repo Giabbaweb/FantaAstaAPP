@@ -8,7 +8,11 @@ import type {
   RosterEntry,
   RosterEntrySource
 } from "@fantaastaapp/domain";
-import { asc, eq } from "drizzle-orm";
+import {
+  asc,
+  eq,
+  sql
+} from "drizzle-orm";
 
 import type {
   DatabaseWriteExecutor
@@ -21,6 +25,14 @@ export type RosterEntryWriteExecutor =
   DatabaseWriteExecutor;
 
 export type CreateRosterEntryPersistenceInput = {
+  auctionSessionTeamId: string;
+  playerId: string;
+  acquisitionCost: number;
+  contractYear: ContractYear;
+  source: RosterEntrySource;
+};
+
+export type UpdateRosterEntryPersistenceInput = {
   auctionSessionTeamId: string;
   playerId: string;
   acquisitionCost: number;
@@ -53,6 +65,11 @@ function toRosterEntry(
 }
 
 export interface RosterEntryRepository {
+  findByIdWithExecutor(
+    executor: RosterEntryWriteExecutor,
+    id: string
+  ): RosterEntry | null;
+
   findByAuctionSessionTeamIdWithExecutor(
     executor: RosterEntryWriteExecutor,
     auctionSessionTeamId: string
@@ -67,11 +84,33 @@ export interface RosterEntryRepository {
     executor: RosterEntryWriteExecutor,
     input: CreateRosterEntryPersistenceInput
   ): RosterEntry;
+
+  updateWithExecutor(
+    executor: RosterEntryWriteExecutor,
+    id: string,
+    input: UpdateRosterEntryPersistenceInput
+  ): RosterEntry | null;
 }
 
 export class SqliteRosterEntryRepository
   implements RosterEntryRepository
 {
+  findByIdWithExecutor(
+    executor: RosterEntryWriteExecutor,
+    id: string
+  ): RosterEntry | null {
+    const [record] = executor
+      .select()
+      .from(rosterEntries)
+      .where(eq(rosterEntries.id, id))
+      .limit(1)
+      .all();
+
+    return record
+      ? toRosterEntry(record)
+      : null;
+  }
+
   findByAuctionSessionTeamIdWithExecutor(
     executor: RosterEntryWriteExecutor,
     auctionSessionTeamId: string
@@ -130,5 +169,25 @@ export class SqliteRosterEntryRepository
     }
 
     return toRosterEntry(record);
+  }
+
+  updateWithExecutor(
+    executor: RosterEntryWriteExecutor,
+    id: string,
+    input: UpdateRosterEntryPersistenceInput
+  ): RosterEntry | null {
+    const [record] = executor
+      .update(rosterEntries)
+      .set({
+        ...input,
+        updatedAt: sql`CURRENT_TIMESTAMP`
+      })
+      .where(eq(rosterEntries.id, id))
+      .returning()
+      .all();
+
+    return record
+      ? toRosterEntry(record)
+      : null;
   }
 }
