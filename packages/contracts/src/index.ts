@@ -493,6 +493,29 @@ export type AddManualRosterAssignmentCommand =
     typeof addManualRosterAssignmentCommandSchema
   >;
 
+export const technicalRosterCorrectionCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    rosterEntryId:
+      z.string().trim().min(1).max(100),
+    targetAuctionSessionTeamId:
+      z.string().trim().min(1).max(100),
+    targetPlayerId:
+      z.string().trim().min(1).max(100),
+    targetAcquisitionCost:
+      z.number().int().positive(),
+    targetContractYear:
+      contractYearSchema,
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().min(1).max(500)
+  });
+
+export type TechnicalRosterCorrectionCommand =
+  z.infer<
+    typeof technicalRosterCorrectionCommandSchema
+  >;
+
 export const auctionCommandTypeSchema = z.enum([
   "OPEN",
   "BID",

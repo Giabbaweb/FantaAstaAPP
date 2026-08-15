@@ -1,6 +1,7 @@
 import {
   addManualInitialRosterEntryCommandSchema,
   addManualRosterAssignmentCommandSchema,
+  technicalRosterCorrectionCommandSchema,
   createAuctionSessionSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
@@ -46,6 +47,12 @@ import type {
   ManualRosterAssignmentErrorMapping
 } from "../http/manual-roster-assignment-errors.js";
 import {
+  mapTechnicalRosterCorrectionError
+} from "../http/technical-roster-correction-errors.js";
+import type {
+  TechnicalRosterCorrectionErrorMapping
+} from "../http/technical-roster-correction-errors.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import type {
@@ -57,6 +64,9 @@ import type {
 import type {
   AtomicManualRosterAssignmentCommandService
 } from "../realtime/atomic-manual-roster-assignment-command.service.js";
+import type {
+  AtomicTechnicalRosterCorrectionCommandService
+} from "../realtime/atomic-technical-roster-correction-command.service.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -96,6 +106,11 @@ type AuctionSessionCommandBody = {
   actor?: unknown;
   comment?: unknown;
   manualAssignmentReason?: unknown;
+  rosterEntryId?: unknown;
+  targetAuctionSessionTeamId?: unknown;
+  targetPlayerId?: unknown;
+  targetAcquisitionCost?: unknown;
+  targetContractYear?: unknown;
 };
 
 type CreateAuctionSessionResponse = {
@@ -129,6 +144,16 @@ type ExecuteManualInitialRosterCommandResponse = {
 
 type ExecuteManualRosterAssignmentCommandResponse = {
   data: RosterEntry;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+type ExecuteTechnicalRosterCorrectionCommandResponse = {
+  data: {
+    before: unknown;
+    after: unknown;
+  };
   stateVersion: number;
   idempotentReplay: boolean;
   error: null;
@@ -171,13 +196,20 @@ type ManualRosterAssignmentCommandPort = Pick<
   "add"
 >;
 
+type TechnicalRosterCorrectionCommandPort = Pick<
+  AtomicTechnicalRosterCorrectionCommandService,
+  "correct"
+>;
+
 export function auctionSessionRoutes(
   operationalCommandService:
     AuctionSessionOperationalCommandPort,
   manualInitialRosterCommandService:
     ManualInitialRosterCommandPort,
   manualRosterAssignmentCommandService:
-    ManualRosterAssignmentCommandPort
+    ManualRosterAssignmentCommandPort,
+  technicalRosterCorrectionCommandService:
+    TechnicalRosterCorrectionCommandPort
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{
@@ -391,7 +423,11 @@ fastify.get<{
         | AuctionSessionConflictResponse
         | AuctionSessionOperationalCommandErrorResponse
         | ExecuteManualInitialRosterCommandResponse
-        | ManualInitialRosterErrorMapping["body"];
+        | ManualInitialRosterErrorMapping["body"]
+        | ExecuteManualRosterAssignmentCommandResponse
+        | ManualRosterAssignmentErrorMapping["body"]
+        | ExecuteTechnicalRosterCorrectionCommandResponse
+        | TechnicalRosterCorrectionErrorMapping["body"];
     }>(
       "/api/auction-sessions/:id/commands/:command",
       async (request, reply) => {
@@ -655,6 +691,78 @@ fastify.get<{
           } catch (error) {
             const mapped =
               mapManualRosterAssignmentError(
+                error
+              );
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "technical-roster-correction"
+        ) {
+          const validation =
+            technicalRosterCorrectionCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Technical roster correction command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await technicalRosterCorrectionCommandService.correct(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  rosterEntryId:
+                    validation.data.rosterEntryId,
+                  auctionSessionTeamId:
+                    validation.data
+                      .targetAuctionSessionTeamId,
+                  playerId:
+                    validation.data.targetPlayerId,
+                  acquisitionCost:
+                    validation.data
+                      .targetAcquisitionCost,
+                  contractYear:
+                    validation.data
+                      .targetContractYear
+                },
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.correction,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapTechnicalRosterCorrectionError(
                 error
               );
 

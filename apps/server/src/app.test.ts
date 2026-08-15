@@ -2658,6 +2658,649 @@ describe("GET /api/auction-sessions", () => {
     }
   );
 
+  describe(
+    "POST /api/auction-sessions/:id/commands/technical-roster-correction",
+    () => {
+      it(
+        "corrects a roster entry atomically and replays the same command idempotently",
+        async () => {
+          const leagueId =
+            "league-technical-correction-http";
+          const sessionId =
+            "session-technical-correction-http";
+
+          const sourceTeamId =
+            "team-technical-correction-source-http";
+          const targetTeamId =
+            "team-technical-correction-target-http";
+
+          const sourceSessionTeamId =
+            "session-team-technical-correction-source-http";
+          const targetSessionTeamId =
+            "session-team-technical-correction-target-http";
+
+          const sourcePlayerId =
+            "player-technical-correction-source-http";
+          const targetPlayerId =
+            "player-technical-correction-target-http";
+
+          const rosterEntryId =
+            "roster-entry-technical-correction-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Technical Correction HTTP League",
+            normalizedName:
+              "technical correction http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 41,
+            initialCredits: 330,
+            status: "SUSPENDED",
+            suspensionReason:
+              "TECHNICAL_BREAK",
+            stateVersion: 0
+          });
+
+          await db.insert(teams).values([
+            {
+              id: sourceTeamId,
+              leagueId,
+              name:
+                "Technical Correction Source HTTP Team"
+            },
+            {
+              id: targetTeamId,
+              leagueId,
+              name:
+                "Technical Correction Target HTTP Team"
+            }
+          ]);
+
+          await db.insert(auctionSessionTeams).values([
+            {
+              id: sourceSessionTeamId,
+              auctionSessionId:
+                sessionId,
+              teamId:
+                sourceTeamId,
+              tableOrder: 1,
+              remainingCredits: 80,
+              renewalCredits: 0
+            },
+            {
+              id: targetSessionTeamId,
+              auctionSessionId:
+                sessionId,
+              teamId:
+                targetTeamId,
+              tableOrder: 2,
+              remainingCredits: 100,
+              renewalCredits: 0
+            }
+          ]);
+
+          await db.insert(players).values([
+            {
+              id: sourcePlayerId,
+              auctionSessionId:
+                sessionId,
+              fmsCode:
+                "technical-correction-http-001",
+              name:
+                "Technical Correction Source HTTP Player",
+              normalizedName:
+                "technical correction source http player",
+              role: "C",
+              availabilityStatus:
+                "ROSTERED"
+            },
+            {
+              id: targetPlayerId,
+              auctionSessionId:
+                sessionId,
+              fmsCode:
+                "technical-correction-http-002",
+              name:
+                "Technical Correction Target HTTP Player",
+              normalizedName:
+                "technical correction target http player",
+              role: "A",
+              availabilityStatus:
+                "AVAILABLE"
+            }
+          ]);
+
+          await db.insert(rosterEntries).values({
+            id: rosterEntryId,
+            auctionSessionTeamId:
+              sourceSessionTeamId,
+            playerId:
+              sourcePlayerId,
+            acquisitionCost: 20,
+            contractYear: 1,
+            source: "AUCTION"
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/technical-roster-correction",
+            payload: {
+              commandId:
+                "technical-correction-http-command",
+              stateVersion: 0,
+              rosterEntryId,
+              targetAuctionSessionTeamId:
+                targetSessionTeamId,
+              targetPlayerId,
+              targetAcquisitionCost: 35,
+              targetContractYear: 3,
+              actor: {
+                name:
+                  "Integration Tester",
+                role:
+                  "AUCTIONEER"
+              },
+              comment:
+                "Correzione tecnica completa"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            firstResponse.json()
+          ).toEqual({
+            data: {
+              before: {
+                rosterEntry:
+                  expect.objectContaining({
+                    id:
+                      rosterEntryId,
+                    auctionSessionTeamId:
+                      sourceSessionTeamId,
+                    playerId:
+                      sourcePlayerId,
+                    acquisitionCost: 20,
+                    contractYear: 1,
+                    source:
+                      "AUCTION"
+                  }),
+                auctionSessionTeamId:
+                  sourceSessionTeamId,
+                playerId:
+                  sourcePlayerId,
+                acquisitionCost: 20,
+                contractYear: 1
+              },
+              after: {
+                rosterEntry:
+                  expect.objectContaining({
+                    id:
+                      rosterEntryId,
+                    auctionSessionTeamId:
+                      targetSessionTeamId,
+                    playerId:
+                      targetPlayerId,
+                    acquisitionCost: 35,
+                    contractYear: 3,
+                    source:
+                      "TECHNICAL_CORRECTION"
+                  }),
+                auctionSessionTeamId:
+                  targetSessionTeamId,
+                playerId:
+                  targetPlayerId,
+                acquisitionCost: 35,
+                contractYear: 3
+              }
+            },
+            stateVersion: 1,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(
+            retryResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            retryResponse.json()
+          ).toEqual({
+            data:
+              firstResponse.json().data,
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const [storedEntry] =
+            await db
+              .select()
+              .from(rosterEntries)
+              .where(
+                eq(
+                  rosterEntries.id,
+                  rosterEntryId
+                )
+              );
+
+          expect(storedEntry).toEqual(
+            expect.objectContaining({
+              auctionSessionTeamId:
+                targetSessionTeamId,
+              playerId:
+                targetPlayerId,
+              acquisitionCost: 35,
+              contractYear: 3,
+              source:
+                "TECHNICAL_CORRECTION"
+            })
+          );
+
+          const [sourceSessionTeam] =
+            await db
+              .select()
+              .from(auctionSessionTeams)
+              .where(
+                eq(
+                  auctionSessionTeams.id,
+                  sourceSessionTeamId
+                )
+              );
+
+          const [targetSessionTeam] =
+            await db
+              .select()
+              .from(auctionSessionTeams)
+              .where(
+                eq(
+                  auctionSessionTeams.id,
+                  targetSessionTeamId
+                )
+              );
+
+          expect(
+            sourceSessionTeam
+              ?.remainingCredits
+          ).toBe(100);
+
+          expect(
+            targetSessionTeam
+              ?.remainingCredits
+          ).toBe(65);
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "TECHNICAL_ROSTER_CORRECTION"
+            );
+
+          expect(
+            matchingEvents
+          ).toHaveLength(1);
+
+          expect(
+            matchingEvents[0]
+          ).toEqual(
+            expect.objectContaining({
+              actorName:
+                "Integration Tester",
+              actorRole:
+                "AUCTIONEER",
+              comment:
+                "Correzione tecnica completa",
+              beforeAuctionSessionTeamId:
+                sourceSessionTeamId,
+              beforePlayerId:
+                sourcePlayerId,
+              beforeAmount: 20,
+              beforeContractYear: 1,
+              afterAuctionSessionTeamId:
+                targetSessionTeamId,
+              afterPlayerId:
+                targetPlayerId,
+              afterAmount: 35,
+              afterContractYear: 3
+            })
+          );
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "technical-correction-http-command"
+            );
+
+          expect(
+            matchingCommands
+          ).toHaveLength(1);
+
+          expect(
+            matchingCommands[0]
+          ).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "TECHNICAL_ROSTER_CORRECTION",
+              expectedStateVersion: 0,
+              resultStateVersion: 1
+            })
+          );
+
+          const [updatedSession] =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.id,
+                  sessionId
+                )
+              );
+
+          expect(
+            updatedSession?.stateVersion
+          ).toBe(1);
+        }
+      );
+
+      it(
+        "rejects a technical roster correction without the mandatory comment",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-technical-correction-invalid" +
+                "/commands/technical-roster-correction",
+              payload: {
+                commandId:
+                  "technical-correction-invalid-command",
+                stateVersion: 0,
+                rosterEntryId:
+                  "roster-entry-invalid",
+                targetAuctionSessionTeamId:
+                  "session-team-invalid",
+                targetPlayerId:
+                  "player-invalid",
+                targetAcquisitionCost: 10,
+                targetContractYear: 1,
+                actor: {
+                  name:
+                    "Integration Tester",
+                  role:
+                    "ADMINISTRATOR"
+                }
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(400);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code:
+                  "INVALID_REQUEST"
+              })
+          });
+        }
+      );
+
+      it(
+        "rejects a stale technical roster correction command",
+        async () => {
+          const leagueId =
+            "league-technical-correction-stale";
+          const sessionId =
+            "session-technical-correction-stale";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Technical Correction Stale League",
+            normalizedName:
+              "technical correction stale league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 42,
+            initialCredits: 330,
+            status: "SUSPENDED",
+            suspensionReason:
+              "TECHNICAL_BREAK",
+            stateVersion: 1
+          });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                sessionId +
+                "/commands/technical-roster-correction",
+              payload: {
+                commandId:
+                  "technical-correction-stale-command",
+                stateVersion: 0,
+                rosterEntryId:
+                  "missing-roster-entry",
+                targetAuctionSessionTeamId:
+                  "missing-session-team",
+                targetPlayerId:
+                  "missing-player",
+                targetAcquisitionCost: 10,
+                targetContractYear: 1,
+                actor: {
+                  name:
+                    "Integration Tester",
+                  role:
+                    "ADMINISTRATOR"
+                },
+                comment:
+                  "Test stale state"
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code:
+                  "STALE_STATE"
+              })
+          });
+        }
+      );
+
+      it(
+        "rejects reuse of a technical correction command id when the correction changes",
+        async () => {
+          const leagueId =
+            "league-technical-correction-conflict";
+          const sessionId =
+            "session-technical-correction-conflict";
+          const teamId =
+            "team-technical-correction-conflict";
+          const sessionTeamId =
+            "session-team-technical-correction-conflict";
+          const playerId =
+            "player-technical-correction-conflict";
+          const rosterEntryId =
+            "roster-entry-technical-correction-conflict";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Technical Correction Conflict League",
+            normalizedName:
+              "technical correction conflict league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 43,
+            initialCredits: 330,
+            status: "SUSPENDED",
+            suspensionReason:
+              "TECHNICAL_BREAK",
+            stateVersion: 0
+          });
+
+          await db.insert(teams).values({
+            id: teamId,
+            leagueId,
+            name:
+              "Technical Correction Conflict Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id: sessionTeamId,
+              auctionSessionId:
+                sessionId,
+              teamId,
+              tableOrder: 1,
+              remainingCredits: 310,
+              renewalCredits: 0
+            });
+
+          await db.insert(players).values({
+            id: playerId,
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "technical-correction-conflict-001",
+            name:
+              "Technical Correction Conflict Player",
+            normalizedName:
+              "technical correction conflict player",
+            role: "D",
+            availabilityStatus:
+              "ROSTERED"
+          });
+
+          await db.insert(rosterEntries).values({
+            id: rosterEntryId,
+            auctionSessionTeamId:
+              sessionTeamId,
+            playerId,
+            acquisitionCost: 20,
+            contractYear: 1,
+            source: "AUCTION"
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/technical-roster-correction",
+            payload: {
+              commandId:
+                "technical-correction-conflict-command",
+              stateVersion: 0,
+              rosterEntryId,
+              targetAuctionSessionTeamId:
+                sessionTeamId,
+              targetPlayerId:
+                playerId,
+              targetAcquisitionCost: 25,
+              targetContractYear: 2,
+              actor: {
+                name:
+                  "Integration Tester",
+                role:
+                  "AUCTIONEER"
+              },
+              comment:
+                "Motivazione invariata"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          const conflictResponse =
+            await app.inject({
+              ...request,
+              payload: {
+                ...request.payload,
+                targetAcquisitionCost: 26
+              }
+            });
+
+          expect(
+            conflictResponse.statusCode
+          ).toBe(409);
+
+          expect(
+            conflictResponse.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code:
+                  "COMMAND_ID_CONFLICT"
+              })
+          });
+        }
+      );
+    }
+  );
+
   describe("POST /api/player-import/archive", () => {
     const validArchiveContent = [
       "Archivio giocatori FMS ReVo",

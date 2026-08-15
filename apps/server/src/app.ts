@@ -78,6 +78,12 @@ import {
   AtomicManualRosterAssignmentCommandService
 } from "./realtime/atomic-manual-roster-assignment-command.service.js";
 import {
+  AtomicTechnicalRosterCorrectionCommandExecutor
+} from "./realtime/atomic-technical-roster-correction-command.executor.js";
+import {
+  AtomicTechnicalRosterCorrectionCommandService
+} from "./realtime/atomic-technical-roster-correction-command.service.js";
+import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
@@ -140,6 +146,9 @@ import {
 import {
   ManualRosterAssignmentService
 } from "./services/manual-roster-assignment.service.js";
+import {
+  TechnicalRosterCorrectionService
+} from "./services/technical-roster-correction.service.js";
 
 export type BuildAppOptions = {
   auctionBackupRequester?:
@@ -267,6 +276,27 @@ export async function buildApp(
       atomicManualRosterAssignmentCommandExecutor
     );
 
+  const technicalRosterCorrectionService =
+    new TechnicalRosterCorrectionService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicTechnicalRosterCorrectionCommandExecutor =
+    new AtomicTechnicalRosterCorrectionCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      technicalRosterCorrectionService,
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicTechnicalRosterCorrectionCommandService =
+    new AtomicTechnicalRosterCorrectionCommandService(
+      atomicTechnicalRosterCorrectionCommandExecutor
+    );
+
   const auctionBackupRequester =
     options.auctionBackupRequester ??
     new NoopAuctionBackupRequester();
@@ -371,7 +401,8 @@ export async function buildApp(
     auctionSessionRoutes(
       auctionSessionOperationalCommandCoordinator,
       atomicManualInitialRosterCommandService,
-      atomicManualRosterAssignmentCommandService
+      atomicManualRosterAssignmentCommandService,
+      atomicTechnicalRosterCorrectionCommandService
     )
   );
   await app.register(
