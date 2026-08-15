@@ -30,6 +30,13 @@ const playerId = "player-auction-event-test";
 const auctionCallId =
   "auction-call-auction-event-test";
 
+const secondTeamId =
+  "team-auction-event-test-2";
+const secondAuctionSessionTeamId =
+  "session-team-auction-event-test-2";
+const secondPlayerId =
+  "player-auction-event-test-2";
+
 describe("SqliteAuctionEventRepository", () => {
   afterEach(() => {
     db.delete(auctionEvents)
@@ -54,6 +61,15 @@ describe("SqliteAuctionEventRepository", () => {
       .where(
         eq(
           players.id,
+          secondPlayerId
+        )
+      )
+      .run();
+
+    db.delete(players)
+      .where(
+        eq(
+          players.id,
           playerId
         )
       )
@@ -63,7 +79,25 @@ describe("SqliteAuctionEventRepository", () => {
       .where(
         eq(
           auctionSessionTeams.id,
+          secondAuctionSessionTeamId
+        )
+      )
+      .run();
+
+    db.delete(auctionSessionTeams)
+      .where(
+        eq(
+          auctionSessionTeams.id,
           auctionSessionTeamId
+        )
+      )
+      .run();
+
+    db.delete(teams)
+      .where(
+        eq(
+          teams.id,
+          secondTeamId
         )
       )
       .run();
@@ -416,6 +450,185 @@ describe("SqliteAuctionEventRepository", () => {
           "OPTION_EXERCISED_MANUALLY",
         comment:
           "Opzione registrata manualmente",
+        suspensionReason: null
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
+    "creates and reads a technical roster correction event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name:
+            "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      db.insert(teams)
+        .values([
+          {
+            id: teamId,
+            leagueId,
+            name:
+              "Auction Event Test Team"
+          },
+          {
+            id: secondTeamId,
+            leagueId,
+            name:
+              "Auction Event Test Team 2"
+          }
+        ])
+        .run();
+
+      db.insert(auctionSessionTeams)
+        .values([
+          {
+            id: auctionSessionTeamId,
+            auctionSessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 310
+          },
+          {
+            id:
+              secondAuctionSessionTeamId,
+            auctionSessionId,
+            teamId:
+              secondTeamId,
+            tableOrder: 2,
+            renewalCredits: 0,
+            remainingCredits: 295
+          }
+        ])
+        .run();
+
+      db.insert(players)
+        .values([
+          {
+            id: playerId,
+            auctionSessionId,
+            fmsCode:
+              "AUDIT-TECH-CORRECTION-001",
+            name:
+              "Technical Correction Before Player",
+            normalizedName:
+              "technical correction before player",
+            role: "C",
+            availabilityStatus:
+              "AVAILABLE"
+          },
+          {
+            id: secondPlayerId,
+            auctionSessionId,
+            fmsCode:
+              "AUDIT-TECH-CORRECTION-002",
+            name:
+              "Technical Correction After Player",
+            normalizedName:
+              "technical correction after player",
+            role: "A",
+            availabilityStatus:
+              "ROSTERED"
+          }
+        ])
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "TECHNICAL_ROSTER_CORRECTION",
+
+            actorName:
+              "Gianfranco",
+            actorRole:
+              "AUCTIONEER",
+            comment:
+              "Corretta squadra, giocatore, costo e anno contrattuale",
+
+            beforeAuctionSessionTeamId:
+              auctionSessionTeamId,
+            beforePlayerId:
+              playerId,
+            beforeAmount: 20,
+            beforeContractYear: 1,
+
+            afterAuctionSessionTeamId:
+              secondAuctionSessionTeamId,
+            afterPlayerId:
+              secondPlayerId,
+            afterAmount: 35,
+            afterContractYear: 3
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "TECHNICAL_ROSTER_CORRECTION",
+
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+
+        actorName:
+          "Gianfranco",
+        actorRole:
+          "AUCTIONEER",
+        comment:
+          "Corretta squadra, giocatore, costo e anno contrattuale",
+
+        manualAssignmentReason: null,
+
+        beforeAuctionSessionTeamId:
+          auctionSessionTeamId,
+        beforePlayerId:
+          playerId,
+        beforeAmount: 20,
+        beforeContractYear: 1,
+
+        afterAuctionSessionTeamId:
+          secondAuctionSessionTeamId,
+        afterPlayerId:
+          secondPlayerId,
+        afterAmount: 35,
+        afterContractYear: 3,
+
         suspensionReason: null
       });
 

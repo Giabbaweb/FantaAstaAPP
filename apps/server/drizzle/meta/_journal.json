@@ -127,6 +127,13 @@
       "when": 1786745718142,
       "tag": "0017_shocking_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1786828019387,
+      "tag": "0018_narrow_quentin_quire",
+      "breakpoints": true
     }
   ]
 }

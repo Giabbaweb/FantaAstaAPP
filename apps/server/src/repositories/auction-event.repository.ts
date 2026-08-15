@@ -21,6 +21,7 @@ export type AuctionEventType =
   | "AUCTION_AWARD_CONFIRMED"
   | "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY"
   | "MANUAL_ROSTER_ASSIGNMENT_ADDED"
+  | "TECHNICAL_ROSTER_CORRECTION"
   | "SESSION_SUSPENDED"
   | "SESSION_RESUMED";
 
@@ -91,6 +92,36 @@ export type ManualRosterAssignmentAddedEvent = {
   createdAt: string;
 };
 
+export type TechnicalRosterCorrectionEvent = {
+  id: string;
+  auctionSessionId: string;
+  auctionCallId: null;
+  eventType:
+    "TECHNICAL_ROSTER_CORRECTION";
+  auctionSessionTeamId: null;
+  playerId: null;
+  amount: null;
+  creditsBefore: null;
+  creditsAfter: null;
+  contractYear: null;
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment: string;
+  manualAssignmentReason: null;
+  beforeAuctionSessionTeamId: string;
+  beforePlayerId: string;
+  beforeAmount: number;
+  beforeContractYear: 1 | 2 | 3;
+  afterAuctionSessionTeamId: string;
+  afterPlayerId: string;
+  afterAmount: number;
+  afterContractYear: 1 | 2 | 3;
+  suspensionReason: null;
+  createdAt: string;
+};
+
 export type AuctionSessionSuspendedEvent = {
   id: string;
   auctionSessionId: string;
@@ -138,6 +169,7 @@ export type AuctionEvent =
   | AuctionAwardConfirmedEvent
   | ManualInitialRosterEntryAddedEvent
   | ManualRosterAssignmentAddedEvent
+  | TechnicalRosterCorrectionEvent
   | AuctionSessionSuspendedEvent
   | AuctionSessionResumedEvent;
 
@@ -190,6 +222,25 @@ export type CreateManualRosterAssignmentAddedEventInput = {
     ];
 };
 
+export type CreateTechnicalRosterCorrectionEventInput = {
+  auctionSessionId: string;
+  eventType:
+    "TECHNICAL_ROSTER_CORRECTION";
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment: string;
+  beforeAuctionSessionTeamId: string;
+  beforePlayerId: string;
+  beforeAmount: number;
+  beforeContractYear: 1 | 2 | 3;
+  afterAuctionSessionTeamId: string;
+  afterPlayerId: string;
+  afterAmount: number;
+  afterContractYear: 1 | 2 | 3;
+};
+
 export type CreateAuctionSessionSuspendedEventInput = {
   auctionSessionId: string;
   eventType: "SESSION_SUSPENDED";
@@ -206,6 +257,7 @@ export type CreateAuctionEventInput =
   | CreateAuctionAwardConfirmedEventInput
   | CreateManualInitialRosterEntryAddedEventInput
   | CreateManualRosterAssignmentAddedEventInput
+  | CreateTechnicalRosterCorrectionEventInput
   | CreateAuctionSessionSuspendedEventInput
   | CreateAuctionSessionResumedEventInput;
 
@@ -370,6 +422,82 @@ function mapAuctionEvent(
           record.comment,
         manualAssignmentReason:
           record.manualAssignmentReason,
+        suspensionReason: null
+      };
+    }
+
+    case "TECHNICAL_ROSTER_CORRECTION": {
+      if (
+        record.auctionCallId !== null ||
+        record.auctionSessionTeamId !== null ||
+        record.playerId !== null ||
+        record.amount !== null ||
+        record.creditsBefore !== null ||
+        record.creditsAfter !== null ||
+        record.contractYear !== null ||
+        record.actorName === null ||
+        record.actorName.length === 0 ||
+        (
+          record.actorRole !== "ADMINISTRATOR" &&
+          record.actorRole !== "AUCTIONEER"
+        ) ||
+        record.comment === null ||
+        record.comment.trim().length === 0 ||
+        record.manualAssignmentReason !== null ||
+        record.beforeAuctionSessionTeamId === null ||
+        record.beforePlayerId === null ||
+        record.beforeAmount === null ||
+        record.beforeAmount <= 0 ||
+        record.beforeContractYear === null ||
+        (
+          record.beforeContractYear !== 1 &&
+          record.beforeContractYear !== 2 &&
+          record.beforeContractYear !== 3
+        ) ||
+        record.afterAuctionSessionTeamId === null ||
+        record.afterPlayerId === null ||
+        record.afterAmount === null ||
+        record.afterAmount <= 0 ||
+        record.afterContractYear === null ||
+        (
+          record.afterContractYear !== 1 &&
+          record.afterContractYear !== 2 &&
+          record.afterContractYear !== 3
+        ) ||
+        record.suspensionReason !== null
+      ) {
+        throw new Error(
+          `Invalid TECHNICAL_ROSTER_CORRECTION event "${record.id}"`
+        );
+      }
+
+      return {
+        ...record,
+        eventType:
+          "TECHNICAL_ROSTER_CORRECTION",
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+        actorName: record.actorName,
+        actorRole: record.actorRole,
+        comment: record.comment,
+        manualAssignmentReason: null,
+        beforeAuctionSessionTeamId:
+          record.beforeAuctionSessionTeamId,
+        beforePlayerId: record.beforePlayerId,
+        beforeAmount: record.beforeAmount,
+        beforeContractYear:
+          record.beforeContractYear,
+        afterAuctionSessionTeamId:
+          record.afterAuctionSessionTeamId,
+        afterPlayerId: record.afterPlayerId,
+        afterAmount: record.afterAmount,
+        afterContractYear:
+          record.afterContractYear,
         suspensionReason: null
       };
     }
@@ -582,6 +710,46 @@ export class SqliteAuctionEventRepository
                 input.comment ?? null,
               manualAssignmentReason:
                 input.manualAssignmentReason,
+              suspensionReason: null
+            }
+        : input.eventType ===
+            "TECHNICAL_ROSTER_CORRECTION"
+          ? {
+              id,
+              auctionSessionId:
+                input.auctionSessionId,
+              auctionCallId: null,
+              eventType:
+                input.eventType,
+              auctionSessionTeamId: null,
+              playerId: null,
+              amount: null,
+              creditsBefore: null,
+              creditsAfter: null,
+              contractYear: null,
+              actorName:
+                input.actorName,
+              actorRole:
+                input.actorRole,
+              comment:
+                input.comment,
+              manualAssignmentReason: null,
+              beforeAuctionSessionTeamId:
+                input.beforeAuctionSessionTeamId,
+              beforePlayerId:
+                input.beforePlayerId,
+              beforeAmount:
+                input.beforeAmount,
+              beforeContractYear:
+                input.beforeContractYear,
+              afterAuctionSessionTeamId:
+                input.afterAuctionSessionTeamId,
+              afterPlayerId:
+                input.afterPlayerId,
+              afterAmount:
+                input.afterAmount,
+              afterContractYear:
+                input.afterContractYear,
               suspensionReason: null
             }
         : input.eventType ===

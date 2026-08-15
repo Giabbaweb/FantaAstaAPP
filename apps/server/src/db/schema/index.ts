@@ -598,6 +598,7 @@ export const auctionEvents = sqliteTable(
         "AUCTION_AWARD_CONFIRMED",
         "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
         "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+        "TECHNICAL_ROSTER_CORRECTION",
         "SESSION_SUSPENDED",
         "SESSION_RESUMED"
       ]
@@ -658,6 +659,46 @@ export const auctionEvents = sqliteTable(
       }
     ),
 
+    beforeAuctionSessionTeamId: text(
+      "before_auction_session_team_id"
+    ).references(() => auctionSessionTeams.id, {
+      onDelete: "restrict"
+    }),
+
+    beforePlayerId: text(
+      "before_player_id"
+    ).references(() => players.id, {
+      onDelete: "restrict"
+    }),
+
+    beforeAmount: integer(
+      "before_amount"
+    ),
+
+    beforeContractYear: integer(
+      "before_contract_year"
+    ),
+
+    afterAuctionSessionTeamId: text(
+      "after_auction_session_team_id"
+    ).references(() => auctionSessionTeams.id, {
+      onDelete: "restrict"
+    }),
+
+    afterPlayerId: text(
+      "after_player_id"
+    ).references(() => players.id, {
+      onDelete: "restrict"
+    }),
+
+    afterAmount: integer(
+      "after_amount"
+    ),
+
+    afterContractYear: integer(
+      "after_contract_year"
+    ),
+
     suspensionReason: text(
       "suspension_reason",
       {
@@ -699,6 +740,14 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorRole} IS NULL
           AND ${table.comment} IS NULL
           AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NULL
+          AND ${table.beforePlayerId} IS NULL
+          AND ${table.beforeAmount} IS NULL
+          AND ${table.beforeContractYear} IS NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR
@@ -714,6 +763,14 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorName} IS NOT NULL
           AND ${table.actorRole} IS NOT NULL
           AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NULL
+          AND ${table.beforePlayerId} IS NULL
+          AND ${table.beforeAmount} IS NULL
+          AND ${table.beforeContractYear} IS NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR
@@ -729,6 +786,39 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorName} IS NOT NULL
           AND ${table.actorRole} IS NOT NULL
           AND ${table.manualAssignmentReason} IS NOT NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NULL
+          AND ${table.beforePlayerId} IS NULL
+          AND ${table.beforeAmount} IS NULL
+          AND ${table.beforeContractYear} IS NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'TECHNICAL_ROSTER_CORRECTION'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NULL
+          AND ${table.playerId} IS NULL
+          AND ${table.amount} IS NULL
+          AND ${table.creditsBefore} IS NULL
+          AND ${table.creditsAfter} IS NULL
+          AND ${table.contractYear} IS NULL
+          AND ${table.actorName} IS NOT NULL
+          AND ${table.actorRole} IS NOT NULL
+          AND ${table.comment} IS NOT NULL
+          AND length(trim(${table.comment})) > 0
+          AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NOT NULL
+          AND ${table.beforePlayerId} IS NOT NULL
+          AND ${table.beforeAmount} IS NOT NULL
+          AND ${table.beforeContractYear} IS NOT NULL
+          AND ${table.afterAuctionSessionTeamId} IS NOT NULL
+          AND ${table.afterPlayerId} IS NOT NULL
+          AND ${table.afterAmount} IS NOT NULL
+          AND ${table.afterContractYear} IS NOT NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR
@@ -745,6 +835,14 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorRole} IS NULL
           AND ${table.comment} IS NULL
           AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NULL
+          AND ${table.beforePlayerId} IS NULL
+          AND ${table.beforeAmount} IS NULL
+          AND ${table.beforeContractYear} IS NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
           AND ${table.suspensionReason} IS NOT NULL
         )
         OR
@@ -761,9 +859,37 @@ export const auctionEvents = sqliteTable(
           AND ${table.actorRole} IS NULL
           AND ${table.comment} IS NULL
           AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NULL
+          AND ${table.beforePlayerId} IS NULL
+          AND ${table.beforeAmount} IS NULL
+          AND ${table.beforeContractYear} IS NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
       )`
+    ),
+
+    check(
+      "auction_events_before_amount_positive",
+      sql`${table.beforeAmount} IS NULL OR ${table.beforeAmount} > 0`
+    ),
+
+    check(
+      "auction_events_after_amount_positive",
+      sql`${table.afterAmount} IS NULL OR ${table.afterAmount} > 0`
+    ),
+
+    check(
+      "auction_events_before_contract_year_range",
+      sql`${table.beforeContractYear} IS NULL OR ${table.beforeContractYear} BETWEEN 1 AND 3`
+    ),
+
+    check(
+      "auction_events_after_contract_year_range",
+      sql`${table.afterContractYear} IS NULL OR ${table.afterContractYear} BETWEEN 1 AND 3`
     ),
 
     check(
