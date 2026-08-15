@@ -332,6 +332,71 @@ describe("SqliteCommandRegistryRepository", () => {
     }
   );
 
+  it(
+    "stores and restores a technical roster correction command result",
+    async () => {
+      const result = {
+        id:
+          "roster-entry-technical-correction-command-result-1",
+        auctionSessionTeamId:
+          "session-team-1",
+        playerId:
+          "player-1",
+        acquisitionCost: 35,
+        contractYear: 3 as const,
+        source:
+          "TECHNICAL_CORRECTION" as const,
+        createdAt:
+          "2026-08-15T20:00:00.000Z",
+        updatedAt:
+          "2026-08-15T20:05:00.000Z"
+      };
+
+      const created =
+        await repository
+          .createTechnicalRosterCorrectionCommand({
+            auctionSessionId:
+              "session-1",
+            commandId:
+              "technical-correction-command-1",
+            commandType:
+              "TECHNICAL_ROSTER_CORRECTION",
+            expectedStateVersion: 2,
+            resultStateVersion: 3,
+            requestFingerprint:
+              "technical-correction:roster-entry-1:team-1:player-1:35:3",
+            result
+          });
+
+      expect(created).toEqual(
+        expect.objectContaining({
+          auctionSessionId:
+            "session-1",
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId: null,
+          commandId:
+            "technical-correction-command-1",
+          commandType:
+            "TECHNICAL_ROSTER_CORRECTION",
+          expectedStateVersion: 2,
+          resultStateVersion: 3,
+          requestFingerprint:
+            "technical-correction:roster-entry-1:team-1:player-1:35:3",
+          result
+        })
+      );
+
+      const found =
+        await repository.findByCommandId(
+          "session-1",
+          "technical-correction-command-1"
+        );
+
+      expect(found).toEqual(created);
+    }
+  );
+
   it("returns null for an unknown command", async () => {
     await expect(
       repository.findByCommandId(

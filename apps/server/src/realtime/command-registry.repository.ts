@@ -44,7 +44,8 @@ export type RegisteredAuctionSessionCommandType =
 
 export type RegisteredManualRosterCommandType =
   | "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
-  | "ADD_MANUAL_ROSTER_ASSIGNMENT";
+  | "ADD_MANUAL_ROSTER_ASSIGNMENT"
+  | "TECHNICAL_ROSTER_CORRECTION";
 
 export type RegisteredManualInitialRosterCommandType =
   Extract<
@@ -56,6 +57,12 @@ export type RegisteredManualRosterAssignmentCommandType =
   Extract<
     RegisteredManualRosterCommandType,
     "ADD_MANUAL_ROSTER_ASSIGNMENT"
+  >;
+
+export type RegisteredTechnicalRosterCorrectionCommandType =
+  Extract<
+    RegisteredManualRosterCommandType,
+    "TECHNICAL_ROSTER_CORRECTION"
   >;
 
 type RegisteredCommandBase = {
@@ -103,11 +110,21 @@ export type RegisteredManualRosterAssignmentCommand =
     result: RosterEntry;
   };
 
+export type RegisteredTechnicalRosterCorrectionCommand =
+  RegisteredCommandBase & {
+    commandScope: "AUCTION_SESSION";
+    auctionCallId: null;
+    commandType:
+      RegisteredTechnicalRosterCorrectionCommandType;
+    result: RosterEntry;
+  };
+
 export type RegisteredCommand =
   | RegisteredAuctionCommand
   | RegisteredAuctionSessionCommand
   | RegisteredManualInitialRosterCommand
-  | RegisteredManualRosterAssignmentCommand;
+  | RegisteredManualRosterAssignmentCommand
+  | RegisteredTechnicalRosterCorrectionCommand;
 
 export type RegisterAuctionCommandInput = {
   auctionSessionId: string;
@@ -147,6 +164,17 @@ export type RegisterManualRosterAssignmentCommandInput = {
   commandId: string;
   commandType:
     RegisteredManualRosterAssignmentCommandType;
+  expectedStateVersion: number;
+  resultStateVersion: number;
+  requestFingerprint: string;
+  result: RosterEntry;
+};
+
+export type RegisterTechnicalRosterCorrectionCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  commandType:
+    RegisteredTechnicalRosterCorrectionCommandType;
   expectedStateVersion: number;
   resultStateVersion: number;
   requestFingerprint: string;
@@ -200,6 +228,15 @@ export interface CommandRegistryRepository {
     executor: DatabaseWriteExecutor,
     input: RegisterManualRosterAssignmentCommandInput
   ): RegisteredManualRosterAssignmentCommand;
+
+  createTechnicalRosterCorrectionCommand(
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): Promise<RegisteredTechnicalRosterCorrectionCommand>;
+
+  createTechnicalRosterCorrectionCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): RegisteredTechnicalRosterCorrectionCommand;
 }
 
 export class SqliteCommandRegistryRepository
@@ -486,6 +523,66 @@ export class SqliteCommandRegistryRepository
     return mapped;
   }
 
+  async createTechnicalRosterCorrectionCommand(
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): Promise<RegisteredTechnicalRosterCorrectionCommand> {
+    return this.createTechnicalRosterCorrectionCommandWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createTechnicalRosterCorrectionCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterTechnicalRosterCorrectionCommandInput
+  ): RegisteredTechnicalRosterCorrectionCommand {
+    const [record] = executor
+      .insert(commandRegistry)
+      .values({
+        id: randomUUID(),
+        auctionSessionId:
+          input.auctionSessionId,
+        commandScope:
+          "AUCTION_SESSION",
+        auctionCallId: null,
+        commandId:
+          input.commandId,
+        commandType:
+          input.commandType,
+        expectedStateVersion:
+          input.expectedStateVersion,
+        resultStateVersion:
+          input.resultStateVersion,
+        requestFingerprint:
+          input.requestFingerprint,
+        resultPayload:
+          JSON.stringify(input.result)
+      })
+      .returning()
+      .all();
+
+    if (!record) {
+      throw new Error(
+        `Failed to register technical roster correction command "${input.commandId}"`
+      );
+    }
+
+    const mapped = this.mapRecord(record);
+
+    if (
+      mapped.commandScope !==
+        "AUCTION_SESSION" ||
+      mapped.commandType !==
+        "TECHNICAL_ROSTER_CORRECTION"
+    ) {
+      throw new Error(
+        `Command "${input.commandId}" has an invalid command type`
+      );
+    }
+
+    return mapped;
+  }
+
   private mapRecord(
     record: typeof commandRegistry.$inferSelect
   ): RegisteredCommand {
@@ -604,7 +701,9 @@ export class SqliteCommandRegistryRepository
         record.commandType ===
           "ADD_MANUAL_INITIAL_ROSTER_ENTRY" ||
         record.commandType ===
-          "ADD_MANUAL_ROSTER_ASSIGNMENT"
+          "ADD_MANUAL_ROSTER_ASSIGNMENT" ||
+        record.commandType ===
+          "TECHNICAL_ROSTER_CORRECTION"
       ) {
         const parsedResult =
           rosterEntrySchema.safeParse(payload);
