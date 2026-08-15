@@ -22,6 +22,16 @@ export type {
 } from "./manual-roster-assignment.js";
 
 export {
+  assertTechnicalRosterCorrectionAllowed,
+  TechnicalRosterCorrectionDomainError
+} from "./technical-roster-correction.js";
+
+export type {
+  TechnicalRosterCorrectionDomainErrorCode,
+  TechnicalRosterCorrectionValidationInput
+} from "./technical-roster-correction.js";
+
+export {
   assertRosterAcquisitionAllowed
 } from "./roster-acquisition.js";
 
