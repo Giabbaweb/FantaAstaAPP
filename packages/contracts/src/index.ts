@@ -422,6 +422,14 @@ export type ResumeAuctionSessionCommand =
     typeof resumeAuctionSessionCommandSchema
   >;
 
+export const reopenAuctionSessionCommandSchema =
+  realtimeCommandMetadataSchema;
+
+export type ReopenAuctionSessionCommand =
+  z.infer<
+    typeof reopenAuctionSessionCommandSchema
+  >;
+
 export const manualInitialRosterCommandActorSchema =
   z.object({
     name: z.string().trim().min(1).max(100),

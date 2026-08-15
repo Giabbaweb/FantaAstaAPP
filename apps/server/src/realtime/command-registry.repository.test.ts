@@ -206,6 +206,68 @@ describe("SqliteCommandRegistryRepository", () => {
   });
 
   it(
+    "stores and restores a reopen session command result",
+    async () => {
+      const result = {
+        id: "session-1",
+        leagueId: "league-1",
+        season: "2026/2027",
+        editionNumber: 1,
+        status: "COMPLETED" as const,
+        suspensionReason: null,
+        initialCredits: 330,
+        maximumInitialRosterEntries: 11,
+        createdAt:
+          "2026-08-12T20:00:00.000Z",
+        updatedAt:
+          "2026-08-12T20:02:00.000Z"
+      };
+
+      const created =
+        await repository.createSessionCommand({
+          auctionSessionId:
+            "session-1",
+          commandId:
+            "reopen-session-command-1",
+          commandType:
+            "REOPEN_SESSION",
+          expectedStateVersion: 1,
+          resultStateVersion: 2,
+          requestFingerprint:
+            "REOPEN_SESSION",
+          result
+        });
+
+      expect(created).toEqual(
+        expect.objectContaining({
+          auctionSessionId:
+            "session-1",
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId: null,
+          commandId:
+            "reopen-session-command-1",
+          commandType:
+            "REOPEN_SESSION",
+          expectedStateVersion: 1,
+          resultStateVersion: 2,
+          requestFingerprint:
+            "REOPEN_SESSION",
+          result
+        })
+      );
+
+      const found =
+        await repository.findByCommandId(
+          "session-1",
+          "reopen-session-command-1"
+        );
+
+      expect(found).toEqual(created);
+    }
+  );
+
+  it(
     "stores and restores a manual initial roster command result",
     async () => {
       const result = {

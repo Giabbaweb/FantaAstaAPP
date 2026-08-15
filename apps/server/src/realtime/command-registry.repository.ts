@@ -40,7 +40,8 @@ export type RegisteredAuctionCommandType =
 
 export type RegisteredAuctionSessionCommandType =
   | "SUSPEND_SESSION"
-  | "RESUME_SESSION";
+  | "RESUME_SESSION"
+  | "REOPEN_SESSION";
 
 export type RegisteredManualRosterCommandType =
   | "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
@@ -497,7 +498,8 @@ export class SqliteCommandRegistryRepository
       mapped.commandScope !== "AUCTION_SESSION" ||
       (
         mapped.commandType !== "SUSPEND_SESSION" &&
-        mapped.commandType !== "RESUME_SESSION"
+        mapped.commandType !== "RESUME_SESSION" &&
+        mapped.commandType !== "REOPEN_SESSION"
       )
     ) {
       throw new Error(
@@ -768,7 +770,8 @@ export class SqliteCommandRegistryRepository
 
       if (
         record.commandType === "SUSPEND_SESSION" ||
-        record.commandType === "RESUME_SESSION"
+        record.commandType === "RESUME_SESSION" ||
+        record.commandType === "REOPEN_SESSION"
       ) {
         const parsedResult =
           auctionSessionSchema.safeParse(payload);
