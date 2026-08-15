@@ -7,6 +7,7 @@ import type {
 } from "../services/auction-backup-requester.js";
 import type {
   AuctionSessionOperationalCommandService,
+  ReopenAuctionSessionCommandInput,
   ResumeAuctionSessionCommandInput,
   SuspendAuctionSessionCommandInput
 } from "../services/auction-session-operational-command.service.js";
@@ -22,7 +23,7 @@ import type {
 
 type OperationalCommandService = Pick<
   AuctionSessionOperationalCommandService,
-  "suspend" | "resume"
+  "suspend" | "resume" | "reopen"
 >;
 
 type SessionRealtimeDispatcher = Pick<
@@ -118,6 +119,24 @@ export class AuctionSessionOperationalCommandCoordinator {
 
     await this.dispatchPostCommit(
       "SESSION_RESUMED",
+      input.auctionSessionId
+    );
+
+    return result;
+  }
+
+  async reopen(
+    input: ReopenAuctionSessionCommandInput
+  ): Promise<ExecuteAtomicAuctionSessionCommandResult> {
+    const result =
+      await this.service.reopen(input);
+
+    if (result.idempotentReplay) {
+      return result;
+    }
+
+    await this.dispatchPostCommit(
+      "SESSION_REOPENED",
       input.auctionSessionId
     );
 

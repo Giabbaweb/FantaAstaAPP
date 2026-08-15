@@ -3,6 +3,7 @@ import {
   addManualRosterAssignmentCommandSchema,
   technicalRosterCorrectionCommandSchema,
   createAuctionSessionSchema,
+  reopenAuctionSessionCommandSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
   updateAuctionSessionSchema
@@ -183,7 +184,7 @@ const service =
 
 type AuctionSessionOperationalCommandPort = Pick<
   AuctionSessionOperationalCommandCoordinator,
-  "suspend" | "resume"
+  "suspend" | "resume" | "reopen"
 >;
 
 type ManualInitialRosterCommandPort = Pick<
@@ -520,6 +521,69 @@ fastify.get<{
           try {
             const result =
               await operationalCommandService.resume({
+                auctionSessionId: id,
+                commandId:
+                  validation.data.commandId,
+                expectedStateVersion:
+                  validation.data.stateVersion
+              });
+
+            return reply.code(200).send({
+              data: result.session,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const operationalMapped =
+              mapAuctionSessionOperationalCommandError(
+                error
+              );
+
+            if (operationalMapped) {
+              return reply
+                .code(
+                  operationalMapped.statusCode
+                )
+                .send(
+                  operationalMapped.body
+                );
+            }
+
+            const mapped =
+              mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (command === "reopen") {
+          const validation =
+            reopenAuctionSessionCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  '"commandId" and "stateVersion" are required and must be valid'
+              }
+            });
+          }
+
+          try {
+            const result =
+              await operationalCommandService.reopen({
                 auctionSessionId: id,
                 commandId:
                   validation.data.commandId,

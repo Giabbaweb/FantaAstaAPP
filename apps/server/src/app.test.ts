@@ -1487,6 +1487,206 @@ describe("GET /api/auction-sessions", () => {
       );
 
       it(
+        "reopens a closed session and replays the command idempotently",
+        async () => {
+          const leagueId =
+            "league-command-reopen";
+          const sessionId =
+            "session-command-reopen";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name: "Reopen Command League",
+            normalizedName:
+              "reopen command league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            maximumInitialRosterEntries: 11,
+            status: "CLOSED",
+            stateVersion: 6
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/reopen",
+            payload: {
+              commandId:
+                "reopen-http-command",
+              stateVersion: 6
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(firstResponse.statusCode)
+            .toBe(200);
+
+          expect(firstResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: sessionId,
+              status: "COMPLETED",
+              suspensionReason: null
+            }),
+            stateVersion: 7,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(retryResponse.statusCode)
+            .toBe(200);
+
+          expect(retryResponse.json()).toEqual({
+            data: expect.objectContaining({
+              id: sessionId,
+              status: "COMPLETED",
+              suspensionReason: null
+            }),
+            stateVersion: 7,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "SESSION_REOPENED"
+            );
+
+          expect(matchingEvents)
+            .toHaveLength(1);
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "reopen-http-command"
+            );
+
+          expect(matchingCommands)
+            .toHaveLength(1);
+
+          expect(matchingCommands[0]).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "REOPEN_SESSION",
+              expectedStateVersion: 6,
+              resultStateVersion: 7
+            })
+          );
+        }
+      );
+
+      it(
+        "returns 400 for an invalid reopen payload",
+        async () => {
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              "session-invalid-reopen-payload/" +
+              "commands/reopen",
+            payload: {
+              commandId:
+                "invalid-reopen-command"
+            }
+          });
+
+          expect(response.statusCode)
+            .toBe(400);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+      );
+
+      it(
+        "returns 409 when reopening a session that is not closed",
+        async () => {
+          const leagueId =
+            "league-command-reopen-invalid";
+          const sessionId =
+            "session-command-reopen-invalid";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Invalid Reopen Command League",
+            normalizedName:
+              "invalid reopen command league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 35,
+            initialCredits: 330,
+            maximumInitialRosterEntries: 11,
+            status: "COMPLETED",
+            stateVersion: 3
+          });
+
+          const response = await app.inject({
+            method: "POST",
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/reopen",
+            payload: {
+              commandId:
+                "invalid-reopen-status-command",
+              stateVersion: 3
+            }
+          });
+
+          expect(response.statusCode)
+            .toBe(409);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code:
+                "INVALID_STATUS_TRANSITION"
+            })
+          });
+        }
+      );
+
+      it(
         "returns 400 for an unknown command",
         async () => {
           const response = await app.inject({
@@ -1494,7 +1694,7 @@ describe("GET /api/auction-sessions", () => {
             url:
               "/api/auction-sessions/" +
               "session-command-invalid/" +
-              "commands/reopen"
+              "commands/unknown-command"
           });
 
           expect(response.statusCode).toBe(400);
@@ -1504,7 +1704,7 @@ describe("GET /api/auction-sessions", () => {
             error: {
               code: "INVALID_REQUEST",
               message:
-                'Unknown auction session command "reopen"'
+                'Unknown auction session command "unknown-command"'
             }
           });
         }

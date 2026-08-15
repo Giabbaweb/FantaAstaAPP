@@ -51,6 +51,20 @@ describe(
       idempotentReplay: false
     };
 
+    const reopenedSession: AuctionSession = {
+      ...runningSession,
+      status: "COMPLETED",
+      suspensionReason: null,
+      updatedAt:
+        "2026-08-13T20:00:00.000Z"
+    };
+
+    const reopenResult = {
+      session: reopenedSession,
+      stateVersion: 7,
+      idempotentReplay: false
+    };
+
     const suspendInput = {
       auctionSessionId: "session-1",
       commandId: "suspend-command-1",
@@ -64,6 +78,12 @@ describe(
       expectedStateVersion: 5
     };
 
+    const reopenInput = {
+      auctionSessionId: "session-1",
+      commandId: "reopen-command-1",
+      expectedStateVersion: 6
+    };
+
     function createFixture() {
       const service = {
         suspend:
@@ -75,6 +95,11 @@ describe(
           vi.fn()
             .mockResolvedValue(
               resumeResult
+            ),
+        reopen:
+          vi.fn()
+            .mockResolvedValue(
+              reopenResult
             )
       };
 
@@ -207,6 +232,93 @@ describe(
         ).toHaveBeenCalledWith(
           "session-1"
         );
+      }
+    );
+
+    it(
+      "dispatches reopen event and snapshot after reopen",
+      async () => {
+        const {
+          service,
+          dispatcher,
+          snapshotDispatcher,
+          backupRequester,
+          coordinator
+        } = createFixture();
+
+        await expect(
+          coordinator.reopen(
+            reopenInput
+          )
+        ).resolves.toEqual(
+          reopenResult
+        );
+
+        expect(
+          service.reopen
+        ).toHaveBeenCalledWith(
+          reopenInput
+        );
+
+        expect(
+          dispatcher.dispatch
+        ).toHaveBeenCalledWith({
+          type:
+            "SESSION_REOPENED",
+          auctionSessionId:
+            "session-1"
+        });
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).toHaveBeenCalledWith(
+          "session-1"
+        );
+
+        expect(
+          backupRequester
+            .requestSuspendedSessionBackup
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "does not dispatch an idempotent reopen replay",
+      async () => {
+        const {
+          service,
+          dispatcher,
+          snapshotDispatcher,
+          backupRequester,
+          coordinator
+        } = createFixture();
+
+        service.reopen
+          .mockResolvedValueOnce({
+            ...reopenResult,
+            idempotentReplay: true
+          });
+
+        await expect(
+          coordinator.reopen(
+            reopenInput
+          )
+        ).resolves.toMatchObject({
+          idempotentReplay: true
+        });
+
+        expect(
+          dispatcher.dispatch
+        ).not.toHaveBeenCalled();
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).not.toHaveBeenCalled();
+
+        expect(
+          backupRequester
+            .requestSuspendedSessionBackup
+        ).not.toHaveBeenCalled();
       }
     );
 
