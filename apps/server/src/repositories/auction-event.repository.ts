@@ -23,7 +23,8 @@ export type AuctionEventType =
   | "MANUAL_ROSTER_ASSIGNMENT_ADDED"
   | "TECHNICAL_ROSTER_CORRECTION"
   | "SESSION_SUSPENDED"
-  | "SESSION_RESUMED";
+  | "SESSION_RESUMED"
+  | "SESSION_REOPENED";
 
 export type AuctionAwardConfirmedEvent = {
   id: string;
@@ -165,13 +166,33 @@ export type AuctionSessionResumedEvent = {
   createdAt: string;
 };
 
+export type AuctionSessionReopenedEvent = {
+  id: string;
+  auctionSessionId: string;
+  auctionCallId: null;
+  eventType: "SESSION_REOPENED";
+  auctionSessionTeamId: null;
+  playerId: null;
+  amount: null;
+  creditsBefore: null;
+  creditsAfter: null;
+  contractYear: null;
+  actorName: null;
+  actorRole: null;
+  comment: null;
+  manualAssignmentReason: null;
+  suspensionReason: null;
+  createdAt: string;
+};
+
 export type AuctionEvent =
   | AuctionAwardConfirmedEvent
   | ManualInitialRosterEntryAddedEvent
   | ManualRosterAssignmentAddedEvent
   | TechnicalRosterCorrectionEvent
   | AuctionSessionSuspendedEvent
-  | AuctionSessionResumedEvent;
+  | AuctionSessionResumedEvent
+  | AuctionSessionReopenedEvent;
 
 export type CreateAuctionAwardConfirmedEventInput = {
   auctionSessionId: string;
@@ -253,13 +274,19 @@ export type CreateAuctionSessionResumedEventInput = {
   eventType: "SESSION_RESUMED";
 };
 
+export type CreateAuctionSessionReopenedEventInput = {
+  auctionSessionId: string;
+  eventType: "SESSION_REOPENED";
+};
+
 export type CreateAuctionEventInput =
   | CreateAuctionAwardConfirmedEventInput
   | CreateManualInitialRosterEntryAddedEventInput
   | CreateManualRosterAssignmentAddedEventInput
   | CreateTechnicalRosterCorrectionEventInput
   | CreateAuctionSessionSuspendedEventInput
-  | CreateAuctionSessionResumedEventInput;
+  | CreateAuctionSessionResumedEventInput
+  | CreateAuctionSessionReopenedEventInput;
 
 type AuctionEventRecord =
   typeof auctionEvents.$inferSelect;
@@ -566,6 +593,53 @@ function mapAuctionEvent(
         ...record,
         eventType:
           "SESSION_RESUMED",
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+        actorName: null,
+        actorRole: null,
+        comment: null,
+        manualAssignmentReason: null,
+        suspensionReason: null
+      };
+    }
+
+    case "SESSION_REOPENED": {
+      if (
+        record.auctionCallId !== null ||
+        record.auctionSessionTeamId !== null ||
+        record.playerId !== null ||
+        record.amount !== null ||
+        record.creditsBefore !== null ||
+        record.creditsAfter !== null ||
+        record.contractYear !== null ||
+        record.actorName !== null ||
+        record.actorRole !== null ||
+        record.comment !== null ||
+        record.manualAssignmentReason !== null ||
+        record.beforeAuctionSessionTeamId !== null ||
+        record.beforePlayerId !== null ||
+        record.beforeAmount !== null ||
+        record.beforeContractYear !== null ||
+        record.afterAuctionSessionTeamId !== null ||
+        record.afterPlayerId !== null ||
+        record.afterAmount !== null ||
+        record.afterContractYear !== null ||
+        record.suspensionReason !== null
+      ) {
+        throw new Error(
+          `Invalid SESSION_REOPENED event "${record.id}"`
+        );
+      }
+
+      return {
+        ...record,
+        eventType:
+          "SESSION_REOPENED",
         auctionCallId: null,
         auctionSessionTeamId: null,
         playerId: null,

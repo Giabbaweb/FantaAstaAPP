@@ -767,6 +767,71 @@ describe("SqliteAuctionEventRepository", () => {
   );
 
   it(
+    "creates and reads a session reopened event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name: "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "SESSION_REOPENED"
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "SESSION_REOPENED",
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+        actorName: null,
+        actorRole: null,
+        comment: null,
+        manualAssignmentReason: null,
+        suspensionReason: null
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
     "rejects an invalid session event shape",
     () => {
       db.insert(leagues)

@@ -758,7 +758,8 @@ export type RealtimeAuctionCallEventType = z.infer<
 
 export const realtimeAuctionSessionEventTypeSchema = z.enum([
   "SESSION_SUSPENDED",
-  "SESSION_RESUMED"
+  "SESSION_RESUMED",
+  "SESSION_REOPENED"
 ]);
 
 export type RealtimeAuctionSessionEventType = z.infer<
@@ -805,9 +806,16 @@ export const realtimeAuctionSessionResumedEventSchema =
     auctionCallId: z.null()
   });
 
+export const realtimeAuctionSessionReopenedEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: z.literal("SESSION_REOPENED"),
+    auctionCallId: z.null()
+  });
+
 export const realtimeAuctionSessionEventSchema = z.union([
   realtimeAuctionSessionSuspendedEventSchema,
-  realtimeAuctionSessionResumedEventSchema
+  realtimeAuctionSessionResumedEventSchema,
+  realtimeAuctionSessionReopenedEventSchema
 ]);
 
 export type RealtimeAuctionSessionEvent = z.infer<
@@ -817,7 +825,8 @@ export type RealtimeAuctionSessionEvent = z.infer<
 export const realtimeAuctionEventSchema = z.union([
   realtimeAuctionCallEventSchema,
   realtimeAuctionSessionSuspendedEventSchema,
-  realtimeAuctionSessionResumedEventSchema
+  realtimeAuctionSessionResumedEventSchema,
+  realtimeAuctionSessionReopenedEventSchema
 ]);
 
 export type RealtimeAuctionEvent = z.infer<
