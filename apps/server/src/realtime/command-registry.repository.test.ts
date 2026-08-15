@@ -335,21 +335,58 @@ describe("SqliteCommandRegistryRepository", () => {
   it(
     "stores and restores a technical roster correction command result",
     async () => {
-      const result = {
+      const beforeRosterEntry = {
         id:
           "roster-entry-technical-correction-command-result-1",
         auctionSessionTeamId:
           "session-team-1",
         playerId:
           "player-1",
+        acquisitionCost: 20,
+        contractYear: 1 as const,
+        source:
+          "AUCTION" as const,
+        createdAt:
+          "2026-08-15T20:00:00.000Z",
+        updatedAt:
+          "2026-08-15T20:00:00.000Z"
+      };
+
+      const afterRosterEntry = {
+        ...beforeRosterEntry,
+        auctionSessionTeamId:
+          "session-team-2",
+        playerId:
+          "player-2",
         acquisitionCost: 35,
         contractYear: 3 as const,
         source:
           "TECHNICAL_CORRECTION" as const,
-        createdAt:
-          "2026-08-15T20:00:00.000Z",
         updatedAt:
           "2026-08-15T20:05:00.000Z"
+      };
+
+      const result = {
+        before: {
+          rosterEntry:
+            beforeRosterEntry,
+          auctionSessionTeamId:
+            "session-team-1",
+          playerId:
+            "player-1",
+          acquisitionCost: 20,
+          contractYear: 1 as const
+        },
+        after: {
+          rosterEntry:
+            afterRosterEntry,
+          auctionSessionTeamId:
+            "session-team-2",
+          playerId:
+            "player-2",
+          acquisitionCost: 35,
+          contractYear: 3 as const
+        }
       };
 
       const created =

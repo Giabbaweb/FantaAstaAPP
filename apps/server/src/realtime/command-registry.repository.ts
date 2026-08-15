@@ -110,13 +110,27 @@ export type RegisteredManualRosterAssignmentCommand =
     result: RosterEntry;
   };
 
+export type RegisteredTechnicalRosterCorrectionSnapshot = {
+  rosterEntry: RosterEntry;
+  auctionSessionTeamId: string;
+  playerId: string;
+  acquisitionCost: number;
+  contractYear: 1 | 2 | 3;
+};
+
+export type RegisteredTechnicalRosterCorrectionResult = {
+  before: RegisteredTechnicalRosterCorrectionSnapshot;
+  after: RegisteredTechnicalRosterCorrectionSnapshot;
+};
+
 export type RegisteredTechnicalRosterCorrectionCommand =
   RegisteredCommandBase & {
     commandScope: "AUCTION_SESSION";
     auctionCallId: null;
     commandType:
       RegisteredTechnicalRosterCorrectionCommandType;
-    result: RosterEntry;
+    result:
+      RegisteredTechnicalRosterCorrectionResult;
   };
 
 export type RegisteredCommand =
@@ -178,8 +192,101 @@ export type RegisterTechnicalRosterCorrectionCommandInput = {
   expectedStateVersion: number;
   resultStateVersion: number;
   requestFingerprint: string;
-  result: RosterEntry;
+  result:
+    RegisteredTechnicalRosterCorrectionResult;
 };
+
+function parseTechnicalRosterCorrectionSnapshot(
+  payload: unknown
+): RegisteredTechnicalRosterCorrectionSnapshot | null {
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    return null;
+  }
+
+  const candidate =
+    payload as Record<string, unknown>;
+
+  const parsedRosterEntry =
+    rosterEntrySchema.safeParse(
+      candidate.rosterEntry
+    );
+
+  if (!parsedRosterEntry.success) {
+    return null;
+  }
+
+  const contractYear =
+    candidate.contractYear;
+
+  if (
+    typeof candidate.auctionSessionTeamId !==
+      "string" ||
+    candidate.auctionSessionTeamId.length === 0 ||
+    typeof candidate.playerId !== "string" ||
+    candidate.playerId.length === 0 ||
+    typeof candidate.acquisitionCost !==
+      "number" ||
+    !Number.isInteger(
+      candidate.acquisitionCost
+    ) ||
+    candidate.acquisitionCost <= 0 ||
+    (
+      contractYear !== 1 &&
+      contractYear !== 2 &&
+      contractYear !== 3
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    rosterEntry:
+      parsedRosterEntry.data,
+    auctionSessionTeamId:
+      candidate.auctionSessionTeamId,
+    playerId:
+      candidate.playerId,
+    acquisitionCost:
+      candidate.acquisitionCost,
+    contractYear
+  };
+}
+
+function parseTechnicalRosterCorrectionResult(
+  payload: unknown
+): RegisteredTechnicalRosterCorrectionResult | null {
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    return null;
+  }
+
+  const candidate =
+    payload as Record<string, unknown>;
+
+  const before =
+    parseTechnicalRosterCorrectionSnapshot(
+      candidate.before
+    );
+
+  const after =
+    parseTechnicalRosterCorrectionSnapshot(
+      candidate.after
+    );
+
+  if (!before || !after) {
+    return null;
+  }
+
+  return {
+    before,
+    after
+  };
+}
 
 export interface CommandRegistryRepository {
   findByCommandId(
@@ -701,9 +808,7 @@ export class SqliteCommandRegistryRepository
         record.commandType ===
           "ADD_MANUAL_INITIAL_ROSTER_ENTRY" ||
         record.commandType ===
-          "ADD_MANUAL_ROSTER_ASSIGNMENT" ||
-        record.commandType ===
-          "TECHNICAL_ROSTER_CORRECTION"
+          "ADD_MANUAL_ROSTER_ASSIGNMENT"
       ) {
         const parsedResult =
           rosterEntrySchema.safeParse(payload);
@@ -734,6 +839,45 @@ export class SqliteCommandRegistryRepository
             record.requestFingerprint,
           result:
             parsedResult.data,
+          createdAt:
+            record.createdAt
+        };
+      }
+
+      if (
+        record.commandType ===
+          "TECHNICAL_ROSTER_CORRECTION"
+      ) {
+        const parsedResult =
+          parseTechnicalRosterCorrectionResult(
+            payload
+          );
+
+        if (!parsedResult) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid technical roster correction result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId: null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult,
           createdAt:
             record.createdAt
         };
