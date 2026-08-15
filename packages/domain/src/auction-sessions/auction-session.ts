@@ -10,7 +10,8 @@ export const auctionSessionCommands = [
   "suspend",
   "resume",
   "complete",
-  "close"
+  "close",
+  "reopen"
 ] as const;
 
 export type AuctionSessionCommand =
@@ -57,7 +58,9 @@ const statusTransitions: Record<
   COMPLETED: {
     close: "CLOSED"
   },
-  CLOSED: {}
+  CLOSED: {
+    reopen: "COMPLETED"
+  }
 };
 
 const operationalStatuses: ReadonlySet<AuctionSessionStatus> =
