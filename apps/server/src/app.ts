@@ -357,7 +357,8 @@ export async function buildApp(
       auctionSessionRepository,
       new SqliteAuctionSessionTeamRepository(),
       new SqliteRosterEntryRepository(),
-      new SqlitePlayerRepository()
+      new SqlitePlayerRepository(),
+      new SqliteFmsExportGoalkeeperRepository()
     );
 
   const fmsExportGoalkeeperSelectionService =

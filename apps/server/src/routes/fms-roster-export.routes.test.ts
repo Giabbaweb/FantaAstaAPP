@@ -15,6 +15,7 @@ import {
 import {
   auctionSessions,
   auctionSessionTeams,
+  fmsExportGoalkeepers,
   leagues,
   players,
   rosterEntries,
@@ -146,6 +147,34 @@ describe(
         rosterRows
       );
 
+      const exportGoalkeeperId =
+        "player-fms-export-http-goalkeeper";
+
+      await db.insert(players).values({
+        id: exportGoalkeeperId,
+        auctionSessionId: sessionId,
+        fmsCode:
+          "fms-export-http-goalkeeper",
+        name: "EXPORT GOALKEEPER",
+        normalizedName:
+          "export goalkeeper",
+        realTeamName: "Roma",
+        role: "P",
+        availabilityStatus:
+          "AVAILABLE"
+      });
+
+      await db
+        .insert(fmsExportGoalkeepers)
+        .values({
+          id:
+            "fms-export-goalkeeper-http-selection",
+          auctionSessionTeamId:
+            sessionTeamId,
+          playerId:
+            exportGoalkeeperId
+        });
+
       const response =
         await app.inject({
           method: "GET",
@@ -176,13 +205,13 @@ describe(
       const lines =
         response.body.split("\n");
 
-      expect(lines).toHaveLength(24);
+      expect(lines).toHaveLength(25);
 
-      expect(lines[0]).toBe(
-        "Portiere\tP-1\t1\t1"
+      expect(lines).toContain(
+        "Portiere\tEXPORT GOALKEEPER\t0\t1"
       );
 
-      expect(lines[23]).toBe(
+      expect(lines[24]).toBe(
         "Attaccante\tA-6\t1\t1"
       );
     });

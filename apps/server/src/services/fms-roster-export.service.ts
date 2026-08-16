@@ -27,6 +27,9 @@ import type {
   AuctionSessionTeamTransactionalRepository
 } from "../repositories/auction-session-team.repository.js";
 import type {
+  FmsExportGoalkeeperRepository
+} from "../repositories/fms-export-goalkeeper.repository.js";
+import type {
   PlayerRepository
 } from "../repositories/player.repository.js";
 import type {
@@ -44,7 +47,9 @@ export type FmsRosterExportServiceErrorCode =
   | "AUCTION_SESSION_TEAM_NOT_FOUND"
   | "AUCTION_SESSION_NOT_FOUND"
   | "AUCTION_SESSION_NOT_EXPORTABLE"
-  | "PLAYER_SESSION_MISMATCH";
+  | "PLAYER_SESSION_MISMATCH"
+  | "FMS_EXPORT_GOALKEEPER_NOT_SELECTED"
+  | "FMS_EXPORT_GOALKEEPER_PLAYER_NOT_FOUND";
 
 export class FmsRosterExportServiceError
   extends Error
@@ -81,7 +86,13 @@ export class FmsRosterExportService {
     private readonly playerRepository:
       Pick<
         PlayerRepository,
+        "findByIdWithExecutor" |
         "findByIdsWithExecutor"
+      >,
+    private readonly goalkeeperRepository:
+      Pick<
+        FmsExportGoalkeeperRepository,
+        "findByAuctionSessionTeamIdWithExecutor"
       >
   ) {}
 
@@ -222,6 +233,52 @@ export class FmsRosterExportService {
       projection
     );
 
-    return projection;
+    const goalkeeperSelection =
+      this.goalkeeperRepository
+        .findByAuctionSessionTeamIdWithExecutor(
+          executor,
+          auctionSessionTeam.id
+        );
+
+    if (!goalkeeperSelection) {
+      throw new FmsRosterExportServiceError(
+        "FMS_EXPORT_GOALKEEPER_NOT_SELECTED",
+        `FMS export goalkeeper was not selected for auction session team "${auctionSessionTeam.id}"`
+      );
+    }
+
+    const exportGoalkeeper =
+      this.playerRepository
+        .findByIdWithExecutor(
+          executor,
+          goalkeeperSelection.playerId
+        );
+
+    if (!exportGoalkeeper) {
+      throw new FmsRosterExportServiceError(
+        "FMS_EXPORT_GOALKEEPER_PLAYER_NOT_FOUND",
+        `FMS export goalkeeper player "${goalkeeperSelection.playerId}" was not found`
+      );
+    }
+
+    if (
+      exportGoalkeeper.auctionSessionId !==
+      auctionSession.id
+    ) {
+      throw new FmsRosterExportServiceError(
+        "PLAYER_SESSION_MISMATCH",
+        `Player "${exportGoalkeeper.id}" does not belong to auction session "${auctionSession.id}"`
+      );
+    }
+
+    return [
+      ...projection,
+      {
+        role: "P",
+        name: exportGoalkeeper.name,
+        acquisitionCost: 0,
+        contractYear: 1
+      }
+    ];
   }
 }

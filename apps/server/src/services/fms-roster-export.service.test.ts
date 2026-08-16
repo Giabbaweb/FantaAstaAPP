@@ -155,8 +155,24 @@ function createService(input?: {
     AuctionSessionTeamPersistenceRecord | null;
   rosterEntries?: RosterEntry[];
   players?: Player[];
+  exportGoalkeeper?: Player | null;
+  exportGoalkeeperPlayerId?: string | null;
 }): FmsRosterExportService {
   const completeRoster = createCompleteRoster();
+
+  const defaultExportGoalkeeper =
+    createPlayer(
+      "player-export-goalkeeper",
+      "P",
+      {
+        name:
+          "EXPORT GOALKEEPER",
+        realTeamName:
+          "Roma",
+        availabilityStatus:
+          "AVAILABLE"
+      }
+    );
 
   return new FmsRosterExportService(
     {
@@ -180,9 +196,56 @@ function createService(input?: {
           completeRoster.rosterEntries
     },
     {
+      findByIdWithExecutor: (
+        _executor,
+        playerId
+      ) => {
+        const exportGoalkeeper =
+          input?.exportGoalkeeper === undefined
+            ? defaultExportGoalkeeper
+            : input.exportGoalkeeper;
+
+        if (
+          exportGoalkeeper &&
+          exportGoalkeeper.id === playerId
+        ) {
+          return exportGoalkeeper;
+        }
+
+        return (
+          input?.players ??
+          completeRoster.players
+        ).find(
+          (player) =>
+            player.id === playerId
+        ) ?? null;
+      },
       findByIdsWithExecutor: () =>
         input?.players ??
         completeRoster.players
+    },
+    {
+      findByAuctionSessionTeamIdWithExecutor:
+        () => {
+          const playerId =
+            input?.exportGoalkeeperPlayerId ===
+            undefined
+              ? "player-export-goalkeeper"
+              : input
+                  .exportGoalkeeperPlayerId;
+
+          return playerId
+            ? {
+                id:
+                  "fms-export-goalkeeper-selection-1",
+                auctionSessionTeamId:
+                  "session-team-1",
+                playerId,
+                createdAt,
+                updatedAt
+              }
+            : null;
+        }
     }
   );
 }
@@ -197,7 +260,14 @@ describe("FmsRosterExportService", () => {
         "session-team-1"
       );
 
-    expect(result).toHaveLength(24);
+    expect(result).toHaveLength(25);
+
+    expect(result).toContainEqual({
+      role: "P",
+      name: "EXPORT GOALKEEPER",
+      acquisitionCost: 0,
+      contractYear: 1
+    });
   });
 
   it("serializes an exportable roster using the FMS format", () => {
@@ -208,19 +278,49 @@ describe("FmsRosterExportService", () => {
         "session-team-1"
       );
 
-    expect(result.split("\n")).toHaveLength(24);
+    const lines =
+      result.split("\n");
 
-    expect(
-      result.split("\n")[0]
-    ).toBe(
-      "Portiere\tP-1\t1\t1"
+    expect(lines).toHaveLength(25);
+
+    expect(lines).toContain(
+      "Portiere\tEXPORT GOALKEEPER\t0\t1"
     );
 
-    expect(
-      result.split("\n")[23]
-    ).toBe(
+    expect(lines[24]).toBe(
       "Attaccante\tA-6\t1\t1"
     );
+  });
+
+  it("rejects export when the FMS goalkeeper was not selected", () => {
+    const service = createService({
+      exportGoalkeeperPlayerId: null
+    });
+
+    expect(() =>
+      service.executeWithExecutor(
+        {} as never,
+        "session-team-1"
+      )
+    ).toThrowError(
+      FmsRosterExportServiceError
+    );
+
+    try {
+      service.executeWithExecutor(
+        {} as never,
+        "session-team-1"
+      );
+    } catch (error) {
+      expect(
+        (
+          error as
+            FmsRosterExportServiceError
+        ).code
+      ).toBe(
+        "FMS_EXPORT_GOALKEEPER_NOT_SELECTED"
+      );
+    }
   });
 
   it("allows export from a closed session", () => {
