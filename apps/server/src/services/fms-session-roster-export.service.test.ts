@@ -63,11 +63,32 @@ const teams: Record<string, Team> = {
 
 function createService(input?: {
   availableTeams?: Record<string, Team>;
+  sessionExists?: boolean;
 }) {
   const availableTeams =
     input?.availableTeams ?? teams;
 
   return new FmsSessionRosterExportService(
+    {
+      findByIdWithExecutor:
+        () =>
+          input?.sessionExists === false
+            ? null
+            : {
+                id: "session-1",
+                leagueId: "league-1",
+                season: "2026/2027",
+                editionNumber: 1,
+                status: "COMPLETED",
+                suspensionReason: null,
+                initialCredits: 300,
+                maximumInitialRosterEntries: 11,
+                createdAt:
+                  "2026-08-16 00:00:00",
+                updatedAt:
+                  "2026-08-16 00:00:00"
+              }
+    },
     {
       findByAuctionSessionIdWithExecutor:
         () => sessionTeams
@@ -140,6 +161,25 @@ describe(
             "content-session-team-2"
         }
       ]);
+    });
+
+    it("rejects export when the auction session cannot be found", async () => {
+      const service = createService({
+        sessionExists: false
+      });
+
+      await expect(
+        service.execute(
+          "missing-session"
+        )
+      ).rejects.toEqual(
+        expect.objectContaining({
+          name:
+            "FmsSessionRosterExportServiceError",
+          code:
+            "AUCTION_SESSION_NOT_FOUND"
+        })
+      );
     });
 
     it("rejects export when a team cannot be found", async () => {

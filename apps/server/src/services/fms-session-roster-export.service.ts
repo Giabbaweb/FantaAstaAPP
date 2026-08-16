@@ -5,6 +5,9 @@ import {
   buildFmsRosterFilename
 } from "../export/fms-roster-filename.js";
 import type {
+  AuctionSessionRepository
+} from "../repositories/auction-session.repository.js";
+import type {
   AuctionSessionTeamTransactionalRepository
 } from "../repositories/auction-session-team.repository.js";
 import type {
@@ -23,6 +26,7 @@ export type FmsSessionRosterExportFile = {
 };
 
 export type FmsSessionRosterExportServiceErrorCode =
+  | "AUCTION_SESSION_NOT_FOUND"
   | "TEAM_NOT_FOUND";
 
 export class FmsSessionRosterExportServiceError
@@ -55,6 +59,11 @@ type TeamLookupPort = Pick<
 
 export class FmsSessionRosterExportService {
   constructor(
+    private readonly auctionSessionRepository:
+      Pick<
+        AuctionSessionRepository,
+        "findByIdWithExecutor"
+      >,
     private readonly auctionSessionTeamRepository:
       Pick<
         AuctionSessionTeamTransactionalRepository,
@@ -70,13 +79,27 @@ export class FmsSessionRosterExportService {
     auctionSessionId: string
   ): Promise<FmsSessionRosterExportFile[]> {
     const sessionTeams =
-      db.transaction((tx) =>
-        this.auctionSessionTeamRepository
+      db.transaction((tx) => {
+        const auctionSession =
+          this.auctionSessionRepository
+            .findByIdWithExecutor(
+              tx,
+              auctionSessionId
+            );
+
+        if (!auctionSession) {
+          throw new FmsSessionRosterExportServiceError(
+            "AUCTION_SESSION_NOT_FOUND",
+            `Auction session "${auctionSessionId}" was not found`
+          );
+        }
+
+        return this.auctionSessionTeamRepository
           .findByAuctionSessionIdWithExecutor(
             tx,
             auctionSessionId
-          )
-      );
+          );
+      });
 
     const files:
       FmsSessionRosterExportFile[] = [];

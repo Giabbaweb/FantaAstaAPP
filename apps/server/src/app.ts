@@ -51,6 +51,9 @@ import {
   fmsRosterExportRoutes
 } from "./routes/fms-roster-export.routes.js";
 import {
+  fmsSessionRosterExportRoutes
+} from "./routes/fms-session-roster-export.routes.js";
+import {
   fmsExportGoalkeeperRoutes
 } from "./routes/fms-export-goalkeeper.routes.js";
 import {
@@ -98,6 +101,9 @@ import {
 import {
   FmsRosterExportService
 } from "./services/fms-roster-export.service.js";
+import {
+  FmsSessionRosterExportService
+} from "./services/fms-session-roster-export.service.js";
 import {
   FmsExportGoalkeeperSelectionService
 } from "./services/fms-export-goalkeeper-selection.service.js";
@@ -361,6 +367,14 @@ export async function buildApp(
       new SqliteFmsExportGoalkeeperRepository()
     );
 
+  const fmsSessionRosterExportService =
+    new FmsSessionRosterExportService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      fmsRosterExportService,
+      new SqliteTeamRepository()
+    );
+
   const fmsExportGoalkeeperSelectionService =
     new FmsExportGoalkeeperSelectionService(
       auctionSessionRepository,
@@ -458,6 +472,12 @@ export async function buildApp(
     fmsRosterExportRoutes(
       fmsRosterExportService,
       new SqliteTeamRepository()
+    )
+  );
+
+  await app.register(
+    fmsSessionRosterExportRoutes(
+      fmsSessionRosterExportService
     )
   );
 
