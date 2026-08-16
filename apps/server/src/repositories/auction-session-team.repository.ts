@@ -43,6 +43,11 @@ export interface AuctionSessionTeamTransactionalRepository {
     id: string
   ): AuctionSessionTeamPersistenceRecord | null;
 
+  findByAuctionSessionIdWithExecutor(
+    executor: AuctionSessionTeamWriteExecutor,
+    auctionSessionId: string
+  ): AuctionSessionTeamPersistenceRecord[];
+
   updateRemainingCreditsWithExecutor(
     executor: AuctionSessionTeamWriteExecutor,
     id: string,
@@ -186,6 +191,28 @@ export class SqliteAuctionSessionTeamRepository
       .all();
 
     return auctionSessionTeam ?? null;
+  }
+
+  findByAuctionSessionIdWithExecutor(
+    executor: AuctionSessionTeamWriteExecutor,
+    auctionSessionId: string
+  ): AuctionSessionTeamPersistenceRecord[] {
+    return executor
+      .select(
+        auctionSessionTeamPersistenceSelection
+      )
+      .from(auctionSessionTeams)
+      .where(
+        eq(
+          auctionSessionTeams.auctionSessionId,
+          auctionSessionId
+        )
+      )
+      .orderBy(
+        asc(auctionSessionTeams.tableOrder),
+        asc(auctionSessionTeams.teamId)
+      )
+      .all();
   }
 
   updateRemainingCreditsWithExecutor(

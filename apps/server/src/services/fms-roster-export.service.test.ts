@@ -186,6 +186,8 @@ function createService(input?: {
         input?.sessionTeam === undefined
           ? createAuctionSessionTeam()
           : input.sessionTeam,
+      findByAuctionSessionIdWithExecutor:
+        () => [],
       updateRemainingCreditsWithExecutor:
         () => null
     },

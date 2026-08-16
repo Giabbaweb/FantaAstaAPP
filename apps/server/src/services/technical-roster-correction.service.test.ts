@@ -587,6 +587,10 @@ describe(
                 realTeamRepository
                   .findByIdWithExecutor
                   .bind(realTeamRepository),
+              findByAuctionSessionIdWithExecutor:
+                realTeamRepository
+                  .findByAuctionSessionIdWithExecutor
+                  .bind(realTeamRepository),
               updateRemainingCreditsWithExecutor:
                 (
                   executor,
