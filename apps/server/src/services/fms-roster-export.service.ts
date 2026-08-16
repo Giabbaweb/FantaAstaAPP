@@ -11,6 +11,9 @@ import type {
 import {
   buildFmsRevoRosterProjection
 } from "../export/fms-revo-roster.projection.js";
+import {
+  serializeFmsRevoRoster
+} from "../export/fms-revo-roster.serializer.js";
 import type {
   FmsRevoRosterExportEntry
 } from "../export/fms-revo-roster.serializer.js";
@@ -88,6 +91,16 @@ export class FmsRosterExportService {
     return db.transaction((tx) =>
       this.executeWithExecutor(
         tx,
+        auctionSessionTeamId
+      )
+    );
+  }
+
+  executeSerialized(
+    auctionSessionTeamId: string
+  ): string {
+    return serializeFmsRevoRoster(
+      this.execute(
         auctionSessionTeamId
       )
     );

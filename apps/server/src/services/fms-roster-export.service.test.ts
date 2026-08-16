@@ -200,6 +200,29 @@ describe("FmsRosterExportService", () => {
     expect(result).toHaveLength(24);
   });
 
+  it("serializes an exportable roster using the FMS format", () => {
+    const service = createService();
+
+    const result =
+      service.executeSerialized(
+        "session-team-1"
+      );
+
+    expect(result.split("\n")).toHaveLength(24);
+
+    expect(
+      result.split("\n")[0]
+    ).toBe(
+      "Portiere\tP-1\t1\t1"
+    );
+
+    expect(
+      result.split("\n")[23]
+    ).toBe(
+      "Attaccante\tA-6\t1\t1"
+    );
+  });
+
   it("allows export from a closed session", () => {
     const service = createService({
       session: createAuctionSession({
