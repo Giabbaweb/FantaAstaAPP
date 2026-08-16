@@ -3,6 +3,10 @@ import type {
 } from "fastify";
 
 import {
+  buildFmsRosterFilename
+} from "../export/fms-roster-filename.js";
+
+import {
   mapFmsRosterExportError
 } from "../http/fms-roster-export-errors.js";
 import type {
@@ -25,14 +29,6 @@ type TeamLookupPort = Pick<
   TeamRepository,
   "findById"
 >;
-
-function sanitizeFilename(
-  value: string
-): string {
-  return value
-    .trim()
-    .replace(/[\\/:*?"<>|]+/gu, "_");
-}
 
 export function fmsRosterExportRoutes(
   exportService: FmsRosterExportServicePort,
@@ -69,7 +65,9 @@ export function fmsRosterExportRoutes(
           }
 
           const filename =
-            `${sanitizeFilename(team.name)}.txt`;
+            buildFmsRosterFilename(
+              team.name
+            );
 
           return reply
             .header(
