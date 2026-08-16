@@ -27,6 +27,9 @@ import {
   SqlitePlayerRepository
 } from "./repositories/player.repository.js";
 import {
+  SqliteFmsExportGoalkeeperRepository
+} from "./repositories/fms-export-goalkeeper.repository.js";
+import {
   SqliteRosterEntryRepository
 } from "./repositories/roster-entry.repository.js";
 import {
@@ -47,6 +50,9 @@ import {
 import {
   fmsRosterExportRoutes
 } from "./routes/fms-roster-export.routes.js";
+import {
+  fmsExportGoalkeeperRoutes
+} from "./routes/fms-export-goalkeeper.routes.js";
 import {
   ownerRoutes
 } from "./routes/owner.routes.js";
@@ -92,6 +98,9 @@ import {
 import {
   FmsRosterExportService
 } from "./services/fms-roster-export.service.js";
+import {
+  FmsExportGoalkeeperSelectionService
+} from "./services/fms-export-goalkeeper-selection.service.js";
 import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
@@ -351,6 +360,15 @@ export async function buildApp(
       new SqlitePlayerRepository()
     );
 
+  const fmsExportGoalkeeperSelectionService =
+    new FmsExportGoalkeeperSelectionService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqlitePlayerRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqliteFmsExportGoalkeeperRepository()
+    );
+
   const atomicAuctionCallCommandService =
     new AtomicAuctionCallCommandService(
       atomicAuctionCommandExecutor,
@@ -439,6 +457,12 @@ export async function buildApp(
     fmsRosterExportRoutes(
       fmsRosterExportService,
       new SqliteTeamRepository()
+    )
+  );
+
+  await app.register(
+    fmsExportGoalkeeperRoutes(
+      fmsExportGoalkeeperSelectionService
     )
   );
 

@@ -465,6 +465,16 @@ export type AddManualInitialRosterEntryCommand =
     typeof addManualInitialRosterEntryCommandSchema
   >;
 
+export const fmsExportGoalkeeperSelectionSchema =
+  z.object({
+    playerId: z.string().trim().min(1)
+  });
+
+export type FmsExportGoalkeeperSelectionInput =
+  z.infer<
+    typeof fmsExportGoalkeeperSelectionSchema
+  >;
+
 export const manualRosterAssignmentReasonSchema =
   z.enum([
     "OPTION_EXERCISED_MANUALLY",
