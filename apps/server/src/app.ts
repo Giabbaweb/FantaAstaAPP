@@ -30,6 +30,9 @@ import {
   SqliteRosterEntryRepository
 } from "./repositories/roster-entry.repository.js";
 import {
+  SqliteTeamRepository
+} from "./repositories/team.repository.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -41,6 +44,9 @@ import {
 import {
   dbHealthRoutes
 } from "./routes/db-health.js";
+import {
+  fmsRosterExportRoutes
+} from "./routes/fms-roster-export.routes.js";
 import {
   ownerRoutes
 } from "./routes/owner.routes.js";
@@ -83,6 +89,9 @@ import {
 import {
   AtomicTechnicalRosterCorrectionCommandService
 } from "./realtime/atomic-technical-roster-correction-command.service.js";
+import {
+  FmsRosterExportService
+} from "./services/fms-roster-export.service.js";
 import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
@@ -334,6 +343,14 @@ export async function buildApp(
       new SqliteAuctionEventRepository()
     );
 
+  const fmsRosterExportService =
+    new FmsRosterExportService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
   const atomicAuctionCallCommandService =
     new AtomicAuctionCallCommandService(
       atomicAuctionCommandExecutor,
@@ -417,6 +434,13 @@ export async function buildApp(
   await app.register(playerRoutes);
   await app.register(playerImportRoutes);
   await app.register(initialRosterImportRoutes);
+
+  await app.register(
+    fmsRosterExportRoutes(
+      fmsRosterExportService,
+      new SqliteTeamRepository()
+    )
+  );
 
   app.addHook("onClose", async () => {
     sqlite.close();

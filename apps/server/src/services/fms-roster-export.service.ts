@@ -106,6 +106,41 @@ export class FmsRosterExportService {
     );
   }
 
+  executeFile(
+    auctionSessionTeamId: string
+  ): {
+    content: string;
+    teamId: string;
+  } {
+    return db.transaction((tx) => {
+      const auctionSessionTeam =
+        this.auctionSessionTeamRepository
+          .findByIdWithExecutor(
+            tx,
+            auctionSessionTeamId
+          );
+
+      if (!auctionSessionTeam) {
+        throw new FmsRosterExportServiceError(
+          "AUCTION_SESSION_TEAM_NOT_FOUND",
+          `Auction session team "${auctionSessionTeamId}" was not found`
+        );
+      }
+
+      const entries =
+        this.executeWithExecutor(
+          tx,
+          auctionSessionTeamId
+        );
+
+      return {
+        content:
+          serializeFmsRevoRoster(entries),
+        teamId: auctionSessionTeam.teamId
+      };
+    });
+  }
+
   executeWithExecutor(
     executor: DatabaseWriteExecutor,
     auctionSessionTeamId: string
