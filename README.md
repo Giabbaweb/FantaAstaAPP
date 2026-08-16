@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.11.0-blue" alt="Version v0.11.0">
+  <img src="https://img.shields.io/badge/version-v0.12.0-blue" alt="Version v0.12.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -272,9 +272,16 @@ RUNNING
 Administrative corrections require a non-running session. A closed
 session must first be explicitly reopened to `COMPLETED`.
 
+Current milestone
+
+✅ **v0.12.0 — Import/export FMS**
+
+The FMS ReVo workflow now supports final roster export, export-only
+goalkeeper selection and session-wide export generation.
+
 Next milestone
 
-➡ **v0.12.0 — Import/export FMS**
+➡ **v0.13.0 — Backup & Recovery**
 
 ---
 
@@ -398,9 +405,9 @@ The `docs/` directory contains the complete project documentation.
 | v0.8 | ✅ Confirmed Awards & Transactions |
 | v0.9    | ✅ Public Display                  |
 | v0.10   | ✅ Suspension & Resilience              |
-| v0.11   | ⏭️ Manual Operations & Corrections      |
-| v0.12   | ⏳ FMS Import/Export               |
-| v0.13   | ⏳ Backup & Recovery               |
+| v0.11   | ✅ Manual Operations & Corrections      |
+| v0.12   | ✅ FMS Import/Export                     |
+| v0.13   | ⏭️ Backup & Recovery                     |
 | v0.14   | ⏳ Operational Validation          |
 | v1.0 | 🎯 Stable Release |
 

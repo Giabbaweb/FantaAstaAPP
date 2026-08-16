@@ -3931,3 +3931,187 @@ Questa decisione integra:
 - ADR-043 per la pipeline atomica e la pubblicazione post-commit;
 - ADR-045 per l'audit di dominio;
 - ADR-048 per autorità amministrative e correzioni.
+---
+
+# ADR-050 — Portiere aggiuntivo per l'export FMS ReVo
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Compatibilità FMS ReVo, rose e export finale
+
+## Contesto
+
+ADR-029 ha definito `roster_entries` come modello autoritativo della rosa
+stagionale e ha rinviato esplicitamente la gestione del terzo portiere a
+una decisione separata.
+
+La rosa ordinaria di FantaAstaAPP rimane composta da:
+
+```text
+2 P
+8 D
+8 C
+6 A
+Totale 24
+```
+
+Il flusso operativo con FMS ReVo richiede però un ulteriore portiere nel
+file finale di esportazione.
+
+Inserire questo giocatore direttamente in `roster_entries` renderebbe la
+rosa FantaAstaAPP di 25 elementi e altererebbe invarianti già consolidate
+su crediti, slot, limiti di ruolo, sostenibilità economica e motore d'asta.
+
+È quindi necessario supportare il requisito FMS senza modificare il
+significato della rosa autoritativa.
+
+## Decisione
+
+Il portiere aggiuntivo richiesto da FMS ReVo viene modellato come
+**selezione export-only persistita separatamente dalla rosa**.
+
+La persistenza dedicata è:
+
+```text
+fms_export_goalkeepers
+```
+
+con associazione alla partecipazione:
+
+```text
+auctionSessionTeamId
+```
+
+e al giocatore:
+
+```text
+playerId
+```
+
+La selezione non crea una `roster_entry`.
+
+Di conseguenza il portiere aggiuntivo:
+
+- non appartiene alla rosa autoritativa FantaAstaAPP;
+- non occupa uno dei 24 slot;
+- non modifica i limiti `2 P / 8 D / 8 C / 6 A`;
+- non consuma crediti;
+- non modifica `remainingCredits`;
+- non partecipa alle regole economiche del motore d'asta.
+
+Per ogni partecipazione alla sessione può esistere al massimo una
+selezione FMS:
+
+```text
+UNIQUE(auctionSessionTeamId)
+```
+
+Lo stesso giocatore non può essere selezionato da più partecipazioni:
+
+```text
+UNIQUE(playerId)
+```
+
+La selezione è ammessa esclusivamente quando la sessione è:
+
+```text
+COMPLETED
+CLOSED
+```
+
+Il candidato deve:
+
+- appartenere alla stessa sessione della partecipazione;
+- avere ruolo `P`;
+- non appartenere già a una rosa;
+- avere una squadra reale valorizzata;
+- appartenere a una delle squadre reali rappresentate dai due portieri
+  ordinari della rosa.
+
+La rosa ordinaria deve contenere esattamente due portieri validi con
+squadra reale valorizzata prima di poter selezionare il portiere
+aggiuntivo.
+
+Se per la stessa partecipazione esiste già una selezione, una nuova
+selezione valida la sostituisce mantenendo una sola riga persistita.
+
+## Export
+
+Il formato serializzato rimane:
+
+```text
+Role<TAB>Name<TAB>Cost<TAB>ContractYear
+```
+
+senza intestazione.
+
+La rosa ordinaria esportabile contiene:
+
+```text
+2 P + 8 D + 8 C + 6 A = 24
+```
+
+Il portiere aggiuntivo viene aggiunto esclusivamente alla projection
+finale FMS con:
+
+```text
+role = P
+acquisitionCost = 0
+contractYear = 1
+```
+
+Il file finale contiene quindi:
+
+```text
+3 P + 8 D + 8 C + 6 A = 25 righe
+```
+
+La selezione export-only non viene trasformata in una normale
+assegnazione di rosa.
+
+Sono supportati:
+
+- export della singola partecipazione;
+- export dell'intera sessione;
+- ordinamento delle partecipazioni secondo `tableOrder`;
+- filename derivato dal nome della squadra tramite builder condiviso.
+
+## Conseguenze
+
+### Positive
+
+- Il modello autoritativo della rosa rimane invariato a 24 giocatori.
+- Il requisito FMS è soddisfatto senza indebolire le invarianti del dominio.
+- Crediti e slot non vengono alterati artificialmente.
+- La selezione è persistente, ripetibile e modificabile in modo controllato.
+- Un portiere non può essere assegnato come export-only a più partecipazioni.
+- Il file FMS finale è deterministico e validabile.
+- Il requisito rinviato da ADR-029 viene formalmente chiuso.
+
+### Negative
+
+- Esiste uno stato persistito aggiuntivo esterno a `roster_entries`.
+- L'export FMS richiede una selezione esplicita prima di poter essere generato.
+- Il servizio di export deve combinare la rosa ordinaria con una projection
+  export-only.
+- Le interfacce amministrative dovranno rendere comprensibile la distinzione
+  tra rosa FantaAstaAPP e file FMS finale.
+
+## Modifica delle decisioni precedenti
+
+ADR-050 completa ADR-029 esclusivamente nella parte in cui la gestione
+del terzo portiere a costo zero era stata rinviata a una decisione futura.
+
+ADR-029 rimane valida per il modello delle `roster_entries` e per la rosa
+ordinaria di 24 giocatori.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-009 per la separazione tra dominio e infrastruttura;
+- ADR-010 per la validazione runtime;
+- ADR-029 per `roster_entries` e rosa stagionale;
+- ADR-033 per la sostenibilità economica;
+- ADR-049 per lo stato `COMPLETED` ottenibile anche tramite riapertura
+  amministrativa di una sessione `CLOSED`.

@@ -1085,22 +1085,64 @@ e pubblica gli effetti realtime soltanto dopo il commit.
 
 ---
 
-## 20. Prossima evoluzione
+## 20. v0.12.0 — Import/export FMS
+
+La v0.12.0 completa la compatibilità operativa con FMS ReVo per
+l’esportazione finale delle rose.
+
+La rosa autoritativa FantaAstaAPP rimane composta da 24 giocatori:
+
+```text
+2 P + 8 D + 8 C + 6 A
+```
+
+Il formato FMS ReVo richiede invece un portiere aggiuntivo. Per evitare
+di alterare il modello della rosa e le sue invarianti, la scelta viene
+persistita separatamente in `fms_export_goalkeepers`.
+
+Il portiere aggiuntivo:
+
+- non appartiene a `roster_entries`;
+- non consuma crediti;
+- non occupa slot;
+- non modifica i limiti di ruolo;
+- è selezionato per una specifica partecipazione alla sessione;
+- deve essere un portiere della stessa sessione non già presente in rosa;
+- deve essere compatibile con le squadre reali dei due portieri ordinari;
+- non può essere selezionato da più partecipazioni;
+- può essere selezionato in `COMPLETED` o `CLOSED`;
+- viene serializzato con costo `0` e anno contratto `1`.
+
+L’export finale contiene quindi:
+
+```text
+3 P + 8 D + 8 C + 6 A = 25 righe
+```
+
+Il tracciato rimane:
+
+```text
+Role<TAB>Name<TAB>Cost<TAB>ContractYear
+```
+
+senza intestazione.
+
+Sono disponibili:
+
+- export della singola partecipazione;
+- filename FMS condiviso e sanitizzato;
+- export session-wide ordinato per `tableOrder`;
+- endpoint di selezione del portiere export-only;
+- endpoint di export della singola rosa;
+- endpoint di export dell’intera sessione.
+
+La decisione sul portiere aggiuntivo è formalizzata in ADR-050.
 
 La prossima milestone funzionale è:
 
 ```text
-v0.12.0 — Import/export FMS
+v0.13.0 — Backup e recovery
 ```
-
-La milestone comprenderà:
-
-- completamento della compatibilità con FMS ReVo;
-- export finale delle rose;
-- riutilizzo del tracciato compatibile con il flusso di import;
-- esclusione del terzo portiere dall'export;
-- validazione dell'integrità dell'output;
-- verifica del ciclo FMS ReVo → FantaAstaAPP → FMS ReVo.
 
 Le decisioni architetturali significative continueranno a essere registrate in:
 

@@ -718,16 +718,18 @@ CONTRACT_YEAR
 
 # v0.12.0 — Import/export FMS
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
-## Obiettivi
+## Obiettivi completati
 
-- completare la compatibilità con FMS;
-- esportare le rose;
-- escludere il terzo portiere;
-- verificare l’integrità dell’output.
+- completata la compatibilità con FMS ReVo per l’export finale;
+- export della singola rosa;
+- selezione persistita del portiere aggiuntivo export-only;
+- export finale a 25 righe;
+- export dell’intera sessione ordinato per `tableOrder`;
+- validazione dell’integrità dell’output.
 
-## Formato previsto
+## Formato implementato
 
 ```text
 Role<TAB>Name<TAB>Cost<TAB>ContractYear
@@ -736,10 +738,20 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 Regole:
 
 - nessuna intestazione;
-- una riga per giocatore;
-- terzo portiere escluso;
+- rosa ordinaria FantaAstaAPP: `2 P / 8 D / 8 C / 6 A`, totale 24;
+- file FMS ReVo: `3 P / 8 D / 8 C / 6 A`, totale 25 righe;
+- il portiere aggiuntivo non appartiene a `roster_entries`;
+- costo del portiere aggiuntivo: `0`;
+- anno contratto del portiere aggiuntivo: `1`;
+- selezione ammessa in `COMPLETED` e `CLOSED`;
+- compatibilità con le squadre reali dei due portieri ordinari;
+- unicità del giocatore selezionato;
 - valori validati;
-- ordine coerente.
+- ordine coerente;
+- export session-wide ordinato per `tableOrder`.
+
+La decisione architetturale relativa al portiere aggiuntivo è formalizzata
+in ADR-050.
 
 ---
 

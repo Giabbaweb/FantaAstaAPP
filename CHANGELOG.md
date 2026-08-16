@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.12.0] - 2026-08-17
+
+### Added
+
+* FMS ReVo roster export for a single auction-session team
+* Validation of complete exportable rosters with `2 P / 8 D / 8 C / 6 A`
+* Persistent `fms_export_goalkeepers` selection for the additional export-only goalkeeper
+* Dedicated FMS export goalkeeper selection service and HTTP endpoint
+* Compatibility validation against the real teams represented by the two roster goalkeepers
+* Final FMS export with 25 rows: `3 P / 8 D / 8 C / 6 A`
+* Session-wide FMS roster export service ordered by `tableOrder`
+* Session-wide FMS roster export HTTP endpoint
+* Shared FMS roster filename builder
+* Ordered persistence lookup for auction-session teams
+
+### Changed
+
+* The FMS ReVo export now includes one additional goalkeeper outside the ordinary 24-player FantaAstaAPP roster
+* The export-only goalkeeper is serialized with acquisition cost `0` and contract year `1`
+* The export-only goalkeeper is persisted separately from `roster_entries` and does not affect credits, roster slots or role limits
+* FMS export goalkeeper selection is allowed only for `COMPLETED` or `CLOSED` sessions
+* Documentation now distinguishes the 24-player FantaAstaAPP roster from the 25-row FMS ReVo export
+
+### Tested
+
+* Full monorepo type checking
+* Full monorepo production build
+* 63 server test files — 411 tests passed
+* 15 domain test files — 135 tests passed
+* 546 automated tests passed in total
+* Session-wide HTTP export with multiple teams and deterministic `tableOrder`
+* Missing-session and invalid-export cases
+
+---
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on **Keep a Changelog** and this project adheres to **Semantic Versioning (SemVer)**.

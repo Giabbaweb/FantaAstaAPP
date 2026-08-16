@@ -43,13 +43,18 @@ Obiettivi principali:
 | Attaccanti | 6 |
 | **Totale** | **24** |
 
-Il terzo portiere:
+Il portiere aggiuntivo FMS:
 
-- costa 0 crediti;
 - è fuori asta;
-- non occupa uno dei 24 posti;
-- viene inserito manualmente in FMS;
-- non compare negli export.
+- non occupa uno dei 24 posti della rosa ordinaria;
+- non è una `roster_entry`;
+- non modifica crediti, slot o limiti di ruolo;
+- viene selezionato separatamente per l’export FMS;
+- deve essere un portiere della stessa sessione e non appartenere a una rosa;
+- deve appartenere a una squadra reale rappresentata dai due portieri ordinari;
+- non può essere selezionato da più partecipazioni;
+- è selezionabile in `COMPLETED` o `CLOSED`;
+- viene esportato con costo 0 e anno contratto 1.
 
 ### 2.4 Contratti
 
@@ -529,7 +534,12 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 ```
 
 - nessuna intestazione;
-- terzo portiere escluso.
+- rosa ordinaria: `2 P / 8 D / 8 C / 6 A`, totale 24;
+- file FMS finale: `3 P / 8 D / 8 C / 6 A`, totale 25 righe;
+- il 25° giocatore è il portiere aggiuntivo FMS export-only;
+- il portiere aggiuntivo è esportato con costo `0` e anno contratto `1`;
+- i file delle squadre possono essere generati singolarmente o per l’intera sessione;
+- l’export session-wide rispetta `tableOrder`.
 
 ## 22. Backup e recovery
 

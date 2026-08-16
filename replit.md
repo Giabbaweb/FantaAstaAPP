@@ -6,7 +6,7 @@ FantaAstaAPP
 
 ## Current Version
 
-v0.9.0
+v0.12.0
 
 ## Package Manager
 

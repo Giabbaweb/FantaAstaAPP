@@ -4,16 +4,16 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 11 completata
-- **Versione corrente:** v0.11.0
-- **Prossimo obiettivo:** Versione 0.12 – Import/export FMS
+- **Stato:** Milestone 12 completata
+- **Versione corrente:** v0.12.0
+- **Prossimo obiettivo:** Versione 0.13 – Backup e recovery
 
 ## Regole immutabili
 
 - 8 squadre tipiche.
 - Crediti configurabili; esempio 330 meno rinnovi.
 - Rosa: 2 P, 8 D, 8 C, 6 A, totale 24.
-- Terzo portiere fuori asta, costo 0, escluso dagli export.
+- Portiere aggiuntivo FMS fuori rosa e fuori asta: costo export 0, anno contratto 1, selezione persistita separatamente e incluso solo nell’export FMS finale.
 - Giro di tavolo prestabilito.
 - Il chiamante effettua la prima offerta e non può aprire a 0.
 - Rilanci: +1, +2, +5, +10, custom.
@@ -142,7 +142,50 @@ stateVersion
 Role<TAB>Name<TAB>Cost<TAB>ContractYear
 ```
 
-Nessuna intestazione. Terzo portiere escluso.
+Nessuna intestazione.
+
+La rosa ordinaria FantaAstaAPP rimane di 24 giocatori:
+
+```text
+2 P + 8 D + 8 C + 6 A
+```
+
+Per FMS ReVo viene selezionato separatamente un portiere aggiuntivo
+export-only. Il file finale contiene quindi 25 righe:
+
+```text
+3 P + 8 D + 8 C + 6 A
+```
+
+Il portiere export-only:
+
+- non appartiene a `roster_entries`;
+- non modifica crediti, slot o limiti della rosa;
+- deve essere un portiere della stessa sessione;
+- non deve appartenere a una rosa;
+- deve appartenere a una squadra reale rappresentata dai due portieri ordinari;
+- non può essere selezionato da più partecipazioni;
+- può essere selezionato in `COMPLETED` o `CLOSED`;
+- viene esportato con costo `0` e anno contratto `1`.
+
+## Stato implementativo della v0.12.0
+
+Sono completati tutti gli elementi delle milestone precedenti e inoltre:
+
+- export FMS ReVo della singola rosa nel formato TAB-separated senza intestazione;
+- validazione della rosa ordinaria completa `2 P / 8 D / 8 C / 6 A`;
+- persistenza separata della selezione del portiere aggiuntivo export-only;
+- vincolo di una selezione per partecipazione e di unicità del giocatore selezionato;
+- selezione del portiere export-only consentita in `COMPLETED` e `CLOSED`;
+- validazione della compatibilità con le squadre reali dei due portieri ordinari;
+- export finale di 25 righe con portiere aggiuntivo a costo `0` e anno contratto `1`;
+- endpoint di selezione del portiere FMS;
+- export session-wide ordinato per `tableOrder`;
+- endpoint HTTP session-wide per ottenere tutti i file FMS della sessione;
+- typecheck e build monorepo verdi;
+- 411 test server e 135 test domain verdi, 546 test complessivi.
+
+---
 
 ## Stato implementativo della v0.11.0
 
