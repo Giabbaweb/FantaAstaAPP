@@ -141,6 +141,13 @@
       "when": 1786834202989,
       "tag": "0019_fantastic_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1786912859751,
+      "tag": "0020_strong_timeslip",
+      "breakpoints": true
     }
   ]
 }

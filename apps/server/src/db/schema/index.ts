@@ -336,6 +336,46 @@ export const rosterEntries = sqliteTable(
   ]
 );
 
+export const fmsExportGoalkeepers = sqliteTable(
+  "fms_export_goalkeepers",
+  {
+    id: text("id").primaryKey(),
+
+    auctionSessionTeamId: text("auction_session_team_id")
+      .notNull()
+      .references(() => auctionSessionTeams.id, {
+        onDelete: "cascade"
+      }),
+
+    playerId: text("player_id")
+      .notNull()
+      .references(() => players.id, {
+        onDelete: "restrict"
+      }),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  },
+  (table) => [
+    uniqueIndex(
+      "fms_export_goalkeepers_session_team_unique"
+    ).on(
+      table.auctionSessionTeamId
+    ),
+
+    uniqueIndex(
+      "fms_export_goalkeepers_player_unique"
+    ).on(
+      table.playerId
+    )
+  ]
+);
+
 export const auctionCalls = sqliteTable(
   "auction_calls",
   {
