@@ -85,6 +85,74 @@ describe(
     );
 
     it(
+      "maps manual assignments to MANUAL_ASSIGNMENT recovery points",
+      async () => {
+        const createRecoveryPoint =
+          vi.fn(
+            async () => ({})
+          );
+
+        const requester =
+          new SqliteAuctionBackupRequester({
+            createRecoveryPoint
+          });
+
+        await requester
+          .requestManualAssignmentBackup({
+            auctionSessionId:
+              "session-manual"
+          });
+
+        expect(
+          createRecoveryPoint
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          createRecoveryPoint
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-manual",
+          reason:
+            "MANUAL_ASSIGNMENT"
+        });
+      }
+    );
+
+    it(
+      "maps technical corrections to TECHNICAL_CORRECTION recovery points",
+      async () => {
+        const createRecoveryPoint =
+          vi.fn(
+            async () => ({})
+          );
+
+        const requester =
+          new SqliteAuctionBackupRequester({
+            createRecoveryPoint
+          });
+
+        await requester
+          .requestTechnicalCorrectionBackup({
+            auctionSessionId:
+              "session-correction"
+          });
+
+        expect(
+          createRecoveryPoint
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          createRecoveryPoint
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-correction",
+          reason:
+            "TECHNICAL_CORRECTION"
+        });
+      }
+    );
+
+    it(
       "propagates recovery point failures to the existing coordinator boundary",
       async () => {
         const expectedError =

@@ -8,7 +8,9 @@ import {
 import type {
   AuctionBackupRequester,
   ConfirmedAwardBackupRequest,
-  SuspendedSessionBackupRequest
+  ManualAssignmentBackupRequest,
+  SuspendedSessionBackupRequest,
+  TechnicalCorrectionBackupRequest
 } from "./auction-backup-requester.js";
 
 import {
@@ -65,6 +67,28 @@ export class SqliteAuctionBackupRequester
         auctionSessionId:
           request.auctionSessionId,
         reason: "SESSION_SUSPENDED"
+      });
+  }
+
+  async requestManualAssignmentBackup(
+    request: ManualAssignmentBackupRequest
+  ): Promise<void> {
+    await this.recoveryPointCreator
+      .createRecoveryPoint({
+        auctionSessionId:
+          request.auctionSessionId,
+        reason: "MANUAL_ASSIGNMENT"
+      });
+  }
+
+  async requestTechnicalCorrectionBackup(
+    request: TechnicalCorrectionBackupRequest
+  ): Promise<void> {
+    await this.recoveryPointCreator
+      .createRecoveryPoint({
+        auctionSessionId:
+          request.auctionSessionId,
+        reason: "TECHNICAL_CORRECTION"
       });
   }
 }

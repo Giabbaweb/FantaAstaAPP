@@ -3,6 +3,12 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import type {
+  AuctionBackupRequester
+} from "../services/auction-backup-requester.js";
+import {
+  NoopAuctionBackupRequester
+} from "../services/auction-backup-requester.js";
+import type {
   TechnicalRosterCorrectionInput
 } from "../services/technical-roster-correction.service.js";
 import type {
@@ -16,6 +22,18 @@ type AtomicTechnicalRosterCorrectionCommandExecutorPort =
     "execute"
   >;
 
+type TechnicalCorrectionBackupRequesterPort =
+  Pick<
+    AuctionBackupRequester,
+    "requestTechnicalCorrectionBackup"
+  >;
+
+export type TechnicalCorrectionBackupErrorHandler =
+  (input: {
+    auctionSessionId: string;
+    error: unknown;
+  }) => void;
+
 export type TechnicalRosterCorrectionCommandActor = {
   name: string;
   role:
@@ -26,7 +44,13 @@ export type TechnicalRosterCorrectionCommandActor = {
 export class AtomicTechnicalRosterCorrectionCommandService {
   constructor(
     private readonly executor:
-      AtomicTechnicalRosterCorrectionCommandExecutorPort
+      AtomicTechnicalRosterCorrectionCommandExecutorPort,
+    private readonly backupRequester:
+      TechnicalCorrectionBackupRequesterPort =
+        new NoopAuctionBackupRequester(),
+    private readonly onBackupError:
+      TechnicalCorrectionBackupErrorHandler =
+        () => undefined
   ) {}
 
   async correct(
@@ -37,7 +61,8 @@ export class AtomicTechnicalRosterCorrectionCommandService {
   ): Promise<
     ExecuteAtomicTechnicalRosterCorrectionCommandResult
   > {
-    return this.executor.execute({
+    const result =
+      await this.executor.execute({
       commandId:
         metadata.commandId,
       commandType:
@@ -75,5 +100,23 @@ export class AtomicTechnicalRosterCorrectionCommandService {
       comment,
       correction
     });
+
+    if (!result.idempotentReplay) {
+      try {
+        await this.backupRequester
+          .requestTechnicalCorrectionBackup({
+            auctionSessionId:
+              correction.auctionSessionId
+          });
+      } catch (error) {
+        this.onBackupError({
+          auctionSessionId:
+            correction.auctionSessionId,
+          error
+        });
+      }
+    }
+
+    return result;
   }
 }

@@ -4,6 +4,12 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import type {
+  AuctionBackupRequester
+} from "../services/auction-backup-requester.js";
+import {
+  NoopAuctionBackupRequester
+} from "../services/auction-backup-requester.js";
+import type {
   ManualRosterAssignmentInput
 } from "../services/manual-roster-assignment.service.js";
 import type {
@@ -17,6 +23,18 @@ type AtomicManualRosterAssignmentCommandExecutorPort =
     "execute"
   >;
 
+type ManualAssignmentBackupRequesterPort =
+  Pick<
+    AuctionBackupRequester,
+    "requestManualAssignmentBackup"
+  >;
+
+export type ManualAssignmentBackupErrorHandler =
+  (input: {
+    auctionSessionId: string;
+    error: unknown;
+  }) => void;
+
 export type ManualRosterAssignmentCommandActor = {
   name: string;
   role:
@@ -27,7 +45,13 @@ export type ManualRosterAssignmentCommandActor = {
 export class AtomicManualRosterAssignmentCommandService {
   constructor(
     private readonly executor:
-      AtomicManualRosterAssignmentCommandExecutorPort
+      AtomicManualRosterAssignmentCommandExecutorPort,
+    private readonly backupRequester:
+      ManualAssignmentBackupRequesterPort =
+        new NoopAuctionBackupRequester(),
+    private readonly onBackupError:
+      ManualAssignmentBackupErrorHandler =
+        () => undefined
   ) {}
 
   async add(
@@ -40,7 +64,8 @@ export class AtomicManualRosterAssignmentCommandService {
   ): Promise<
     ExecuteAtomicManualRosterAssignmentCommandResult
   > {
-    return this.executor.execute({
+    const result =
+      await this.executor.execute({
       commandId:
         metadata.commandId,
       commandType:
@@ -78,5 +103,23 @@ export class AtomicManualRosterAssignmentCommandService {
       comment,
       assignment
     });
+
+    if (!result.idempotentReplay) {
+      try {
+        await this.backupRequester
+          .requestManualAssignmentBackup({
+            auctionSessionId:
+              assignment.auctionSessionId
+          });
+      } catch (error) {
+        this.onBackupError({
+          auctionSessionId:
+            assignment.auctionSessionId,
+          error
+        });
+      }
+    }
+
+    return result;
   }
 }

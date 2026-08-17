@@ -17,13 +17,27 @@ describe(
         execute: vi.fn()
       };
 
+      const backupRequester = {
+        requestManualAssignmentBackup:
+          vi.fn(
+            async () => undefined
+          )
+      };
+
+      const onBackupError =
+        vi.fn();
+
       const service =
         new AtomicManualRosterAssignmentCommandService(
-          executor
+          executor,
+          backupRequester,
+          onBackupError
         );
 
       return {
         executor,
+        backupRequester,
+        onBackupError,
         service
       };
     }
@@ -136,6 +150,198 @@ describe(
         expect(result).toEqual(
           executorResult
         );
+      }
+    );
+
+    it(
+      "requests a MANUAL_ASSIGNMENT backup only after a non-replayed commit",
+      async () => {
+        const {
+          executor,
+          backupRequester,
+          service
+        } = createFixture();
+
+        executor.execute.mockResolvedValue({
+          rosterEntry: {
+            id:
+              "roster-entry-backup",
+            auctionSessionTeamId:
+              assignment.auctionSessionTeamId,
+            playerId:
+              assignment.playerId,
+            acquisitionCost:
+              assignment.acquisitionCost,
+            contractYear:
+              assignment.contractYear,
+            source:
+              "MANUAL_ASSIGNMENT",
+            createdAt:
+              "2026-08-17T20:00:00.000Z",
+            updatedAt:
+              "2026-08-17T20:00:00.000Z"
+          },
+          stateVersion: 4,
+          idempotentReplay: false
+        });
+
+        await service.add(
+          {
+            commandId:
+              "command-backup-1",
+            stateVersion: 3
+          },
+          {
+            name: "Auctioneer",
+            role: "AUCTIONEER"
+          },
+          assignment,
+          "OTHER",
+          "Backup test"
+        );
+
+        expect(
+          backupRequester
+            .requestManualAssignmentBackup
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          backupRequester
+            .requestManualAssignmentBackup
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-1"
+        });
+      }
+    );
+
+    it(
+      "does not request a manual assignment backup for an idempotent replay",
+      async () => {
+        const {
+          executor,
+          backupRequester,
+          service
+        } = createFixture();
+
+        executor.execute.mockResolvedValue({
+          rosterEntry: {
+            id:
+              "roster-entry-replay",
+            auctionSessionTeamId:
+              assignment.auctionSessionTeamId,
+            playerId:
+              assignment.playerId,
+            acquisitionCost:
+              assignment.acquisitionCost,
+            contractYear:
+              assignment.contractYear,
+            source:
+              "MANUAL_ASSIGNMENT",
+            createdAt:
+              "2026-08-17T20:00:00.000Z",
+            updatedAt:
+              "2026-08-17T20:00:00.000Z"
+          },
+          stateVersion: 4,
+          idempotentReplay: true
+        });
+
+        await service.add(
+          {
+            commandId:
+              "command-replay-1",
+            stateVersion: 3
+          },
+          {
+            name: "Administrator",
+            role: "ADMINISTRATOR"
+          },
+          assignment,
+          "OTHER",
+          "Replay test"
+        );
+
+        expect(
+          backupRequester
+            .requestManualAssignmentBackup
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "keeps a committed manual assignment successful when backup fails",
+      async () => {
+        const {
+          executor,
+          backupRequester,
+          onBackupError,
+          service
+        } = createFixture();
+
+        const executorResult = {
+          rosterEntry: {
+            id:
+              "roster-entry-failure",
+            auctionSessionTeamId:
+              assignment.auctionSessionTeamId,
+            playerId:
+              assignment.playerId,
+            acquisitionCost:
+              assignment.acquisitionCost,
+            contractYear:
+              assignment.contractYear,
+            source:
+              "MANUAL_ASSIGNMENT" as const,
+            createdAt:
+              "2026-08-17T20:00:00.000Z",
+            updatedAt:
+              "2026-08-17T20:00:00.000Z"
+          },
+          stateVersion: 4,
+          idempotentReplay: false
+        };
+
+        const backupError =
+          new Error("manual backup failed");
+
+        executor.execute.mockResolvedValue(
+          executorResult
+        );
+
+        backupRequester
+          .requestManualAssignmentBackup
+          .mockRejectedValue(
+            backupError
+          );
+
+        await expect(
+          service.add(
+            {
+              commandId:
+                "command-backup-failure",
+              stateVersion: 3
+            },
+            {
+              name: "Auctioneer",
+              role: "AUCTIONEER"
+            },
+            assignment,
+            "OTHER",
+            "Failure test"
+          )
+        ).resolves.toEqual(
+          executorResult
+        );
+
+        expect(
+          onBackupError
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-1",
+          error:
+            backupError
+        });
       }
     );
 

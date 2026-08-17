@@ -278,6 +278,10 @@ export async function buildApp(
       atomicManualInitialRosterCommandExecutor
     );
 
+  const auctionBackupRequester =
+    options.auctionBackupRequester ??
+    new SqliteAuctionBackupRequester();
+
   const manualRosterAssignmentService =
     new ManualRosterAssignmentService(
       auctionSessionRepository,
@@ -297,7 +301,23 @@ export async function buildApp(
 
   const atomicManualRosterAssignmentCommandService =
     new AtomicManualRosterAssignmentCommandService(
-      atomicManualRosterAssignmentCommandExecutor
+      atomicManualRosterAssignmentCommandExecutor,
+      auctionBackupRequester,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "backup",
+            auctionSessionId,
+            backupType:
+              "MANUAL_ASSIGNMENT",
+            error
+          },
+          "Post-commit manual assignment backup failed"
+        );
+      }
     );
 
   const technicalRosterCorrectionService =
@@ -318,12 +338,24 @@ export async function buildApp(
 
   const atomicTechnicalRosterCorrectionCommandService =
     new AtomicTechnicalRosterCorrectionCommandService(
-      atomicTechnicalRosterCorrectionCommandExecutor
+      atomicTechnicalRosterCorrectionCommandExecutor,
+      auctionBackupRequester,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "backup",
+            auctionSessionId,
+            backupType:
+              "TECHNICAL_CORRECTION",
+            error
+          },
+          "Post-commit technical correction backup failed"
+        );
+      }
     );
-
-  const auctionBackupRequester =
-    options.auctionBackupRequester ??
-    new SqliteAuctionBackupRequester();
 
   const auctionSessionOperationalCommandCoordinator =
     new AuctionSessionOperationalCommandCoordinator(

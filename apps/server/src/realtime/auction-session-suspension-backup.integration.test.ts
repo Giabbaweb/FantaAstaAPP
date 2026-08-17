@@ -37,7 +37,11 @@ describe(
       app = await buildApp({
         auctionBackupRequester: {
           requestConfirmedAwardBackup,
-          requestSuspendedSessionBackup
+          requestSuspendedSessionBackup,
+          requestManualAssignmentBackup:
+            vi.fn(),
+          requestTechnicalCorrectionBackup:
+            vi.fn()
         }
       });
     });

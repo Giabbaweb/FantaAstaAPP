@@ -12,6 +12,14 @@ export type SuspendedSessionBackupRequest = {
   auctionSessionId: string;
 };
 
+export type ManualAssignmentBackupRequest = {
+  auctionSessionId: string;
+};
+
+export type TechnicalCorrectionBackupRequest = {
+  auctionSessionId: string;
+};
+
 export interface AuctionBackupRequester {
   requestConfirmedAwardBackup(
     request: ConfirmedAwardBackupRequest
@@ -19,6 +27,14 @@ export interface AuctionBackupRequester {
 
   requestSuspendedSessionBackup(
     request: SuspendedSessionBackupRequest
+  ): Promise<void>;
+
+  requestManualAssignmentBackup(
+    request: ManualAssignmentBackupRequest
+  ): Promise<void>;
+
+  requestTechnicalCorrectionBackup(
+    request: TechnicalCorrectionBackupRequest
   ): Promise<void>;
 }
 
@@ -33,6 +49,18 @@ export class NoopAuctionBackupRequester
 
   async requestSuspendedSessionBackup(
     _request: SuspendedSessionBackupRequest
+  ): Promise<void> {
+    return;
+  }
+
+  async requestManualAssignmentBackup(
+    _request: ManualAssignmentBackupRequest
+  ): Promise<void> {
+    return;
+  }
+
+  async requestTechnicalCorrectionBackup(
+    _request: TechnicalCorrectionBackupRequest
   ): Promise<void> {
     return;
   }
