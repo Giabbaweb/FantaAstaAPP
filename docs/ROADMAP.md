@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.11.0
+v0.12.0
 ```
 
 Milestone completate:
@@ -112,10 +112,16 @@ Milestone completate:
 - 135 test domain verdi;
 - typecheck e build completi del monorepo superati.
 
-Prossima milestone:
+Milestone corrente:
 
 ```text
-v0.12.0 — Import/export FMS
+v0.13.0 — Backup e recovery
+```
+
+Stato:
+
+```text
+IN_PROGRESS
 ```
 
 ---
@@ -757,16 +763,17 @@ in ADR-050.
 
 # v0.13.0 — Backup e recovery
 
-**Stato:** `PLANNED`
+**Stato:** `IN_PROGRESS`
 
 ## Obiettivi
 
-- snapshot;
-- backup del database;
+- backup SQLite con manifest di metadata;
 - verifica di integrità;
 - recovery controllato;
 - consultazione dei log;
-- ripristino dopo riavvio.
+- ripristino dopo riavvio;
+- nessun auto-resume;
+- gestione manuale dei recovery point.
 
 ## Scenari previsti
 

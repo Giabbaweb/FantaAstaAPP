@@ -954,26 +954,107 @@ La presenza nella rete locale non equivale ad autorizzazione.
 
 ## 18. Backup e recovery
 
-Il sistema dovrà poter recuperare una sessione dopo:
+Il sistema deve poter recuperare una sessione dopo:
 
 - riavvio del server;
 - arresto accidentale;
 - interruzione elettrica;
 - problema di rete;
 - errore operativo;
-- sospensione volontaria.
+- sospensione volontaria;
+- danneggiamento del database.
 
-Sono previsti:
+Ogni recovery point è composto da:
 
-- backup del file SQLite;
-- snapshot applicativi;
-- audit trail;
-- verifica dell’integrità;
-- ripristino controllato.
+```text
+database SQLite
++
+piccolo manifest di metadata
+```
 
-Dopo un riavvio con una sessione interrotta, il sistema non deve riprendere automaticamente l’asta.
+Il database SQLite rimane l'unica rappresentazione autorevole dello stato
+persistente contenuto nel recovery point.
 
-La sessione viene caricata in stato sospeso e richiede un’azione esplicita del banditore.
+Non viene introdotto uno snapshot applicativo separato come seconda fonte di
+stato.
+
+La copia di un database SQLite aperto utilizza la SQLite Online Backup API
+esposta da `better-sqlite3` tramite `db.backup()`.
+
+Il backup viene richiesto esclusivamente dopo il commit dell'operazione
+autorevole che lo genera. Un errore di backup non annulla un comando già
+committato e un replay idempotente non genera un backup duplicato.
+
+Il backup è event-driven. Non vengono usati timer periodici né il numero di
+transazioni SQLite come trigger.
+
+I recovery point automatici comprendono almeno:
+
+```text
+CONFIRMED_AWARD
+MANUAL_ASSIGNMENT
+TECHNICAL_CORRECTION
+SESSION_SUSPENDED
+SESSION_COMPLETED
+RECOVERY_RESTART
+```
+
+È inoltre previsto un backup manuale.
+
+I backup vengono organizzati per lega e stagione sotto:
+
+```text
+backups/
+```
+
+e non vengono eliminati automaticamente durante la sessione.
+
+Dopo la creazione viene eseguita una verifica di integrità, incluso:
+
+```sql
+PRAGMA integrity_check;
+```
+
+Il restore ordinario è controllato, riservato a `ADMINISTRATOR` e consentito
+solo con sessione `SUSPENDED`. Quando possibile, prima della sostituzione del
+database corrente viene creato un recovery point `PRE_RESTORE`.
+
+Se il database corrente non è utilizzabile, viene usato un percorso distinto
+di Emergency Recovery senza scelta automatica del backup da ripristinare.
+
+Al bootstrap, prima dell'operatività realtime, ogni sessione persistita in:
+
+```text
+RUNNING
+```
+
+viene messa in sicurezza tramite:
+
+```text
+RUNNING → SUSPENDED
+```
+
+con causale:
+
+```text
+RECOVERY_RESTART
+```
+
+La `AuctionCall` eventualmente presente mantiene il proprio stato operativo
+interno, inclusi offerta, leader, turno, PASS ed esclusioni.
+
+Una sessione già `SUSPENDED` rimane invariata.
+
+Nessun auto-resume.
+
+Il logging tecnico di backup e recovery rimane separato dall'audit di dominio
+e dal `command_registry` ed è persistito anche su file locale sotto:
+
+```text
+logs/
+```
+
+Le decisioni complete sono formalizzate in ADR-051.
 
 ---
 
@@ -982,7 +1063,7 @@ La sessione viene caricata in stato sospeso e richiede un’azione esplicita del
 La versione corrente è:
 
 ```text
-v0.11.0
+v0.12.0
 ```
 
 Sono operative:

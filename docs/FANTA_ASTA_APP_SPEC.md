@@ -188,6 +188,7 @@ PIZZA_BREAK
 TECHNICAL_BREAK
 ORGANIZATIONAL_BREAK
 NETWORK_ISSUE
+RECOVERY_RESTART
 OTHER
 ```
 
@@ -543,21 +544,67 @@ Role<TAB>Name<TAB>Cost<TAB>ContractYear
 
 ## 22. Backup e recovery
 
-- backup dopo assegnazioni importanti;
-- backup alla sospensione;
-- snapshot periodici;
-- log eventi;
-- ripristino controllato.
+Il recovery point è composto da:
 
-Dopo un riavvio con chiamata interrotta, la sessione viene caricata in `SUSPENDED`.
+```text
+database SQLite
++
+piccolo manifest di metadata
+```
 
-Il banditore sceglie:
+Il database SQLite rimane l'unica rappresentazione autorevole dello stato
+persistente del recovery point. Non viene introdotto uno snapshot applicativo
+separato come seconda rappresentazione dello stato.
 
-- riprendi;
-- annulla;
-- recovery mode.
+Il backup è event-driven e non utilizza timer periodici né conteggi di
+transazioni SQLite come trigger.
+
+Sono previsti backup automatici almeno dopo:
+
+- assegnazione definitiva;
+- assegnazione manuale;
+- correzione tecnica;
+- sospensione della sessione;
+- completamento della sessione;
+- restart recovery.
+
+È inoltre previsto un backup manuale richiesto da `ADMINISTRATOR` o
+`AUCTIONEER`.
+
+Ogni backup viene verificato dopo la creazione tramite controlli di integrità,
+incluso `PRAGMA integrity_check`, e viene nuovamente verificato prima di un
+restore.
+
+I backup sono organizzati in modo distinguibile per lega e stagione.
+Non viene applicato pruning automatico durante la sessione e la cancellazione
+dei recovery point è sempre un'azione amministrativa esplicita.
+
+Il restore ordinario è riservato a `ADMINISTRATOR`, richiede una sessione
+`SUSPENDED` e deve preservare il database corrente tramite un recovery point
+`PRE_RESTORE` quando il database è ancora utilizzabile.
+
+Dopo un riavvio, ogni sessione persistita in `RUNNING` viene messa in sicurezza
+prima dell'operatività realtime tramite:
+
+```text
+RUNNING → SUSPENDED
+```
+
+con causale:
+
+```text
+RECOVERY_RESTART
+```
+
+La `AuctionCall` eventualmente presente mantiene offerta, leader, turno, PASS
+ed esclusioni.
+
+Una sessione già `SUSPENDED` rimane invariata.
 
 Nessun auto-resume.
+
+Le decisioni architetturali complete del sottosistema sono definite in
+ADR-051.
 
 ## 23. Invarianti
 
