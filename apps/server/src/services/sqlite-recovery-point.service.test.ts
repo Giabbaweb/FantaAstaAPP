@@ -197,9 +197,34 @@ describe(
               status: "SUSPENDED",
               stateVersion: 157
             });
+
+            expect(
+              backupDatabase.pragma(
+                "journal_mode",
+                {
+                  simple: true
+                }
+              )
+            ).toBe("delete");
           } finally {
             backupDatabase.close();
           }
+
+          await expect(
+            stat(
+              `${result.sqlitePath}-wal`
+            )
+          ).rejects.toMatchObject({
+            code: "ENOENT"
+          });
+
+          await expect(
+            stat(
+              `${result.sqlitePath}-shm`
+            )
+          ).rejects.toMatchObject({
+            code: "ENOENT"
+          });
 
           expect(
             result.manifest.integrity.status

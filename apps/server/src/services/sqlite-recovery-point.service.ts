@@ -262,10 +262,25 @@ export class SqliteRecoveryPointService {
     const backupDatabase = new Database(
       sqlitePath,
       {
-        readonly: true,
         fileMustExist: true
       }
     );
+
+    const backupJournalMode =
+      backupDatabase.pragma(
+        "journal_mode = DELETE",
+        {
+          simple: true
+        }
+      );
+
+    if (backupJournalMode !== "delete") {
+      backupDatabase.close();
+
+      throw new Error(
+        "Failed to normalize recovery point journal mode"
+      );
+    }
 
     let integrityMessages: string[];
     let backupIdentity:
