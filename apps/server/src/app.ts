@@ -63,6 +63,9 @@ import {
   manualBackupRoutes
 } from "./routes/manual-backup.routes.js";
 import {
+  recoveryPointCatalogRoutes
+} from "./routes/recovery-point-catalog.routes.js";
+import {
   ownerRoutes
 } from "./routes/owner.routes.js";
 import {
@@ -174,6 +177,9 @@ import {
   ManualBackupService
 } from "./services/manual-backup.service.js";
 import {
+  RecoveryPointCatalogService
+} from "./services/recovery-point-catalog.service.js";
+import {
   SqliteRecoveryPointService
 } from "./services/sqlite-recovery-point.service.js";
 import {
@@ -191,6 +197,11 @@ export type BuildAppOptions = {
     AuctionBackupRequester;
   manualBackupService?:
     ManualBackupService;
+  recoveryPointCatalogService?:
+    Pick<
+      RecoveryPointCatalogService,
+      "listForAuctionSession"
+    >;
 };
 
 export async function buildApp(
@@ -307,6 +318,15 @@ export async function buildApp(
         )
       })
     );
+
+  const recoveryPointCatalogService =
+    options.recoveryPointCatalogService ??
+    new RecoveryPointCatalogService({
+      backupRoot: path.join(
+        workspaceRoot,
+        "backups"
+      )
+    });
 
   const manualRosterAssignmentService =
     new ManualRosterAssignmentService(
@@ -508,6 +528,11 @@ export async function buildApp(
   await app.register(
     manualBackupRoutes(
       manualBackupService
+    )
+  );
+  await app.register(
+    recoveryPointCatalogRoutes(
+      recoveryPointCatalogService
     )
   );
   await app.register(
