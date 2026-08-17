@@ -143,6 +143,7 @@ export type AuctionSessionSuspendedEvent = {
     | "TECHNICAL_BREAK"
     | "ORGANIZATIONAL_BREAK"
     | "NETWORK_ISSUE"
+    | "RECOVERY_RESTART"
     | "OTHER";
   createdAt: string;
 };

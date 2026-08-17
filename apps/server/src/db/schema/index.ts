@@ -60,6 +60,7 @@ export const auctionSessions = sqliteTable(
         "TECHNICAL_BREAK",
         "ORGANIZATIONAL_BREAK",
         "NETWORK_ISSUE",
+        "RECOVERY_RESTART",
         "OTHER"
       ]
     }),
@@ -749,6 +750,7 @@ export const auctionEvents = sqliteTable(
           "TECHNICAL_BREAK",
           "ORGANIZATIONAL_BREAK",
           "NETWORK_ISSUE",
+          "RECOVERY_RESTART",
           "OTHER"
         ]
       }

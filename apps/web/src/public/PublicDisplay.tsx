@@ -267,6 +267,7 @@ export function PublicDisplay():
       | "TECHNICAL_BREAK"
       | "ORGANIZATIONAL_BREAK"
       | "NETWORK_ISSUE"
+      | "RECOVERY_RESTART"
       | "OTHER"
       | null
   ): string => {
@@ -282,6 +283,9 @@ export function PublicDisplay():
 
       case "NETWORK_ISSUE":
         return "Problema di rete";
+
+      case "RECOVERY_RESTART":
+        return "Ripristino dopo riavvio";
 
       case "OTHER":
         return "Pausa operativa";
