@@ -11,6 +11,7 @@ import {
 } from "@fantaastaapp/domain";
 
 import {
+  databasePath,
   sqlite,
   workspaceRoot
 } from "./db/client.js";
@@ -68,6 +69,9 @@ import {
 import {
   recoveryPointDeletionRoutes
 } from "./routes/recovery-point-deletion.routes.js";
+import {
+  recoveryPointRestoreRoutes
+} from "./routes/recovery-point-restore.routes.js";
 import {
   ownerRoutes
 } from "./routes/owner.routes.js";
@@ -186,6 +190,12 @@ import {
   RecoveryPointDeletionService
 } from "./services/recovery-point-deletion.service.js";
 import {
+  RecoveryPointRestoreService
+} from "./services/recovery-point-restore.service.js";
+import {
+  RestoreRuntimeCoordinator
+} from "./services/restore-runtime-coordinator.js";
+import {
   SqliteRecoveryPointService
 } from "./services/sqlite-recovery-point.service.js";
 import {
@@ -212,6 +222,17 @@ export type BuildAppOptions = {
     Pick<
       RecoveryPointDeletionService,
       "deleteRecoveryPoint"
+    >;
+  recoveryPointRestoreService?:
+    Pick<
+      RecoveryPointRestoreService,
+      "prepareRestore"
+    >;
+  restoreRuntimeCoordinator?:
+    Pick<
+      RestoreRuntimeCoordinator,
+      | "prepareAndSchedule"
+      | "markResponseFlushed"
     >;
 };
 
@@ -347,6 +368,29 @@ export async function buildApp(
         "backups"
       )
     });
+
+  const recoveryPointRestoreService =
+    options.recoveryPointRestoreService ??
+    new RecoveryPointRestoreService({
+      sqlite,
+      backupRoot: path.join(
+        workspaceRoot,
+        "backups"
+      ),
+      databasePath,
+      recoveryPointCreator:
+        new SqliteRecoveryPointService({
+          sqlite,
+          backupRoot: path.join(
+            workspaceRoot,
+            "backups"
+          )
+        })
+    });
+
+  const restoreRuntimeCoordinator =
+    options.restoreRuntimeCoordinator ??
+    new RestoreRuntimeCoordinator();
 
   const manualRosterAssignmentService =
     new ManualRosterAssignmentService(
@@ -558,6 +602,12 @@ export async function buildApp(
   await app.register(
     recoveryPointDeletionRoutes(
       recoveryPointDeletionService
+    )
+  );
+  await app.register(
+    recoveryPointRestoreRoutes(
+      recoveryPointRestoreService,
+      restoreRuntimeCoordinator
     )
   );
   await app.register(

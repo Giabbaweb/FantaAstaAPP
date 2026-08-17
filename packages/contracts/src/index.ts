@@ -474,6 +474,24 @@ export type DeleteRecoveryPointCommand =
     typeof deleteRecoveryPointCommandSchema
   >;
 
+export const restoreRecoveryPointCommandSchema =
+  z.object({
+    actor: z.object({
+      name:
+        z.string()
+          .trim()
+          .min(1)
+          .max(100),
+      role:
+        z.literal("ADMINISTRATOR")
+    })
+  });
+
+export type RestoreRecoveryPointCommand =
+  z.infer<
+    typeof restoreRecoveryPointCommandSchema
+  >;
+
 export const addManualInitialRosterEntryCommandSchema =
   realtimeCommandMetadataSchema.extend({
     auctionSessionTeamId:
