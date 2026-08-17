@@ -149,12 +149,12 @@ import {
 import {
   AuctionCallCommandHandler
 } from "./services/auction-call-command-handler.js";
-import {
-  NoopAuctionBackupRequester
-} from "./services/auction-backup-requester.js";
 import type {
   AuctionBackupRequester
 } from "./services/auction-backup-requester.js";
+import {
+  SqliteAuctionBackupRequester
+} from "./services/sqlite-auction-backup-requester.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
@@ -323,7 +323,7 @@ export async function buildApp(
 
   const auctionBackupRequester =
     options.auctionBackupRequester ??
-    new NoopAuctionBackupRequester();
+    new SqliteAuctionBackupRequester();
 
   const auctionSessionOperationalCommandCoordinator =
     new AuctionSessionOperationalCommandCoordinator(

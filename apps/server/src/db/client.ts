@@ -11,7 +11,7 @@ import * as schema from "./schema/index.js";
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 
-const workspaceRoot = path.resolve(
+export const workspaceRoot = path.resolve(
   currentDirectory,
   "../../../.."
 );
