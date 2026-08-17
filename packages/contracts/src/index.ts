@@ -445,6 +445,17 @@ export type ManualInitialRosterCommandActor =
     typeof manualInitialRosterCommandActorSchema
   >;
 
+export const createManualBackupCommandSchema =
+  z.object({
+    actor:
+      manualInitialRosterCommandActorSchema
+  });
+
+export type CreateManualBackupCommand =
+  z.infer<
+    typeof createManualBackupCommandSchema
+  >;
+
 export const addManualInitialRosterEntryCommandSchema =
   realtimeCommandMetadataSchema.extend({
     auctionSessionTeamId:

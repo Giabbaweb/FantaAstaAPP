@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 
@@ -9,7 +11,8 @@ import {
 } from "@fantaastaapp/domain";
 
 import {
-  sqlite
+  sqlite,
+  workspaceRoot
 } from "./db/client.js";
 import {
   SqliteAuctionCallRepository
@@ -56,6 +59,9 @@ import {
 import {
   fmsExportGoalkeeperRoutes
 } from "./routes/fms-export-goalkeeper.routes.js";
+import {
+  manualBackupRoutes
+} from "./routes/manual-backup.routes.js";
 import {
   ownerRoutes
 } from "./routes/owner.routes.js";
@@ -165,6 +171,12 @@ import {
   ConfirmedAuctionAwardService
 } from "./services/confirmed-auction-award.service.js";
 import {
+  ManualBackupService
+} from "./services/manual-backup.service.js";
+import {
+  SqliteRecoveryPointService
+} from "./services/sqlite-recovery-point.service.js";
+import {
   ManualInitialRosterEntryService
 } from "./services/manual-initial-roster-entry.service.js";
 import {
@@ -177,6 +189,8 @@ import {
 export type BuildAppOptions = {
   auctionBackupRequester?:
     AuctionBackupRequester;
+  manualBackupService?:
+    ManualBackupService;
 };
 
 export async function buildApp(
@@ -281,6 +295,18 @@ export async function buildApp(
   const auctionBackupRequester =
     options.auctionBackupRequester ??
     new SqliteAuctionBackupRequester();
+
+  const manualBackupService =
+    options.manualBackupService ??
+    new ManualBackupService(
+      new SqliteRecoveryPointService({
+        sqlite,
+        backupRoot: path.join(
+          workspaceRoot,
+          "backups"
+        )
+      })
+    );
 
   const manualRosterAssignmentService =
     new ManualRosterAssignmentService(
@@ -479,6 +505,11 @@ export async function buildApp(
   );
 
   await app.register(dbHealthRoutes);
+  await app.register(
+    manualBackupRoutes(
+      manualBackupService
+    )
+  );
   await app.register(
     auctionSessionRoutes(
       auctionSessionOperationalCommandCoordinator,
