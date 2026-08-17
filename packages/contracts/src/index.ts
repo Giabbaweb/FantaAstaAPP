@@ -456,6 +456,24 @@ export type CreateManualBackupCommand =
     typeof createManualBackupCommandSchema
   >;
 
+export const deleteRecoveryPointCommandSchema =
+  z.object({
+    actor: z.object({
+      name:
+        z.string()
+          .trim()
+          .min(1)
+          .max(100),
+      role:
+        z.literal("ADMINISTRATOR")
+    })
+  });
+
+export type DeleteRecoveryPointCommand =
+  z.infer<
+    typeof deleteRecoveryPointCommandSchema
+  >;
+
 export const addManualInitialRosterEntryCommandSchema =
   realtimeCommandMetadataSchema.extend({
     auctionSessionTeamId:

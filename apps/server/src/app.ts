@@ -66,6 +66,9 @@ import {
   recoveryPointCatalogRoutes
 } from "./routes/recovery-point-catalog.routes.js";
 import {
+  recoveryPointDeletionRoutes
+} from "./routes/recovery-point-deletion.routes.js";
+import {
   ownerRoutes
 } from "./routes/owner.routes.js";
 import {
@@ -180,6 +183,9 @@ import {
   RecoveryPointCatalogService
 } from "./services/recovery-point-catalog.service.js";
 import {
+  RecoveryPointDeletionService
+} from "./services/recovery-point-deletion.service.js";
+import {
   SqliteRecoveryPointService
 } from "./services/sqlite-recovery-point.service.js";
 import {
@@ -201,6 +207,11 @@ export type BuildAppOptions = {
     Pick<
       RecoveryPointCatalogService,
       "listForAuctionSession"
+    >;
+  recoveryPointDeletionService?:
+    Pick<
+      RecoveryPointDeletionService,
+      "deleteRecoveryPoint"
     >;
 };
 
@@ -322,6 +333,15 @@ export async function buildApp(
   const recoveryPointCatalogService =
     options.recoveryPointCatalogService ??
     new RecoveryPointCatalogService({
+      backupRoot: path.join(
+        workspaceRoot,
+        "backups"
+      )
+    });
+
+  const recoveryPointDeletionService =
+    options.recoveryPointDeletionService ??
+    new RecoveryPointDeletionService({
       backupRoot: path.join(
         workspaceRoot,
         "backups"
@@ -533,6 +553,11 @@ export async function buildApp(
   await app.register(
     recoveryPointCatalogRoutes(
       recoveryPointCatalogService
+    )
+  );
+  await app.register(
+    recoveryPointDeletionRoutes(
+      recoveryPointDeletionService
     )
   );
   await app.register(
