@@ -153,6 +153,40 @@ describe(
     );
 
     it(
+      "maps session completion to SESSION_COMPLETED recovery points",
+      async () => {
+        const createRecoveryPoint =
+          vi.fn(
+            async () => ({})
+          );
+
+        const requester =
+          new SqliteAuctionBackupRequester({
+            createRecoveryPoint
+          });
+
+        await requester
+          .requestCompletedSessionBackup({
+            auctionSessionId:
+              "session-completed"
+          });
+
+        expect(
+          createRecoveryPoint
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          createRecoveryPoint
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-completed",
+          reason:
+            "SESSION_COMPLETED"
+        });
+      }
+    );
+
+    it(
       "propagates recovery point failures to the existing coordinator boundary",
       async () => {
         const expectedError =

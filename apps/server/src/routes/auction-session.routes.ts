@@ -68,6 +68,9 @@ import type {
 import type {
   AtomicTechnicalRosterCorrectionCommandService
 } from "../realtime/atomic-technical-roster-correction-command.service.js";
+import type {
+  AuctionBackupRequester
+} from "../services/auction-backup-requester.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
@@ -202,6 +205,11 @@ type TechnicalRosterCorrectionCommandPort = Pick<
   "correct"
 >;
 
+type CompletedSessionBackupRequesterPort = Pick<
+  AuctionBackupRequester,
+  "requestCompletedSessionBackup"
+>;
+
 export function auctionSessionRoutes(
   operationalCommandService:
     AuctionSessionOperationalCommandPort,
@@ -210,7 +218,9 @@ export function auctionSessionRoutes(
   manualRosterAssignmentCommandService:
     ManualRosterAssignmentCommandPort,
   technicalRosterCorrectionCommandService:
-    TechnicalRosterCorrectionCommandPort
+    TechnicalRosterCorrectionCommandPort,
+  completedSessionBackupRequester:
+    CompletedSessionBackupRequesterPort
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.get<{
@@ -857,6 +867,26 @@ fastify.get<{
               id,
               command
             );
+
+          if (command === "complete") {
+            try {
+              await completedSessionBackupRequester
+                .requestCompletedSessionBackup({
+                  auctionSessionId: id
+                });
+            } catch (error) {
+              fastify.log.error(
+                {
+                  module: "backup",
+                  auctionSessionId: id,
+                  backupType:
+                    "SESSION_COMPLETED",
+                  error
+                },
+                "Post-commit session completion backup failed"
+              );
+            }
+          }
 
           return reply.code(200).send({
             data: session,

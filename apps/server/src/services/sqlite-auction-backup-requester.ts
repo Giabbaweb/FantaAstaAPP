@@ -7,6 +7,7 @@ import {
 
 import type {
   AuctionBackupRequester,
+  CompletedSessionBackupRequest,
   ConfirmedAwardBackupRequest,
   ManualAssignmentBackupRequest,
   SuspendedSessionBackupRequest,
@@ -89,6 +90,17 @@ export class SqliteAuctionBackupRequester
         auctionSessionId:
           request.auctionSessionId,
         reason: "TECHNICAL_CORRECTION"
+      });
+  }
+
+  async requestCompletedSessionBackup(
+    request: CompletedSessionBackupRequest
+  ): Promise<void> {
+    await this.recoveryPointCreator
+      .createRecoveryPoint({
+        auctionSessionId:
+          request.auctionSessionId,
+        reason: "SESSION_COMPLETED"
       });
   }
 }

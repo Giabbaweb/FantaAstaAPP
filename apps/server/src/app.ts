@@ -484,7 +484,8 @@ export async function buildApp(
       auctionSessionOperationalCommandCoordinator,
       atomicManualInitialRosterCommandService,
       atomicManualRosterAssignmentCommandService,
-      atomicTechnicalRosterCorrectionCommandService
+      atomicTechnicalRosterCorrectionCommandService,
+      auctionBackupRequester
     )
   );
   await app.register(

@@ -41,6 +41,8 @@ describe(
           requestManualAssignmentBackup:
             vi.fn(),
           requestTechnicalCorrectionBackup:
+            vi.fn(),
+          requestCompletedSessionBackup:
             vi.fn()
         }
       });

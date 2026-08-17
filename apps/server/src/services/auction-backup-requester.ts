@@ -20,6 +20,10 @@ export type TechnicalCorrectionBackupRequest = {
   auctionSessionId: string;
 };
 
+export type CompletedSessionBackupRequest = {
+  auctionSessionId: string;
+};
+
 export interface AuctionBackupRequester {
   requestConfirmedAwardBackup(
     request: ConfirmedAwardBackupRequest
@@ -35,6 +39,10 @@ export interface AuctionBackupRequester {
 
   requestTechnicalCorrectionBackup(
     request: TechnicalCorrectionBackupRequest
+  ): Promise<void>;
+
+  requestCompletedSessionBackup(
+    request: CompletedSessionBackupRequest
   ): Promise<void>;
 }
 
@@ -61,6 +69,12 @@ export class NoopAuctionBackupRequester
 
   async requestTechnicalCorrectionBackup(
     _request: TechnicalCorrectionBackupRequest
+  ): Promise<void> {
+    return;
+  }
+
+  async requestCompletedSessionBackup(
+    _request: CompletedSessionBackupRequest
   ): Promise<void> {
     return;
   }
