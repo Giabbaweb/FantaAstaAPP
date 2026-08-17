@@ -4115,3 +4115,579 @@ Questa decisione integra:
 - ADR-033 per la sostenibilità economica;
 - ADR-049 per lo stato `COMPLETED` ottenibile anche tramite riapertura
   amministrativa di una sessione `CLOSED`.
+
+---
+
+# ADR-051 — Backup SQLite e recovery controllato
+
+**Stato:** `ACCEPTED`
+**Data:** 2026-08
+**Ambito:** Backup, integrità, restore, restart recovery e diagnostica
+
+## Contesto
+
+FantaAstaAPP è un'applicazione locale, offline-first e server-authoritative
+basata su SQLite.
+
+Il PC del banditore ospita il server e il database autorevole e rappresenta
+quindi un componente critico durante l'asta.
+
+Le milestone precedenti hanno già introdotto:
+
+- persistenza SQLite locale;
+- transazioni atomiche;
+- `stateVersion`;
+- `command_registry`;
+- audit di dominio persistente tramite `auction_events`;
+- pubblicazione realtime esclusivamente dopo commit;
+- sospensione operativa della sessione;
+- divieto di ripresa automatica;
+- boundary post-commit `AuctionBackupRequester`;
+- `NoopAuctionBackupRequester` come implementazione temporanea;
+- richiesta di backup dopo una conferma definitiva;
+- richiesta di backup dopo una sospensione riuscita;
+- isolamento degli errori di backup dai comandi già committati;
+- assenza di backup duplicati sui replay idempotenti.
+
+Il sottosistema completo di backup e recovery è responsabilità della
+Milestone 13.
+
+La soluzione deve rimanere locale, semplice, comprensibile e utilizzabile
+durante un'asta reale senza dipendere da Internet o servizi cloud.
+
+Backup, audit di dominio, `command_registry`, snapshot realtime e logging
+tecnico rimangono responsabilità distinte.
+
+## Decisione
+
+### Artefatto di backup
+
+Ogni recovery point è composto da:
+
+```text
+database SQLite
++
+piccolo manifest di metadata
+```
+
+Il database SQLite rimane l'unica copia autorevole dello stato persistente
+contenuta nel recovery point.
+
+Il manifest non contiene una seconda rappresentazione dello stato
+applicativo e non costituisce una fonte di verità alternativa.
+
+Il manifest serve a identificare e diagnosticare il backup e deve contenere
+almeno le informazioni necessarie per riconoscere:
+
+- data e ora di creazione;
+- lega;
+- sessione d'asta;
+- stagione;
+- motivo del backup;
+- file SQLite associato;
+- stato della verifica di integrità;
+- identità/versione dello schema o delle migrazioni;
+- dimensione del backup;
+- eventuali informazioni diagnostiche utili.
+
+Foto dei giocatori, loghi e altri asset grafici non fanno parte del backup
+del database.
+
+### Tecnica SQLite-safe
+
+Il backup del database aperto viene creato tramite la SQLite Online Backup
+API esposta da `better-sqlite3` attraverso:
+
+```text
+db.backup()
+```
+
+Non viene utilizzata come tecnica primaria una copia filesystem diretta
+del file SQLite aperto.
+
+Il database autorevole può rimanere aperto durante la creazione del backup.
+
+La richiesta di backup avviene esclusivamente dopo il commit
+dell'operazione autorevole che l'ha generata.
+
+Rimangono valide le proprietà:
+
+```text
+rollback
+→ nessun backup
+
+idempotent replay
+→ nessun backup duplicato
+
+errore del backup
+→ nessun rollback dell'operazione già committata
+```
+
+La prima implementazione può attendere il completamento del backup nella
+fase post-commit, ma questa scelta non è definitiva.
+
+La decisione tra attesa del completamento e successivo eventuale
+disaccoppiamento deve essere presa dopo misurazioni reali di:
+
+- dimensione del database;
+- durata del backup;
+- durata dell'integrity check;
+- impatto operativo sul flusso dell'asta.
+
+Non viene introdotta preventivamente una coda asincrona dedicata.
+
+### Trigger automatici e manuali
+
+Il backup è event-driven.
+
+Non viene introdotto un timer periodico e non viene utilizzato il numero
+di transazioni SQLite come trigger.
+
+Sono recovery point automatici almeno:
+
+```text
+CONFIRMED_AWARD
+MANUAL_ASSIGNMENT
+TECHNICAL_CORRECTION
+SESSION_SUSPENDED
+SESSION_COMPLETED
+RECOVERY_RESTART
+```
+
+`RECOVERY_RESTART` produce il backup dopo che la sessione interrotta è
+stata messa in sicurezza tramite la transizione persistita:
+
+```text
+RUNNING → SUSPENDED
+```
+
+È inoltre disponibile una richiesta manuale:
+
+```text
+MANUAL_BACKUP
+```
+
+attivabile dalla futura interfaccia amministrativa tramite un comando
+equivalente a:
+
+```text
+CREA BACKUP ORA
+```
+
+Backup automatici e manuali utilizzano lo stesso sottosistema e la stessa
+tecnica SQLite-safe.
+
+### Organizzazione dei file
+
+I backup vengono separati in modo comprensibile per lega e stagione.
+
+La struttura di riferimento è:
+
+```text
+backups/
+└── <lega>/
+    └── <stagione>/
+```
+
+I nomi dei file devono essere leggibili anche dal filesystem e includere
+almeno informazioni sufficienti a riconoscere:
+
+```text
+lega
+stagione
+timestamp
+motivo
+```
+
+Il manifest conserva anche gli identificatori tecnici reali, inclusi
+`leagueId` e `auctionSessionId`, in modo che il nome leggibile della lega
+non sia utilizzato come unica identità tecnica.
+
+### Retention e cancellazione
+
+Durante una sessione d'asta non viene applicato alcun pruning automatico.
+
+Tutti i recovery point della sessione vengono conservati.
+
+Non viene introdotta alcuna cancellazione automatica basata su:
+
+```text
+numero massimo di backup
+età del backup
+data del calendario
+spazio occupato
+```
+
+La futura pagina `/admin` deve consentire di:
+
+- elencare i backup presenti;
+- mostrarne data, motivo, stato e dimensione;
+- selezionare i backup;
+- conservarli;
+- eliminarli esplicitamente;
+- eliminare più backup soltanto dopo conferma amministrativa.
+
+La cancellazione dei backup è sempre manuale.
+
+### Verifica di integrità
+
+La creazione del file non equivale automaticamente a un backup valido.
+
+Dopo la creazione vengono verificati almeno:
+
+1. esistenza del file SQLite;
+2. apertura del database di backup;
+3. esecuzione di:
+
+```sql
+PRAGMA integrity_check;
+```
+
+con risultato:
+
+```text
+ok
+```
+
+4. riconoscibilità dello schema e delle migrazioni;
+5. coerenza tra identità della lega/sessione nel database e nel manifest;
+6. presenza della struttura minima necessaria al recovery.
+
+La verifica di integrità viene eseguita:
+
+```text
+subito dopo la creazione
+e
+prima di ogni restore
+```
+
+Gli stati diagnostici previsti sono:
+
+```text
+VALID
+INVALID
+UNCHECKED
+INCOMPATIBLE
+```
+
+`VALID` indica che il backup è integro e coerente.
+
+`INCOMPATIBLE` indica che il file può essere integro ma non direttamente
+ripristinabile dalla versione corrente senza un trattamento compatibile
+dello schema.
+
+Un backup non valido non viene cancellato automaticamente.
+
+### Restore amministrativo controllato
+
+Il restore ordinario è un'operazione esplicita riservata esclusivamente a:
+
+```text
+ADMINISTRATOR
+```
+
+Il restore ordinario è consentito soltanto quando la sessione interessata
+è:
+
+```text
+SUSPENDED
+```
+
+Se la sessione è `RUNNING`, deve essere prima sospesa tramite il normale
+flusso autorevole.
+
+Prima del restore il backup selezionato viene nuovamente verificato.
+
+Il server deve inoltre verificare lato backend che:
+
+```text
+manifest leagueId
+=
+backup database leagueId
+=
+target leagueId
+```
+
+e che la stessa coerenza valga per `auctionSessionId`.
+
+La UI non costituisce la protezione autorevole contro il restore della
+lega o sessione sbagliata.
+
+Prima di sostituire un database corrente ancora utilizzabile deve essere
+creato un recovery point speciale:
+
+```text
+PRE_RESTORE
+```
+
+Se il database corrente è danneggiato al punto da non consentire un backup
+normale, il file corrente non viene comunque eliminato automaticamente e
+deve essere preservato per diagnosi o recupero.
+
+Il restore non sovrascrive alla cieca il database corrente.
+
+La procedura deve:
+
+```text
+verificare il backup selezionato
+→ creare PRE_RESTORE quando possibile
+→ preparare un candidato di restore separato
+→ verificare il candidato
+→ chiudere in modo controllato la connessione al DB
+→ sostituire il database autorevole
+→ riavviare il runtime/server
+→ rieseguire le verifiche di startup
+```
+
+Se il restore fallisce, il sistema non deve lasciare intenzionalmente il
+database in uno stato intermedio né tornare automaticamente operativo.
+
+### Emergency Recovery
+
+Se il database corrente è danneggiato o non utilizzabile al punto da non
+consentire il normale flusso applicativo, il sistema utilizza un percorso
+separato di:
+
+```text
+EMERGENCY RECOVERY
+```
+
+L'Emergency Recovery è riservato a:
+
+```text
+ADMINISTRATOR
+```
+
+Non viene effettuata automaticamente la scelta del backup da ripristinare.
+
+Il sistema non deve:
+
+```text
+scegliere automaticamente "l'ultimo backup"
+provare automaticamente backup precedenti in sequenza
+ripristinare automaticamente un backup
+```
+
+L'amministratore seleziona esplicitamente il recovery point.
+
+### Restart recovery
+
+ADR-014 rimane vincolante.
+
+Al bootstrap, prima di rendere operativa la parte realtime, il server deve
+individuare tutte le sessioni persistite in:
+
+```text
+RUNNING
+```
+
+e metterle in sicurezza tramite:
+
+```text
+RUNNING
+↓
+SUSPENDED
+```
+
+con nuova causale:
+
+```text
+RECOVERY_RESTART
+```
+
+La transizione deve essere persistita in modo controllato e deve:
+
+- preservare integralmente la `AuctionCall` eventualmente presente;
+- preservare offerta, leader, turno, PASS ed esclusioni;
+- incrementare coerentemente `stateVersion`;
+- registrare `SESSION_SUSPENDED` nell'audit di dominio;
+- richiedere un backup post-commit.
+
+Una sessione già persistita come:
+
+```text
+SUSPENDED
+```
+
+rimane invariata, inclusa la causale già presente.
+
+Non vengono prodotti:
+
+```text
+nuovo audit
+nuovo backup
+nuova causale
+```
+
+per una sessione che era già sospesa prima del riavvio.
+
+Gli altri stati:
+
+```text
+SETUP
+READY
+COMPLETED
+CLOSED
+```
+
+non vengono modificati dal restart recovery.
+
+Se la messa in sicurezza di una sessione `RUNNING` fallisce, quella
+sessione non deve essere resa normalmente operativa.
+
+### Nessun auto-resume
+
+Dopo restore o restart recovery una sessione recuperata non torna mai
+automaticamente a `RUNNING`.
+
+La ripresa richiede sempre il comando esplicito previsto dal lifecycle:
+
+```text
+RESUME_SESSION
+```
+
+Lo snapshot autorevole viene ricostruito e ridistribuito ai client dopo il
+riavvio secondo il normale protocollo realtime.
+
+### Ruoli amministrativi
+
+Le autorizzazioni per il sottosistema sono:
+
+| Operazione | ADMINISTRATOR | AUCTIONEER |
+|---|---:|---:|
+| Visualizzare backup | sì | sì |
+| Creare backup manuale | sì | sì |
+| Restore | sì | no |
+| Eliminare backup | sì | no |
+| Emergency Recovery | sì | no |
+
+`OPERATOR`, `OBSERVER` e `PUBLIC_DISPLAY` non possiedono capacità di
+backup o recovery.
+
+### Logging e diagnostica
+
+Il logging tecnico di backup e recovery utilizza Pino e rimane separato
+dall'audit di dominio e dal `command_registry`.
+
+Gli eventi tecnici significativi devono essere persistiti anche su file
+locale nella directory:
+
+```text
+logs/
+```
+
+in modo da poter diagnosticare un crash o un restore anche quando il
+database che conteneva lo stato precedente viene sostituito.
+
+Devono essere registrabili almeno operazioni equivalenti a:
+
+```text
+BACKUP_STARTED
+BACKUP_COMPLETED
+BACKUP_FAILED
+
+RESTORE_REQUESTED
+RESTORE_VALIDATION_STARTED
+PRE_RESTORE_BACKUP_COMPLETED
+RESTORE_REPLACEMENT_STARTED
+RESTORE_COMPLETED
+RESTORE_FAILED
+
+STARTUP_RECOVERY
+```
+
+I log devono includere, quando disponibili:
+
+- lega e sessione;
+- motivo del backup;
+- file coinvolti;
+- `stateVersion`;
+- dimensione del database e del backup;
+- durata in millisecondi;
+- stato dell'integrity check;
+- versione/schema;
+- fase del restore;
+- dettagli tecnici controllati dell'errore.
+
+Un errore di backup non modifica retroattivamente l'esito del comando
+autorevole già committato.
+
+La futura pagina `/admin` deve poter mostrare almeno:
+
+- stato del database corrente;
+- stato generale del sottosistema di backup;
+- ultimo backup;
+- elenco dei backup disponibili;
+- motivo;
+- dimensione;
+- stato `VALID`, `INVALID`, `UNCHECKED` o `INCOMPATIBLE`;
+- spazio totale occupato;
+- azione di backup manuale;
+- restore amministrativo;
+- cancellazione selezionata con conferma.
+
+Un fallimento di backup deve essere visibile all'amministratore come
+warning operativo, senza trasformare il Public Display in un'interfaccia
+diagnostica.
+
+## Conseguenze
+
+### Positive
+
+- Il backup rimane semplice e basato sul database SQLite autorevole.
+- Non viene introdotta una seconda rappresentazione dello stato
+  applicativo.
+- I recovery point corrispondono a eventi operativi significativi.
+- Il backup può essere creato con il database aperto tramite l'API nativa
+  prevista per database SQLite live.
+- Le proprietà post-commit e idempotenti delle milestone precedenti vengono
+  preservate.
+- I backup sono immediatamente distinguibili per lega e stagione.
+- Nessun recovery point viene eliminato automaticamente durante l'asta.
+- Integrità e compatibilità vengono verificate prima di un restore.
+- Il database corrente viene protetto prima di un restore quando possibile.
+- Un restore non può riprendere automaticamente l'asta.
+- Una sessione interrotta in `RUNNING` viene messa in sicurezza prima
+  dell'operatività realtime.
+- Il logging esterno al DB permette di diagnosticare restore e crash anche
+  quando il database viene sostituito.
+- Le operazioni distruttive rimangono sotto controllo amministrativo
+  esplicito.
+
+### Negative
+
+- Ogni recovery point produce almeno un file SQLite e un manifest.
+- L'assenza di pruning automatico può aumentare lo spazio occupato durante
+  una sessione.
+- L'integrity check introduce I/O aggiuntivo dopo la creazione del backup.
+- La scelta di attendere il completamento del backup rimane da validare con
+  misurazioni reali.
+- Il restore richiede una procedura più articolata rispetto a una semplice
+  copia del file.
+- Il restart recovery richiede una fase di bootstrap applicativa prima
+  dell'apertura operativa del realtime.
+- La persistenza dei log tecnici su file richiede gestione del filesystem.
+
+## Relazioni
+
+Questa decisione integra:
+
+- ADR-001 per il principio offline-first;
+- ADR-002 per il server autoritativo;
+- ADR-006 per SQLite come database locale;
+- ADR-014 per il divieto di ripresa automatica;
+- ADR-015 per il logging strutturato con Pino;
+- ADR-019 per il lifecycle della sessione;
+- ADR-025 per la possibilità di sessioni operative appartenenti a leghe
+  differenti;
+- ADR-031 e ADR-034 per stato e persistenza coerente della `AuctionCall`;
+- ADR-041 per lo snapshot autorevole;
+- ADR-042 per `stateVersion`, idempotenza e `command_registry`;
+- ADR-043 per la pipeline atomica e gli effetti post-commit;
+- ADR-045 per la separazione tra audit di dominio, logging e command
+  registry;
+- ADR-047 per sospensione, ripresa e backup post-commit;
+- ADR-048 per le autorità `ADMINISTRATOR` e `AUCTIONEER`.
+
+ADR-051 completa il sottosistema di backup e recovery rinviato
+esplicitamente dalle milestone precedenti.
