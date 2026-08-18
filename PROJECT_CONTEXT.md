@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 12 completata
-- **Versione corrente:** v0.12.0
-- **Prossimo obiettivo:** Versione 0.13 – Backup e recovery
+- **Stato:** Milestone 13 completata
+- **Versione corrente:** v0.13.0
+- **Prossimo obiettivo:** Versione 0.14 – Collaudo operativo
 
 ## Regole immutabili
 
@@ -168,6 +168,48 @@ Il portiere export-only:
 - può essere selezionato in `COMPLETED` o `CLOSED`;
 - viene esportato con costo `0` e anno contratto `1`.
 
+## Stato implementativo della v0.13.0
+
+Sono completati tutti gli elementi delle milestone precedenti e inoltre:
+
+- recovery point SQLite creati tramite SQLite Online Backup API;
+- manifest JSON con lega, sessione, stagione, motivo, file, dimensione,
+  identità della migrazione e stato di integrità;
+- `PRAGMA integrity_check` sui recovery point;
+- organizzazione dei backup per lega e stagione;
+- recovery point automatici `CONFIRMED_AWARD`, `MANUAL_ASSIGNMENT`,
+  `TECHNICAL_CORRECTION`, `SESSION_SUSPENDED`, `SESSION_COMPLETED` e
+  `RECOVERY_RESTART`;
+- recovery point manuale tramite endpoint amministrativo;
+- catalogo dei recovery point;
+- cancellazione esplicita amministrativa senza pruning automatico;
+- startup recovery delle sessioni persistite in `RUNNING`;
+- transizione di sicurezza `RUNNING -> SUSPENDED` con causale
+  `RECOVERY_RESTART`;
+- preservazione dello stato interno della `AuctionCall` durante startup
+  recovery;
+- nessun auto-resume;
+- restore ordinario consentito solo a `ADMINISTRATOR` e su sessione
+  `SUSPENDED`;
+- validazione del recovery point prima del restore;
+- recovery point obbligatorio `PRE_RESTORE` prima del restore ordinario;
+- candidate database separato e swap controllato;
+- chiusura dell'applicazione prima della sostituzione del database live;
+- logging tecnico persistente di backup/recovery sotto `logs/`;
+- Emergency Recovery CLI per database live non utilizzabile;
+- selezione esplicita del recovery point in Emergency Recovery;
+- preservazione del database danneggiato e degli eventuali sidecar WAL/SHM;
+- rehearsal end-to-end del Controlled Restore e dell'Emergency Recovery;
+- 82 file di test server;
+- 511 test server verdi;
+- 15 file di test domain;
+- 135 test domain verdi;
+- 646 test automatici complessivi;
+- typecheck completo del monorepo superato;
+- build completa del monorepo superata.
+
+---
+
 ## Stato implementativo della v0.12.0
 
 Sono completati tutti gli elementi delle milestone precedenti e inoltre:
@@ -308,14 +350,16 @@ Versione 0.10 — Sospensione e resilienza:
 
 ## Prossimo obiettivo
 
-Versione 0.11 — Operazioni manuali e correzioni:
+Versione 0.14 — Collaudo operativo:
 
-- assegnazioni manuali;
-- gestione manuale delle opzioni;
-- correzioni tecniche;
-- motivazioni obbligatorie;
-- audit completo;
-- validazioni coerenti con crediti, slot, ruoli e sostenibilità economica.
+- simulazione completa dell'asta con otto squadre;
+- verifica contemporanea di operatori, osservatori e schermo pubblico;
+- test di disconnessioni, comandi simultanei, sospensione e ripresa;
+- misurazione di stabilità e tempi di risposta;
+- prova operativa dei flussi di backup e recovery;
+- verifica delle assegnazioni manuali e dell'export finale;
+- correzione degli eventuali problemi UX emersi dal collaudo;
+- preparazione della release candidate.
 
 Fonte autoritativa completa:
 

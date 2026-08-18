@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.12.0
+v0.13.0
 ```
 
 Milestone completate:
@@ -106,22 +106,33 @@ Milestone completate:
 - comando atomico e idempotente `REOPEN_SESSION`;
 - evento persistente `SESSION_REOPENED`;
 - evento realtime `SESSION_REOPENED`;
-- 52 file di test server verdi;
-- 364 test server verdi;
-- 12 file di test domain verdi;
+- recovery point SQLite tramite SQLite Online Backup API;
+- manifest JSON di metadata e verifica `PRAGMA integrity_check`;
+- backup event-driven sui trigger autorevoli e backup manuale;
+- catalogo e cancellazione manuale dei recovery point;
+- startup recovery `RUNNING -> SUSPENDED` con `RECOVERY_RESTART`;
+- nessun auto-resume;
+- controlled restore con `PRE_RESTORE` e swap a runtime chiuso;
+- logging tecnico persistente di backup e recovery;
+- Emergency Recovery offline con selezione esplicita del recovery point;
+- preservazione del database danneggiato e dei sidecar WAL/SHM;
+- 82 file di test server verdi;
+- 511 test server verdi;
+- 15 file di test domain verdi;
 - 135 test domain verdi;
+- 646 test automatici complessivi;
 - typecheck e build completi del monorepo superati.
 
 Milestone corrente:
 
 ```text
-v0.13.0 — Backup e recovery
+v0.14.0 — Collaudo operativo
 ```
 
 Stato:
 
 ```text
-IN_PROGRESS
+NEXT
 ```
 
 ---
@@ -542,7 +553,7 @@ Dopo il commit:
 3. viene invocato il boundary applicativo per la richiesta di backup.
 
 Il sottosistema completo di backup e recovery non appartiene alla
-v0.8.0 e rimane previsto dalla v0.13.0.
+v0.8.0 ed è stato completato nella v0.13.0.
 
 ## Implementazione completata
 
@@ -763,42 +774,114 @@ in ADR-050.
 
 # v0.13.0 — Backup e recovery
 
-**Stato:** `IN_PROGRESS`
+**Stato:** `COMPLETED`
 
-## Obiettivi
+## Obiettivi completati
 
-- backup SQLite con manifest di metadata;
-- verifica di integrità;
-- recovery controllato;
-- consultazione dei log;
-- ripristino dopo riavvio;
+- recovery point SQLite con manifest di metadata;
+- creazione SQLite-safe tramite `db.backup()`;
+- verifica di integrità con `PRAGMA integrity_check`;
+- backup event-driven sui trigger autorevoli;
+- creazione manuale di recovery point;
+- catalogo dei recovery point;
+- cancellazione amministrativa esplicita senza pruning automatico;
+- startup recovery dopo riavvio;
 - nessun auto-resume;
-- gestione manuale dei recovery point.
+- controlled restore con validazione preventiva e `PRE_RESTORE`;
+- logging tecnico persistente su file;
+- Emergency Recovery per database live non utilizzabile.
 
-## Scenari previsti
+## Trigger implementati
 
-- interruzione elettrica;
-- crash del server;
-- riavvio volontario;
-- problema di rete;
-- database danneggiato;
-- sessione sospesa.
+```text
+CONFIRMED_AWARD
+MANUAL_ASSIGNMENT
+TECHNICAL_CORRECTION
+SESSION_SUSPENDED
+SESSION_COMPLETED
+RECOVERY_RESTART
+MANUAL_BACKUP
+```
 
-## Regola fondamentale
+I backup post-commit non vengono duplicati sui replay idempotenti e un
+fallimento del backup non annulla un'operazione autorevole già committata.
 
-Dopo un riavvio con sessione interrotta:
+## Startup recovery
+
+Dopo un riavvio, una sessione persistita in:
+
+```text
+RUNNING
+```
+
+viene messa in sicurezza tramite:
 
 ```text
 RUNNING → SUSPENDED
 ```
 
-La ripresa richiede sempre un’azione manuale del banditore.
+con causale:
+
+```text
+RECOVERY_RESTART
+```
+
+L'eventuale `AuctionCall` conserva offerta, leader, turno, PASS ed esclusioni.
+Una sessione già `SUSPENDED` rimane invariata e la ripresa richiede sempre
+un'azione manuale.
+
+## Controlled restore
+
+Il restore ordinario:
+
+- è riservato a `ADMINISTRATOR`;
+- richiede la sessione `SUSPENDED`;
+- valida manifest, integrità, identità e migrazione;
+- crea un recovery point `PRE_RESTORE`;
+- prepara un database candidate separato;
+- chiude il runtime prima dello swap;
+- rimuove gli eventuali sidecar WAL/SHM obsoleti;
+- richiede il normale restart dell'applicazione dopo la sostituzione.
+
+## Emergency Recovery
+
+Quando il database live non è utilizzabile:
+
+- viene usata una CLI amministrativa indipendente dal bootstrap del DB live;
+- il recovery point deve essere scelto esplicitamente;
+- è richiesta la conferma testuale `RESTORE`;
+- il candidate viene validato offline;
+- il database danneggiato viene preservato;
+- vengono preservati anche eventuali WAL/SHM;
+- nessun recovery point viene scelto automaticamente.
+
+## Diagnostica
+
+Gli eventi tecnici di backup e recovery sono persistiti sotto:
+
+```text
+logs/
+```
+
+separatamente da audit di dominio e `command_registry`.
+
+## Verifica finale
+
+- 82 file di test server;
+- 511 test server;
+- 15 file di test domain;
+- 135 test domain;
+- 646 test automatici complessivi;
+- typecheck completo del monorepo superato;
+- build completa del monorepo superata;
+- rehearsal end-to-end di restore controllato ed Emergency Recovery superati;
+- recovery matrix verificata.
 
 ---
 
 # v0.14.0 — Collaudo operativo
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 

@@ -1,5 +1,82 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on **Keep a Changelog** and this project adheres to **Semantic Versioning (SemVer)**.
+
+---
+
+## [Unreleased]
+
+### Added
+
+* Nothing yet
+
+---
+
+## [0.13.0] - 2026-08-18
+
+### Added
+
+* SQLite recovery points created with the SQLite Online Backup API
+* Human-readable recovery point filenames organized by league and season
+* JSON metadata manifest for every recovery point
+* `PRAGMA integrity_check` validation of generated recovery points
+* Persisted migration identity and recovery-point integrity metadata
+* Event-driven automatic recovery points for:
+  * `CONFIRMED_AWARD`
+  * `MANUAL_ASSIGNMENT`
+  * `TECHNICAL_CORRECTION`
+  * `SESSION_SUSPENDED`
+  * `SESSION_COMPLETED`
+  * `RECOVERY_RESTART`
+* Manual recovery-point creation endpoint
+* Recovery-point catalog endpoint
+* Explicit administrative recovery-point deletion
+* Startup recovery for persisted `RUNNING` sessions
+* `RECOVERY_RESTART` suspension reason
+* Controlled restore preparation with recovery-point validation
+* Mandatory `PRE_RESTORE` recovery point before ordinary restore
+* Controlled restore HTTP endpoint restricted to `ADMINISTRATOR`
+* Runtime restore coordinator, executor and process boundary
+* Persistent technical backup/recovery logging under `logs/`
+* Emergency Recovery CLI for unusable or corrupted live databases
+* Offline Emergency Recovery preparation independent from the live database
+* Preservation of damaged SQLite database, WAL and SHM files during Emergency Recovery
+
+### Changed
+
+* Backup generation is event-driven; no periodic backup timer is used
+* Backup failures never roll back an already committed authoritative operation
+* Idempotent command replay does not create duplicate recovery points
+* A persisted `RUNNING` session is converted to `SUSPENDED` before realtime operability after restart
+* Startup recovery never performs automatic session resume
+* Ordinary restore requires the target auction session to be `SUSPENDED`
+* Ordinary restore closes the application before replacing the live SQLite database
+* Recovery-point retention has no automatic pruning during an auction session
+* Emergency Recovery requires explicit recovery-point selection and explicit `RESTORE` confirmation
+* Backup/recovery technical logging remains separate from domain audit and `command_registry`
+
+### Tested
+
+* Full monorepo test suite
+* Full monorepo type checking
+* Full monorepo production build
+* 82 server test files — 511 tests passed
+* 15 domain test files — 135 tests passed
+* 646 automated tests passed in total
+* Startup recovery from `RUNNING` with `RECOVERY_RESTART`
+* Preservation of active auction-call state during startup recovery
+* Controlled restore validation for invalid, incompatible, missing and corrupted recovery points
+* Runtime shutdown-before-swap ordering and swap-failure handling
+* Emergency Recovery with an unusable live database
+* Preservation of the damaged database during Emergency Recovery
+* Emergency Recovery cancellation without altering the live database
+* Physical verification of the persistent technical recovery log
+* End-to-end Emergency Recovery rehearsal on a temporary filesystem
+
+---
+
 ## [0.12.0] - 2026-08-17
 
 ### Added
@@ -36,12 +113,6 @@
 ---
 
 
-All notable changes to this project will be documented in this file.
-
-The format is based on **Keep a Changelog** and this project adheres to **Semantic Versioning (SemVer)**.
-
----
-
 ## [Unreleased]
 
 ### Added
@@ -55,9 +126,7 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 ### Added
 
 * Administrative authority model for manual roster operations
-* Manual initial-roster entry command
-* Manual roster-assignment command
-* Technical roster correction command
+* Manual initial-roster entry commal roster correction command
 * Persistent audit events for manual assignments and technical corrections
 * Mandatory operator identity and reason/comment for administrative corrections
 * Atomic and idempotent execution of administrative roster commands

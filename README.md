@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.12.0-blue" alt="Version v0.12.0">
+  <img src="https://img.shields.io/badge/version-v0.13.0-blue" alt="Version v0.13.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.12.0**
+**v0.13.0**
 
 Completed milestones
 
@@ -243,10 +243,22 @@ Completed milestones
 - ✅ Atomic and idempotent REOPEN_SESSION command
 - ✅ Persistent SESSION_REOPENED audit event
 - ✅ Realtime SESSION_REOPENED event and post-commit snapshot publication
-- ✅ 52 backend test files
-- ✅ 364 backend tests passing
-- ✅ 12 domain test files
+- ✅ SQLite-safe recovery points with metadata manifests
+- ✅ Integrity validation with `PRAGMA integrity_check`
+- ✅ Event-driven automatic and manual recovery points
+- ✅ Recovery-point catalog and explicit administrative deletion
+- ✅ Startup recovery with `RUNNING → SUSPENDED / RECOVERY_RESTART`
+- ✅ No automatic session resume after restart
+- ✅ Controlled restore with mandatory `PRE_RESTORE`
+- ✅ Runtime shutdown-before-swap restore boundary
+- ✅ Persistent backup/recovery technical log
+- ✅ Emergency Recovery CLI independent from the live database
+- ✅ Preservation of damaged DB/WAL/SHM during Emergency Recovery
+- ✅ 82 backend test files
+- ✅ 511 backend tests passing
+- ✅ 15 domain test files
 - ✅ 135 domain tests passing
+- ✅ 646 automated tests passing
 - ✅ Full monorepo type checking
 - ✅ Full monorepo production build
 
@@ -274,14 +286,16 @@ session must first be explicitly reopened to `COMPLETED`.
 
 Current milestone
 
-✅ **v0.12.0 — Import/export FMS**
+✅ **v0.13.0 — Backup & Recovery**
 
-The FMS ReVo workflow now supports final roster export, export-only
-goalkeeper selection and session-wide export generation.
+The backup and recovery subsystem now provides SQLite-safe recovery points,
+integrity manifests, event-driven automatic and manual backup triggers,
+startup recovery, controlled restore, persistent technical logging and an
+offline Emergency Recovery workflow for an unusable live database.
 
 Next milestone
 
-➡ **v0.13.0 — Backup & Recovery**
+➡ **v0.14.0 — Operational Validation**
 
 ---
 
@@ -364,7 +378,7 @@ Main capabilities:
 - no duplicate realtime or backup side effects on idempotent replay;
 - no automatic resume after reconnect or runtime reconstruction.
 
-The complete backup and recovery subsystem remains planned for v0.13.0.
+The complete backup and recovery subsystem is implemented in v0.13.0.
 
 ---
 
@@ -407,8 +421,8 @@ The `docs/` directory contains the complete project documentation.
 | v0.10   | ✅ Suspension & Resilience              |
 | v0.11   | ✅ Manual Operations & Corrections      |
 | v0.12   | ✅ FMS Import/Export                     |
-| v0.13   | ⏭️ Backup & Recovery                     |
-| v0.14   | ⏳ Operational Validation          |
+| v0.13   | ✅ Backup & Recovery                     |
+| v0.14   | ⏭️ Operational Validation          |
 | v1.0 | 🎯 Stable Release |
 
 ---

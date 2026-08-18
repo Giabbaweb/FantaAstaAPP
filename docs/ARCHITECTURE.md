@@ -1063,7 +1063,7 @@ Le decisioni complete sono formalizzate in ADR-051.
 La versione corrente è:
 
 ```text
-v0.12.0
+v0.13.0
 ```
 
 Sono operative:
@@ -1149,8 +1149,18 @@ Sono operative:
 - evento persistente `SESSION_REOPENED`;
 - evento realtime `SESSION_REOPENED`;
 - pubblicazione di evento e snapshot esclusivamente dopo commit;
-- 52 file di test server e 364 test server verdi;
-- 12 file di test domain e 135 test domain verdi;
+- recovery point SQLite-safe con manifest di metadata;
+- verifica dei recovery point tramite `PRAGMA integrity_check`;
+- trigger automatici e manuali event-driven;
+- catalogo e cancellazione esplicita dei recovery point;
+- startup recovery con `RUNNING -> SUSPENDED` e `RECOVERY_RESTART`;
+- controlled restore con `PRE_RESTORE`, candidate separato e runtime chiuso;
+- technical log persistente di backup e recovery;
+- Emergency Recovery indipendente dal bootstrap del database live;
+- preservazione del database danneggiato e dei sidecar WAL/SHM;
+- 82 file di test server e 511 test server verdi;
+- 15 file di test domain e 135 test domain verdi;
+- 646 test automatici complessivi;
 - typecheck e build completi del monorepo superati.
 
 La v0.11.0 completa quindi il livello amministrativo necessario per
@@ -1219,10 +1229,53 @@ Sono disponibili:
 
 La decisione sul portiere aggiuntivo è formalizzata in ADR-050.
 
+## 21. v0.13.0 — Backup e recovery
+
+La v0.13.0 completa il sottosistema locale di Backup & Recovery definito in
+ADR-051.
+
+I recovery point vengono creati tramite la SQLite Online Backup API e sono
+composti da un database SQLite e da un manifest JSON diagnostico. Ogni
+recovery point viene verificato con `PRAGMA integrity_check` e conserva
+l'identità dell'ultima migrazione applicata.
+
+Il modello operativo è event-driven. I trigger implementati sono:
+
+```text
+CONFIRMED_AWARD
+MANUAL_ASSIGNMENT
+TECHNICAL_CORRECTION
+SESSION_SUSPENDED
+SESSION_COMPLETED
+RECOVERY_RESTART
+MANUAL_BACKUP
+```
+
+Il restore ordinario richiede una sessione `SUSPENDED`, crea `PRE_RESTORE`,
+valida un candidate separato e sostituisce il database live soltanto dopo
+la chiusura del runtime.
+
+Al bootstrap, una sessione rimasta `RUNNING` viene messa in sicurezza con:
+
+```text
+RUNNING -> SUSPENDED
+```
+
+e causale `RECOVERY_RESTART`, senza modificare lo stato interno dell'eventuale
+`AuctionCall` e senza alcun auto-resume.
+
+Per un database live non utilizzabile è disponibile un percorso distinto di
+Emergency Recovery. La CLI non importa il bootstrap del database applicativo,
+richiede la selezione esplicita del recovery point e preserva il database
+danneggiato e gli eventuali sidecar WAL/SHM prima dello swap.
+
+La diagnostica di backup e recovery è persistita in un technical log locale
+separato dall'audit di dominio.
+
 La prossima milestone funzionale è:
 
 ```text
-v0.13.0 — Backup e recovery
+v0.14.0 — Collaudo operativo
 ```
 
 Le decisioni architetturali significative continueranno a essere registrate in:
@@ -1233,7 +1286,7 @@ docs/DECISIONS.md
 
 ---
 
-## 21. Fonti progettuali
+## 22. Fonti progettuali
 
 Questo documento sintetizza e traduce in architettura tecnica le regole definite nella specifica master, nella roadmap e nella struttura iniziale del progetto.
 
