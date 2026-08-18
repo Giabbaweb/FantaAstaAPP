@@ -49,6 +49,12 @@ describe(
         const error =
           vi.fn();
 
+        const technicalInfo =
+          vi.fn();
+
+        const technicalError =
+          vi.fn();
+
         const boundary =
           new RestoreProcessBoundary({
             executor: {
@@ -58,6 +64,12 @@ describe(
             logger: {
               info,
               error
+            },
+            technicalLogger: {
+              info:
+                technicalInfo,
+              error:
+                technicalError
             }
           });
 
@@ -74,6 +86,21 @@ describe(
 
         expect(error)
           .not.toHaveBeenCalled();
+
+        expect(
+          technicalInfo
+        ).toHaveBeenCalledWith({
+          event:
+            "RESTORE_COMPLETED",
+          auctionSessionId:
+            "session-1",
+          fileName:
+            "backup.sqlite"
+        });
+
+        expect(
+          technicalError
+        ).not.toHaveBeenCalled();
 
         expect(exit)
           .toHaveBeenCalledWith(0);
@@ -97,6 +124,9 @@ describe(
         const error =
           vi.fn();
 
+        const technicalError =
+          vi.fn();
+
         const boundary =
           new RestoreProcessBoundary({
             executor: {
@@ -111,6 +141,12 @@ describe(
             logger: {
               info,
               error
+            },
+            technicalLogger: {
+              info:
+                vi.fn(),
+              error:
+                technicalError
             }
           });
 
@@ -131,6 +167,15 @@ describe(
             }),
             "Recovery point restore failed after runtime wake"
           );
+
+        expect(
+          technicalError
+        ).toHaveBeenCalledWith({
+          event:
+            "RESTORE_FAILED",
+          error:
+            expectedError
+        });
 
         expect(exit)
           .toHaveBeenCalledWith(1);

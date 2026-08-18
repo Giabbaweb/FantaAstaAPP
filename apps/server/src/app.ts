@@ -171,6 +171,9 @@ import type {
 import {
   SqliteAuctionBackupRequester
 } from "./services/sqlite-auction-backup-requester.js";
+import type {
+  BackupRecoveryTechnicalLogger
+} from "./services/backup-recovery-technical-logger.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
@@ -209,6 +212,8 @@ import {
 } from "./services/technical-roster-correction.service.js";
 
 export type BuildAppOptions = {
+  backupRecoveryTechnicalLogger?:
+    BackupRecoveryTechnicalLogger;
   auctionBackupRequester?:
     AuctionBackupRequester;
   manualBackupService?:
@@ -335,20 +340,33 @@ export async function buildApp(
       atomicManualInitialRosterCommandExecutor
     );
 
+  const recoveryPointService =
+    new SqliteRecoveryPointService({
+      sqlite,
+      backupRoot: path.join(
+        workspaceRoot,
+        "backups"
+      ),
+      ...(
+        options.backupRecoveryTechnicalLogger
+          ? {
+              technicalLogger:
+                options.backupRecoveryTechnicalLogger
+            }
+          : {}
+      )
+    });
+
   const auctionBackupRequester =
     options.auctionBackupRequester ??
-    new SqliteAuctionBackupRequester();
+    new SqliteAuctionBackupRequester(
+      recoveryPointService
+    );
 
   const manualBackupService =
     options.manualBackupService ??
     new ManualBackupService(
-      new SqliteRecoveryPointService({
-        sqlite,
-        backupRoot: path.join(
-          workspaceRoot,
-          "backups"
-        )
-      })
+      recoveryPointService
     );
 
   const recoveryPointCatalogService =
@@ -379,13 +397,15 @@ export async function buildApp(
       ),
       databasePath,
       recoveryPointCreator:
-        new SqliteRecoveryPointService({
-          sqlite,
-          backupRoot: path.join(
-            workspaceRoot,
-            "backups"
-          )
-        })
+        recoveryPointService,
+      ...(
+        options.backupRecoveryTechnicalLogger
+          ? {
+              technicalLogger:
+                options.backupRecoveryTechnicalLogger
+            }
+          : {}
+      )
     });
 
   const restoreRuntimeCoordinator =

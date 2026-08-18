@@ -9,6 +9,10 @@ import path from "node:path";
 import Database from "better-sqlite3";
 
 import type {
+  BackupRecoveryTechnicalLogger
+} from "./backup-recovery-technical-logger.js";
+
+import type {
   CreateRecoveryPointInput
 } from "./sqlite-recovery-point.service.js";
 
@@ -58,6 +62,8 @@ export type RecoveryPointRestoreServiceOptions = {
   databasePath: string;
   recoveryPointCreator:
     RecoveryPointCreator;
+  technicalLogger?:
+    BackupRecoveryTechnicalLogger;
 };
 
 export class RecoveryPointRestoreError
@@ -242,6 +248,9 @@ export class RecoveryPointRestoreService {
   private readonly recoveryPointCreator:
     RecoveryPointCreator;
 
+  private readonly technicalLogger:
+    BackupRecoveryTechnicalLogger | undefined;
+
   constructor(
     options:
       RecoveryPointRestoreServiceOptions
@@ -253,6 +262,9 @@ export class RecoveryPointRestoreService {
       options.databasePath;
     this.recoveryPointCreator =
       options.recoveryPointCreator;
+
+    this.technicalLogger =
+      options.technicalLogger;
   }
 
   async prepareRestore(
@@ -261,6 +273,24 @@ export class RecoveryPointRestoreService {
   ): Promise<
     PreparedRecoveryPointRestore
   > {
+    this.technicalLogger?.info({
+      event:
+        "RESTORE_REQUESTED",
+      auctionSessionId:
+        input.auctionSessionId,
+      fileName:
+        input.fileName
+    });
+
+    this.technicalLogger?.info({
+      event:
+        "RESTORE_VALIDATION_STARTED",
+      auctionSessionId:
+        input.auctionSessionId,
+      fileName:
+        input.fileName
+    });
+
     if (
       input.fileName.length === 0 ||
       path.basename(input.fileName) !==
@@ -529,6 +559,19 @@ export class RecoveryPointRestoreService {
           reason:
             "PRE_RESTORE"
         });
+
+      this.technicalLogger?.info({
+        event:
+          "PRE_RESTORE_BACKUP_COMPLETED",
+        auctionSessionId:
+          input.auctionSessionId,
+        leagueId:
+          liveSession.leagueId,
+        reason:
+          "PRE_RESTORE",
+        fileName:
+          input.fileName
+      });
     } catch (error) {
       await rm(
         candidatePath,

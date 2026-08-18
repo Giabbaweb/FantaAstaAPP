@@ -43,6 +43,15 @@ describe(
             }
           );
 
+        const technicalInfo =
+          vi.fn(
+            () => {
+              calls.push(
+                "technical-log"
+              );
+            }
+          );
+
         const commitSwap =
           vi.fn(
             async () => {
@@ -67,7 +76,11 @@ describe(
               commitSwap
             },
             databasePath:
-              "/data/fantaasta.sqlite"
+              "/data/fantaasta.sqlite",
+            technicalLogger: {
+              info:
+                technicalInfo
+            }
           });
 
         await expect(
@@ -86,8 +99,20 @@ describe(
         expect(calls)
           .toEqual([
             "close",
+            "technical-log",
             "swap"
           ]);
+
+        expect(
+          technicalInfo
+        ).toHaveBeenCalledWith({
+          event:
+            "RESTORE_REPLACEMENT_STARTED",
+          auctionSessionId:
+            "session-1",
+          fileName:
+            "backup.sqlite"
+        });
 
         expect(
           commitSwap

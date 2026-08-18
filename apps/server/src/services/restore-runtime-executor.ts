@@ -1,4 +1,7 @@
 import type {
+  BackupRecoveryTechnicalLogger
+} from "./backup-recovery-technical-logger.js";
+import type {
   RecoveryPointSwapService
 } from "./recovery-point-swap.service.js";
 import type {
@@ -18,6 +21,12 @@ type RecoveryPointSwapPort = Pick<
 export type RestoreApplicationCloser =
   () => Promise<void>;
 
+type BackupRecoveryTechnicalLoggerPort =
+  Pick<
+    BackupRecoveryTechnicalLogger,
+    "info"
+  >;
+
 export type RestoreRuntimeExecutorOptions = {
   coordinator:
     RestoreRuntimeCoordinatorPort;
@@ -26,6 +35,8 @@ export type RestoreRuntimeExecutorOptions = {
   swapService:
     RecoveryPointSwapPort;
   databasePath: string;
+  technicalLogger?:
+    BackupRecoveryTechnicalLoggerPort;
 };
 
 export type RestoreRuntimeExecutionResult =
@@ -52,6 +63,9 @@ export class RestoreRuntimeExecutor {
   private readonly databasePath:
     string;
 
+  private readonly technicalLogger:
+    BackupRecoveryTechnicalLoggerPort | undefined;
+
   private executionStarted =
     false;
 
@@ -70,6 +84,9 @@ export class RestoreRuntimeExecutor {
 
     this.databasePath =
       options.databasePath;
+
+    this.technicalLogger =
+      options.technicalLogger;
   }
 
   async executeScheduledRestore():
@@ -102,6 +119,15 @@ export class RestoreRuntimeExecutor {
       true;
 
     await this.closeApplication();
+
+    this.technicalLogger?.info({
+      event:
+        "RESTORE_REPLACEMENT_STARTED",
+      auctionSessionId:
+        prepared.auctionSessionId,
+      fileName:
+        prepared.fileName
+    });
 
     const swapResult =
       await this.swapService

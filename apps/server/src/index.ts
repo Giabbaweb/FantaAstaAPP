@@ -1,12 +1,19 @@
 import "dotenv/config";
 
+import path from "node:path";
+
 import {
   buildApp
 } from "./app.js";
 
 import {
-  databasePath
+  databasePath,
+  workspaceRoot
 } from "./db/client.js";
+
+import {
+  BackupRecoveryTechnicalLogger
+} from "./services/backup-recovery-technical-logger.js";
 
 import {
   RecoveryPointSwapService
@@ -63,9 +70,20 @@ const restoreRuntimeCoordinator =
     }
   );
 
+const backupRecoveryTechnicalLogger =
+  await BackupRecoveryTechnicalLogger
+    .create({
+      logsRoot:
+        path.join(
+          workspaceRoot,
+          "logs"
+        )
+    });
+
 const app =
   await buildApp({
-    restoreRuntimeCoordinator
+    restoreRuntimeCoordinator,
+    backupRecoveryTechnicalLogger
   });
 
 const restoreRuntimeExecutor =
@@ -81,7 +99,10 @@ const restoreRuntimeExecutor =
     swapService:
       new RecoveryPointSwapService(),
 
-    databasePath
+    databasePath,
+
+    technicalLogger:
+      backupRecoveryTechnicalLogger
   });
 
 restoreProcessBoundary =
@@ -116,7 +137,10 @@ restoreProcessBoundary =
             message
           );
         }
-    }
+    },
+
+    technicalLogger:
+      backupRecoveryTechnicalLogger
   });
 
 const start =
@@ -133,9 +157,29 @@ const start =
         const recovered of
         recoveryResult.recoveredSessions
       ) {
+        const startupRecoveryDetails = {
+          previousStateVersion:
+            recovered.previousStateVersion,
+          recoveredStateVersion:
+            recovered.recoveredStateVersion,
+          backupSucceeded:
+            recovered.backupSucceeded
+        };
+
         if (
           recovered.backupSucceeded
         ) {
+          backupRecoveryTechnicalLogger.info({
+            event:
+              "STARTUP_RECOVERY",
+            auctionSessionId:
+              recovered.auctionSessionId,
+            reason:
+              "RECOVERY_RESTART",
+            details:
+              startupRecoveryDetails
+          });
+
           app.log.info(
             {
               auctionSessionId:
@@ -155,6 +199,19 @@ const start =
             "RUNNING auction session suspended after restart"
           );
         } else {
+          backupRecoveryTechnicalLogger.error({
+            event:
+              "STARTUP_RECOVERY",
+            auctionSessionId:
+              recovered.auctionSessionId,
+            reason:
+              "RECOVERY_RESTART",
+            error:
+              recovered.backupError,
+            details:
+              startupRecoveryDetails
+          });
+
           app.log.error(
             {
               auctionSessionId:

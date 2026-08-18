@@ -1,4 +1,7 @@
 import type {
+  BackupRecoveryTechnicalLogger
+} from "./backup-recovery-technical-logger.js";
+import type {
   RestoreRuntimeExecutor
 } from "./restore-runtime-executor.js";
 
@@ -6,6 +9,13 @@ type RestoreRuntimeExecutorPort = Pick<
   RestoreRuntimeExecutor,
   "executeScheduledRestore"
 >;
+
+type BackupRecoveryTechnicalLoggerPort =
+  Pick<
+    BackupRecoveryTechnicalLogger,
+    | "info"
+    | "error"
+  >;
 
 export type RestoreProcessExit =
   (code: number) => void;
@@ -30,6 +40,8 @@ export type RestoreProcessBoundaryOptions = {
     RestoreProcessExit;
   logger:
     RestoreProcessLogger;
+  technicalLogger?:
+    BackupRecoveryTechnicalLoggerPort;
 };
 
 export class RestoreProcessBoundary {
@@ -41,6 +53,9 @@ export class RestoreProcessBoundary {
 
   private readonly logger:
     RestoreProcessLogger;
+
+  private readonly technicalLogger:
+    BackupRecoveryTechnicalLoggerPort | undefined;
 
   private running =
     false;
@@ -57,6 +72,9 @@ export class RestoreProcessBoundary {
 
     this.logger =
       options.logger;
+
+    this.technicalLogger =
+      options.technicalLogger;
   }
 
   wake(): void {
@@ -84,6 +102,15 @@ export class RestoreProcessBoundary {
         return;
       }
 
+      this.technicalLogger?.info({
+        event:
+          "RESTORE_COMPLETED",
+        auctionSessionId:
+          result.auctionSessionId,
+        fileName:
+          result.fileName
+      });
+
       this.logger.info(
         {
           auctionSessionId:
@@ -100,6 +127,12 @@ export class RestoreProcessBoundary {
 
       this.exit(0);
     } catch (error) {
+      this.technicalLogger?.error({
+        event:
+          "RESTORE_FAILED",
+        error
+      });
+
       this.logger.error(
         {
           error,
