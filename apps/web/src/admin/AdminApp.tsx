@@ -5,7 +5,9 @@ import {
 
 import type {
   AuctionSession,
-  League
+  League,
+  RealtimeAuctionSnapshot,
+  RealtimeError
 } from "@fantaastaapp/contracts";
 
 import {
@@ -13,10 +15,39 @@ import {
   fetchLeagues
 } from "../shared/app-api.js";
 
+import {
+  createAdminRealtimeClient
+} from "./admin-realtime.js";
+
 type AdminStatus =
   | "LOADING"
+  | "CONNECTING"
   | "READY"
   | "ERROR";
+
+function createAdminDeviceId(): string {
+  const storageKey =
+    "fantaastaapp.admin.deviceId";
+
+  const existing =
+    window.localStorage.getItem(
+      storageKey
+    );
+
+  if (existing) {
+    return existing;
+  }
+
+  const deviceId =
+    `admin-${crypto.randomUUID()}`;
+
+  window.localStorage.setItem(
+    storageKey,
+    deviceId
+  );
+
+  return deviceId;
+}
 
 export function AdminApp() {
   const [
@@ -39,8 +70,17 @@ export function AdminApp() {
     setErrorMessage
   ] = useState<string | null>(null);
 
+  const [
+    snapshot,
+    setSnapshot
+  ] = useState<RealtimeAuctionSnapshot | null>(
+    null
+  );
+
   useEffect(() => {
     let cancelled = false;
+    let disconnect:
+      (() => void) | null = null;
 
     const load = async () => {
       try {
@@ -58,7 +98,63 @@ export function AdminApp() {
 
         setSession(activeSession);
         setLeagues(availableLeagues);
-        setStatus("READY");
+
+        if (!activeSession) {
+          setStatus("READY");
+          return;
+        }
+
+        setStatus("CONNECTING");
+
+        const client =
+          createAdminRealtimeClient({
+            deviceId:
+              createAdminDeviceId(),
+            auctionSessionId:
+              activeSession.id,
+
+            onRegistered: () => {
+              if (!cancelled) {
+                setStatus("CONNECTING");
+              }
+            },
+
+            onSnapshot: (
+              nextSnapshot
+            ) => {
+              if (cancelled) {
+                return;
+              }
+
+              setSnapshot(
+                nextSnapshot
+              );
+
+              setSession(
+                nextSnapshot.session
+              );
+
+              setStatus("READY");
+            },
+
+            onError: (
+              realtimeError:
+                RealtimeError
+            ) => {
+              if (cancelled) {
+                return;
+              }
+
+              setErrorMessage(
+                realtimeError.message
+              );
+
+              setStatus("ERROR");
+            }
+          });
+
+        disconnect =
+          client.disconnect;
       } catch (error) {
         if (cancelled) {
           return;
@@ -78,10 +174,14 @@ export function AdminApp() {
 
     return () => {
       cancelled = true;
+      disconnect?.();
     };
   }, []);
 
-  if (status === "LOADING") {
+  if (
+    status === "LOADING" ||
+    status === "CONNECTING"
+  ) {
     return (
       <main>
         <h1>FantaAstaAPP</h1>
@@ -151,6 +251,11 @@ export function AdminApp() {
 
           <dt>Stato</dt>
           <dd>{session.status}</dd>
+
+          <dt>State version</dt>
+          <dd>
+            {snapshot?.stateVersion ?? "-"}
+          </dd>
 
           <dt>Crediti iniziali</dt>
           <dd>{session.initialCredits}</dd>
