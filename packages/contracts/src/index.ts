@@ -1189,3 +1189,73 @@ export const realtimeAuctionSnapshotSchema = z.object({
 export type RealtimeAuctionSnapshot = z.infer<
   typeof realtimeAuctionSnapshotSchema
 >;
+
+export const adminActivityEventTypeSchema = z.enum([
+  "AUCTION_AWARD_CONFIRMED",
+  "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+  "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+  "TECHNICAL_ROSTER_CORRECTION",
+  "SESSION_SUSPENDED",
+  "SESSION_RESUMED",
+  "SESSION_REOPENED"
+]);
+
+export type AdminActivityEventType = z.infer<
+  typeof adminActivityEventTypeSchema
+>;
+
+export const adminActivityItemSchema = z.object({
+  eventId: z.string().min(1),
+  eventType: adminActivityEventTypeSchema,
+  createdAt: z.string().min(1),
+
+  playerName: z.string().min(1).nullable(),
+  teamName: z.string().min(1).nullable(),
+  amount: z.number().int().nonnegative().nullable(),
+
+  actorName: z.string().min(1).nullable(),
+  actorRole: z
+    .enum([
+      "ADMINISTRATOR",
+      "AUCTIONEER"
+    ])
+    .nullable(),
+
+  comment: z.string().nullable(),
+
+  manualAssignmentReason: z
+    .enum([
+      "OPTION_EXERCISED_MANUALLY",
+      "OPTION_NO_EXTERNAL_BID",
+      "TECHNICAL_CORRECTION",
+      "OTHER"
+    ])
+    .nullable(),
+
+  suspensionReason: z
+    .enum([
+      "PIZZA_BREAK",
+      "TECHNICAL_BREAK",
+      "ORGANIZATIONAL_BREAK",
+      "NETWORK_ISSUE",
+      "RECOVERY_RESTART",
+      "OTHER"
+    ])
+    .nullable(),
+
+  beforeTeamName: z.string().min(1).nullable(),
+  beforePlayerName: z.string().min(1).nullable(),
+  beforeAmount: z.number().int().positive().nullable(),
+  beforeContractYear:
+    z.number().int().min(1).max(3).nullable(),
+
+  afterTeamName: z.string().min(1).nullable(),
+  afterPlayerName: z.string().min(1).nullable(),
+  afterAmount: z.number().int().positive().nullable(),
+  afterContractYear:
+    z.number().int().min(1).max(3).nullable()
+});
+
+export type AdminActivityItem = z.infer<
+  typeof adminActivityItemSchema
+>;

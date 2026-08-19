@@ -40,6 +40,9 @@ import {
   SqliteTeamRepository
 } from "./repositories/team.repository.js";
 import {
+  adminActivityRoutes
+} from "./routes/admin-activity.routes.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -616,6 +619,7 @@ export async function buildApp(
 
   await app.register(dbHealthRoutes);
   await app.register(leagueRoutes);
+  await app.register(adminActivityRoutes);
   await app.register(
     manualBackupRoutes(
       manualBackupService
