@@ -61,6 +61,9 @@ import {
   fmsExportGoalkeeperRoutes
 } from "./routes/fms-export-goalkeeper.routes.js";
 import {
+  leagueRoutes
+} from "./routes/league.routes.js";
+import {
   manualBackupRoutes
 } from "./routes/manual-backup.routes.js";
 import {
@@ -609,6 +612,7 @@ export async function buildApp(
   );
 
   await app.register(dbHealthRoutes);
+  await app.register(leagueRoutes);
   await app.register(
     manualBackupRoutes(
       manualBackupService

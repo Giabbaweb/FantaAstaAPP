@@ -95,6 +95,184 @@ describe("application integration", () => {
     });
   });
 
+  describe("League API", () => {
+    it("creates, lists, gets and updates a league", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: "  Lega Test M14  "
+        }
+      });
+
+      expect(createResponse.statusCode).toBe(201);
+
+      const created = createResponse.json<{
+        data: {
+          id: string;
+          name: string;
+          createdAt: string;
+          updatedAt: string;
+        };
+        error: null;
+      }>();
+
+      expect(created.data.name).toBe(
+        "Lega Test M14"
+      );
+
+      const leagueId =
+        created.data.id;
+
+      const listResponse = await app.inject({
+        method: "GET",
+        url: "/api/leagues"
+      });
+
+      expect(listResponse.statusCode).toBe(200);
+
+      const listBody = listResponse.json<{
+        data: Array<{
+          id: string;
+          name: string;
+        }>;
+        error: null;
+      }>();
+
+      expect(
+        listBody.data.some(
+          (league) =>
+            league.id === leagueId
+        )
+      ).toBe(true);
+
+      const detailResponse = await app.inject({
+        method: "GET",
+        url: `/api/leagues/${leagueId}`
+      });
+
+      expect(detailResponse.statusCode).toBe(200);
+
+      expect(
+        detailResponse.json<{
+          data: {
+            id: string;
+            name: string;
+          };
+          error: null;
+        }>().data
+      ).toMatchObject({
+        id: leagueId,
+        name: "Lega Test M14"
+      });
+
+      const updateResponse = await app.inject({
+        method: "PATCH",
+        url: `/api/leagues/${leagueId}`,
+        payload: {
+          name: "  Lega   Test   M14   Updated  "
+        }
+      });
+
+      expect(updateResponse.statusCode).toBe(200);
+
+      expect(
+        updateResponse.json<{
+          data: {
+            id: string;
+            name: string;
+          };
+          error: null;
+        }>().data
+      ).toMatchObject({
+        id: leagueId,
+        name: "Lega Test M14 Updated"
+      });
+    });
+
+    it("returns 404 for an unknown league", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/leagues/missing-league"
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      expect(response.json()).toEqual({
+        data: null,
+        error: {
+          code: "LEAGUE_NOT_FOUND",
+          message:
+            'League "missing-league" was not found'
+        }
+      });
+    });
+
+    it("rejects duplicate league names after normalization", async () => {
+      const firstResponse = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: "Lega Duplicate M14"
+        }
+      });
+
+      expect(firstResponse.statusCode).toBe(201);
+
+      const secondResponse = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: "  LEGA   DUPLICATE   M14  "
+        }
+      });
+
+      expect(secondResponse.statusCode).toBe(409);
+
+      expect(
+        secondResponse.json<{
+          data: null;
+          error: {
+            code: string;
+            message: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code:
+            "LEAGUE_NAME_ALREADY_EXISTS"
+        }
+      });
+    });
+
+    it("rejects an invalid create payload", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: ""
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "INVALID_REQUEST"
+        }
+      });
+    });
+  });
+
   describe("GET /api/auction-sessions/:id", () => {
     it("returns the requested auction session", async () => {
       await db.insert(leagues).values({
