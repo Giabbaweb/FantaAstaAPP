@@ -403,20 +403,78 @@ export function AdminApp() {
                 team.callStatus ?? "NONE"
               }
             >
-              <strong
-                className="admin-call-teams__name"
-                title={team.teamName}
-              >
-                {team.teamName}
-              </strong>
+              <div className="admin-call-team__summary">
+                <strong
+                  className="admin-call-teams__name"
+                  title={team.teamName}
+                >
+                  {team.teamName}
+                </strong>
 
-              <span>
-                {team.callStatus ?? "-"}
-              </span>
+                <span
+                  className="admin-call-team__status"
+                  data-status={
+                    team.callStatus ?? "NONE"
+                  }
+                >
+                  {team.callStatus ?? "-"}
+                </span>
 
-              <small>
-                Max {team.maximumBid ?? "-"}
-              </small>
+                <small>
+                  Max {team.maximumBid ?? "-"}
+                </small>
+              </div>
+
+              <dl className="admin-call-team__details">
+                <div>
+                  <dt>Crediti</dt>
+                  <dd>
+                    {team.remainingCredits}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>Slot tot.</dt>
+                  <dd>
+                    {
+                      team.rosterSize +
+                      team.remainingRosterSlots
+                    }
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>P</dt>
+                  <dd>
+                    {team.rosterRoles.P.count}/
+                    {team.rosterRoles.P.limit}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>D</dt>
+                  <dd>
+                    {team.rosterRoles.D.count}/
+                    {team.rosterRoles.D.limit}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>C</dt>
+                  <dd>
+                    {team.rosterRoles.C.count}/
+                    {team.rosterRoles.C.limit}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>A</dt>
+                  <dd>
+                    {team.rosterRoles.A.count}/
+                    {team.rosterRoles.A.limit}
+                  </dd>
+                </div>
+              </dl>
             </article>
           ))}
         </div>
@@ -446,48 +504,10 @@ export function AdminApp() {
         </div>
       </section>
 
-      <section className="admin-panel">
-        <div className="admin-panel__heading">
-          <p className="admin-panel__label">
-            Situazione rapida squadre
-          </p>
-
-          <span>
-            Crediti · slot · stato
-          </span>
-        </div>
-
-        <div className="admin-team-table">
-          {cockpit?.teams.map((team) => (
-            <article
-              key={team.auctionSessionTeamId}
-            >
-              <strong>
-                {team.tableOrder}. {team.teamName}
-              </strong>
-
-              <span>
-                {team.remainingCredits} cr
-              </span>
-
-              <span>
-                max {team.maximumBid ?? "-"}
-              </span>
-
-              <span>
-                {team.remainingRosterSlots} slot
-              </span>
-
-              <span
-                data-status={
-                  team.callStatus ?? "NONE"
-                }
-              >
-                {team.callStatus ?? "-"}
-              </span>
-            </article>
-          ))}
-        </div>
+      <section className="admin-cockpit__workspace">
+        <p>
+          Spazio disponibile per strumenti operativi aggiuntivi.
+        </p>
       </section>
     </main>
   );

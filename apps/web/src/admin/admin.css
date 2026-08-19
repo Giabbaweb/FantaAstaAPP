@@ -189,45 +189,93 @@ input {
 
 .admin-call-teams {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns:
+    repeat(8, minmax(0, 1fr));
+  gap: 4px;
 }
 
 .admin-call-teams article {
+  min-width: 0;
+  min-height: 220px;
+  border: 1px solid #cfd9e4;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.admin-call-team__summary {
   padding: 10px;
-  border: 1px solid #d8e1eb;
-  border-radius: 9px;
-  background: #f7f9fb;
+  border-bottom: 1px solid #e3e9ef;
+  background: #f5f7fa;
 }
 
-.admin-call-teams strong,
-.admin-call-teams span,
-.admin-call-teams small {
+.admin-call-teams article[data-status="PASSED"]
+  .admin-call-team__summary {
+  background: #fff2bd;
+}
+
+.admin-call-teams article[data-status="EXCLUDED"]
+  .admin-call-team__summary {
+  background: #fde7e7;
+}
+
+.admin-call-teams__name {
   display: block;
+  overflow: hidden;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.admin-call-teams strong {
-  margin-bottom: 6px;
-}
-
-.admin-call-teams span {
+.admin-call-team__status {
+  display: block;
   font-size: 0.75rem;
   font-weight: 800;
 }
 
-.admin-call-teams small {
-  margin-top: 3px;
+.admin-call-team__summary small {
+  display: block;
+  margin-top: 4px;
   color: #64748b;
 }
 
-.admin-call-teams article[data-status="PASSED"] {
-  background: #fff5cf;
-  border-color: #e7c354;
+.admin-call-team__details {
+  margin: 0;
+  padding: 10px;
 }
 
-.admin-call-teams article[data-status="EXCLUDED"] {
-  background: #fdeaea;
-  border-color: #df9090;
+.admin-call-team__details div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.admin-call-team__details dt {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.admin-call-team__details dd {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-call-team__details div:nth-child(3) dd {
+  color: #1769aa;
+}
+
+.admin-call-team__details div:nth-child(4) dd {
+  color: #2e7d32;
+}
+
+.admin-call-team__details div:nth-child(5) dd {
+  color: #795548;
+}
+
+.admin-call-team__details div:nth-child(6) dd {
+  color: #c62828;
 }
 
 .admin-panel--new-call {
@@ -260,45 +308,6 @@ input {
   padding-inline: 20px;
 }
 
-.admin-team-table {
-  display: grid;
-  gap: 6px;
-}
-
-.admin-team-table article {
-  display: grid;
-  grid-template-columns:
-    minmax(220px, 2fr)
-    100px
-    110px
-    100px
-    110px;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  border-bottom: 1px solid #edf1f5;
-}
-
-.admin-team-table article:last-child {
-  border-bottom: 0;
-}
-
-.admin-team-table span {
-  font-size: 0.85rem;
-}
-
-.admin-team-table span[data-status] {
-  font-weight: 800;
-}
-
-.admin-team-table span[data-status="PASSED"] {
-  color: #9a6a00;
-}
-
-.admin-team-table span[data-status="EXCLUDED"] {
-  color: #b42318;
-}
-
 .admin-empty {
   color: #64748b;
 }
@@ -312,14 +321,18 @@ input {
   .admin-call-teams {
     grid-template-columns: repeat(4, 1fr);
   }
-
-  .admin-team-table article {
-    grid-template-columns: 1.7fr repeat(4, 1fr);
-  }
 }
 
-.admin-call-teams__name {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+
+.admin-cockpit__workspace {
+  min-height: 130px;
+  max-width: 1100px;
+  margin: 8px auto 0;
+  border: 1px dashed #c7d2de;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.45);
+  font-size: 0.8rem;
 }

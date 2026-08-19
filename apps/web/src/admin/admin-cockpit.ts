@@ -12,6 +12,24 @@ export type AdminCockpitTeam = {
   maximumBid: number | null;
   remainingRosterSlots: number;
   rosterSize: number;
+  rosterRoles: {
+    P: {
+      count: number;
+      limit: number;
+    };
+    D: {
+      count: number;
+      limit: number;
+    };
+    C: {
+      count: number;
+      limit: number;
+    };
+    A: {
+      count: number;
+      limit: number;
+    };
+  };
   callStatus:
     | "ACTIVE"
     | "PASSED"
@@ -117,6 +135,24 @@ export function createAdminCockpitProjection(
                 .remainingRosterSlots,
             rosterSize:
               team.roster.rosterSize,
+            rosterRoles: {
+              P: {
+                count: team.roster.P.count,
+                limit: team.roster.P.limit
+              },
+              D: {
+                count: team.roster.D.count,
+                limit: team.roster.D.limit
+              },
+              C: {
+                count: team.roster.C.count,
+                limit: team.roster.C.limit
+              },
+              A: {
+                count: team.roster.A.count,
+                limit: team.roster.A.limit
+              }
+            },
             callStatus:
               operationalTeam?.status ??
               null,
