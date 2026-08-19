@@ -374,6 +374,7 @@ describe("realtime snapshot SQLite readers", () => {
       reader.findPlayerById("player-1")
     ).resolves.toEqual({
       id: "player-1",
+      fmsCode: "A001",
       name: "Attaccante One",
       realTeamName: null,
       role: "A"

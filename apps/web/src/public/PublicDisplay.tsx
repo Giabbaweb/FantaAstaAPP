@@ -454,7 +454,7 @@ export function PublicDisplay():
             <>
               <img
                 className="public-display__player-photo"
-                src={`/player-photos/${currentPlayer.id}.png`}
+                src={`/player-photos/${currentPlayer.fmsCode}.png`}
                 alt=""
                 aria-hidden="true"
                 onError={(event) => {

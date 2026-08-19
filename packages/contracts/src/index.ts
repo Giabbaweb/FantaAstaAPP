@@ -1100,6 +1100,7 @@ export type RealtimePublicDisplayTeam = z.infer<
 export const realtimePublicDisplayPlayerSchema =
   z.object({
     id: z.string().min(1),
+    fmsCode: z.string().trim().min(1).max(50),
     name: z.string().min(1),
     realTeamName: z.string().min(1).nullable(),
     role: playerRoleSchema

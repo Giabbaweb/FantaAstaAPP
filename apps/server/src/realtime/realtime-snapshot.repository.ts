@@ -74,6 +74,7 @@ export type RealtimePublicDisplayTeamData = {
 
 export type RealtimePublicDisplayPlayerData = {
   id: string;
+  fmsCode: string;
   name: string;
   realTeamName: string | null;
   role: PlayerRole;
@@ -450,6 +451,7 @@ export class SqliteRealtimePublicDisplayReader
     const [record] = await db
       .select({
         id: players.id,
+        fmsCode: players.fmsCode,
         name: players.name,
         realTeamName: players.realTeamName,
         role: players.role
