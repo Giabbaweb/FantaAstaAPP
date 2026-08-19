@@ -17,6 +17,43 @@ const nullableOptionalStringSchema = (
   schema: z.ZodString
 ) => schema.nullable().optional();
 
+export const leagueSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type League = z.infer<
+  typeof leagueSchema
+>;
+
+export const createLeagueSchema = z.object({
+  name: z.string().trim().min(1).max(100)
+});
+
+export type CreateLeagueInput = z.infer<
+  typeof createLeagueSchema
+>;
+
+export const updateLeagueSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional()
+  })
+  .refine(
+    (value) =>
+      Object.values(value).some(
+        (field) => field !== undefined
+      ),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateLeagueInput = z.infer<
+  typeof updateLeagueSchema
+>;
+
 export const teamSchema = z.object({
   id: z.string().min(1),
   leagueId: z.string().min(1),
