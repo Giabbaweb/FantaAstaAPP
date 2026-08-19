@@ -161,6 +161,18 @@ export type UpdateTeamOwnerInput = z.infer<
   typeof updateTeamOwnerSchema
 >;
 
+export const setTeamAccessPinSchema = z.object({
+  pin: z
+    .string()
+    .regex(/^\d{4}$/, {
+      message: "PIN must contain exactly 4 digits"
+    })
+});
+
+export type SetTeamAccessPinInput = z.infer<
+  typeof setTeamAccessPinSchema
+>;
+
 export const auctionSessionTeamSchema = z.object({
   auctionSessionId: z.string().min(1),
   teamId: z.string().min(1),

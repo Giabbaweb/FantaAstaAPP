@@ -88,6 +88,9 @@ import {
   playerRoutes
 } from "./routes/player.routes.js";
 import {
+  teamAccessRoutes
+} from "./routes/team-access.routes.js";
+import {
   teamRoutes
 } from "./routes/team.routes.js";
 import {
@@ -649,6 +652,7 @@ export async function buildApp(
       auctionCallCommandCoordinator
     )
   );
+  await app.register(teamAccessRoutes);
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
   await app.register(auctionSessionTeamRoutes);

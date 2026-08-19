@@ -273,6 +273,160 @@ describe("application integration", () => {
     });
   });
 
+  describe("Team access PIN API", () => {
+    it("configures the PIN without storing it in clear text", async () => {
+      await db.insert(leagues).values({
+        id: "league-team-access-pin",
+        name: "League Team Access PIN",
+        normalizedName:
+          "league team access pin"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-team-access-pin",
+        leagueId:
+          "league-team-access-pin",
+        season: "2026/2027",
+        editionNumber: 501,
+        initialCredits: 300
+      });
+
+      await db.insert(teams).values({
+        id: "team-team-access-pin",
+        leagueId:
+          "league-team-access-pin",
+        name: "Team Access PIN"
+      });
+
+      await db.insert(auctionSessionTeams).values({
+        id: "session-team-access-pin-1",
+        auctionSessionId:
+          "session-team-access-pin",
+        teamId:
+          "team-team-access-pin",
+        tableOrder: 1,
+        renewalCredits: 0,
+        remainingCredits: 300
+      });
+
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/session-team-access-pin-1/access-pin",
+        payload: {
+          pin: "1111"
+        }
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(response.body).toBe("");
+
+      const [credential] = await db
+        .select({
+          accessPinHash:
+            auctionSessionTeams.accessPinHash
+        })
+        .from(auctionSessionTeams)
+        .where(
+          eq(
+            auctionSessionTeams.id,
+            "session-team-access-pin-1"
+          )
+        );
+
+      expect(credential).toBeDefined();
+
+      expect(
+        credential?.accessPinHash
+      ).toMatch(/^scrypt\$/);
+
+      expect(
+        credential?.accessPinHash
+      ).not.toContain("1111");
+    });
+
+    it("rejects an invalid PIN", async () => {
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/any-session-team/access-pin",
+        payload: {
+          pin: "123"
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "INVALID_REQUEST"
+        }
+      });
+    });
+
+    it("rejects a non-numeric PIN", async () => {
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/any-session-team/access-pin",
+        payload: {
+          pin: "abcd"
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "INVALID_REQUEST"
+        }
+      });
+    });
+
+    it("returns 404 for an unknown auction session team", async () => {
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/missing-session-team/access-pin",
+        payload: {
+          pin: "1111"
+        }
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "TEAM_ACCESS_NOT_FOUND"
+        }
+      });
+    });
+  });
+
   describe("GET /api/auction-sessions/:id", () => {
     it("returns the requested auction session", async () => {
       await db.insert(leagues).values({
