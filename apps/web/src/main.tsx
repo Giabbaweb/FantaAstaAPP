@@ -2,8 +2,14 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import {
+  AdminApp
+} from "./admin/AdminApp.js";
+import {
   PublicDisplay
 } from "./public/PublicDisplay.js";
+import {
+  RemoteApp
+} from "./remote/RemoteApp.js";
 
 const rootElement =
   document.getElementById("root");
@@ -20,14 +26,18 @@ const pathname =
 const app =
   pathname === "/public"
     ? <PublicDisplay />
-    : (
-        <main>
-          <h1>FantaAstaAPP</h1>
-          <p>
-            Frontend in inizializzazione.
-          </p>
-        </main>
-      );
+    : pathname === "/admin"
+      ? <AdminApp />
+      : pathname === "/remote"
+        ? <RemoteApp />
+        : (
+            <main>
+              <h1>FantaAstaAPP</h1>
+              <p>
+                Frontend in inizializzazione.
+              </p>
+            </main>
+          );
 
 ReactDOM.createRoot(
   rootElement
