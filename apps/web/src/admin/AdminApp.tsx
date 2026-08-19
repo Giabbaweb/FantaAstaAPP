@@ -22,6 +22,8 @@ import {
   createAdminRealtimeClient
 } from "./admin-realtime.js";
 
+import "./admin.css";
+
 type AdminStatus =
   | "LOADING"
   | "CONNECTING"
@@ -240,154 +242,252 @@ export function AdminApp() {
       : null;
 
   return (
-    <main>
-      <h1>FantaAstaAPP</h1>
-      <h2>Console Admin</h2>
+    <main className="admin-cockpit">
+      <header className="admin-cockpit__header">
+        <div>
+          <strong className="admin-cockpit__brand">
+            FantaAstaAPP
+          </strong>
 
-      <section>
-        <h3>Sessione attiva</h3>
+          <span className="admin-cockpit__surface">
+            Console Admin
+          </span>
+        </div>
 
-        <dl>
-          <dt>Lega</dt>
-          <dd>
+        <div className="admin-cockpit__session">
+          <strong>
             {league?.name ?? session.leagueId}
-          </dd>
+          </strong>
 
-          <dt>Stagione</dt>
-          <dd>{session.season}</dd>
+          <span>
+            {session.season}
+          </span>
 
-          <dt>Edizione</dt>
-          <dd>{session.editionNumber}</dd>
+          <span>
+            {session.editionNumber}ª edizione
+          </span>
+        </div>
 
-          <dt>Stato</dt>
-          <dd>{session.status}</dd>
+        <div className="admin-cockpit__state">
+          <span data-status={session.status}>
+            {session.status}
+          </span>
 
-          <dt>State version</dt>
-          <dd>
-            {snapshot?.stateVersion ?? "-"}
-          </dd>
-        </dl>
-      </section>
+          <small>
+            Stato #{snapshot?.stateVersion ?? "-"}
+          </small>
+        </div>
+      </header>
 
-      <section>
-        <h3>Chiamata corrente</h3>
-
-        {cockpit?.currentPlayer ? (
-          <>
-            <p>
-              <strong>
-                {cockpit.currentPlayer.name}
-              </strong>
-              {" · "}
-              {cockpit.currentPlayer.role}
-              {cockpit.currentPlayer.realTeamName
-                ? ` · ${cockpit.currentPlayer.realTeamName}`
-                : ""}
-            </p>
-
-            <dl>
-              <dt>Prezzo corrente</dt>
-              <dd>
-                {cockpit.currentBid ?? "-"}
-              </dd>
-
-              <dt>Leader</dt>
-              <dd>
-                {
-                  cockpit.currentLeaderName ??
-                  "-"
-                }
-              </dd>
-
-              <dt>Turno</dt>
-              <dd>
-                {
-                  cockpit.currentTurnName ??
-                  "-"
-                }
-              </dd>
-            </dl>
-          </>
-        ) : (
-          <p>
-            Nessun giocatore in chiamata.
+      <div className="admin-cockpit__top-grid">
+        <section className="admin-panel admin-panel--current-call">
+          <p className="admin-panel__label">
+            Chiamata corrente
           </p>
-        )}
-      </section>
 
-      <section>
-        <h3>Situazione squadre</h3>
+          {cockpit?.currentPlayer ? (
+            <div className="admin-current-player">
+              <img
+                src={`/player-photos/${cockpit.currentPlayer.fmsCode}.png`}
+                alt=""
+                aria-hidden="true"
+                onError={(event) => {
+                  event.currentTarget.style.display =
+                    "none";
+                }}
+              />
 
-        {cockpit ? (
-          <div>
-            {cockpit.teams.map((team) => (
-              <article
-                key={
-                  team.auctionSessionTeamId
-                }
-              >
-                <h4>
-                  {team.tableOrder}.{" "}
-                  {team.teamName}
-                </h4>
+              <div>
+                <h1>
+                  {cockpit.currentPlayer.name}
+                </h1>
 
-                <dl>
-                  <dt>Crediti</dt>
-                  <dd>
-                    {team.remainingCredits}
-                  </dd>
+                <p>
+                  <strong>
+                    {cockpit.currentPlayer.role}
+                  </strong>
 
-                  <dt>Massimo rilancio</dt>
-                  <dd>
-                    {team.maximumBid ?? "-"}
-                  </dd>
-
-                  <dt>Rosa</dt>
-                  <dd>
-                    {team.rosterSize}
-                    {" / "}
-                    {
-                      team.rosterSize +
-                      team.remainingRosterSlots
-                    }
-                  </dd>
-
-                  <dt>Slot residui</dt>
-                  <dd>
-                    {
-                      team.remainingRosterSlots
-                    }
-                  </dd>
-
-                  <dt>Stato chiamata</dt>
-                  <dd>
-                    {
-                      team.callStatus ??
-                      "-"
-                    }
-                  </dd>
-
-                  {team.exclusionReason && (
+                  {cockpit.currentPlayer.realTeamName && (
                     <>
-                      <dt>
-                        Motivo esclusione
-                      </dt>
-                      <dd>
-                        {
-                          team.exclusionReason
-                        }
-                      </dd>
+                      {" · "}
+                      {
+                        cockpit.currentPlayer
+                          .realTeamName
+                      }
                     </>
                   )}
-                </dl>
-              </article>
-            ))}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="admin-empty">
+              Nessun giocatore in chiamata.
+            </p>
+          )}
+
+          <div className="admin-call-metrics">
+            <article>
+              <span>Prezzo</span>
+              <strong>
+                {cockpit?.currentBid ?? "-"}
+              </strong>
+            </article>
+
+            <article>
+              <span>Leader</span>
+              <strong>
+                {
+                  cockpit?.currentLeaderName ??
+                  "-"
+                }
+              </strong>
+            </article>
+
+            <article>
+              <span>Turno</span>
+              <strong>
+                {
+                  cockpit?.currentTurnName ??
+                  "-"
+                }
+              </strong>
+            </article>
           </div>
-        ) : (
-          <p>
-            Snapshot realtime non ancora disponibile.
+        </section>
+
+        <section className="admin-panel admin-panel--controls">
+          <p className="admin-panel__label">
+            Controlli asta
           </p>
-        )}
+
+          <div className="admin-controls">
+            <button disabled>
+              Sospendi sessione
+            </button>
+
+            <button disabled>
+              Conferma aggiudicazione
+            </button>
+
+            <button disabled>
+              Annulla chiamata
+            </button>
+
+            <button disabled>
+              Correzione amministrativa
+            </button>
+          </div>
+
+          <small className="admin-controls__note">
+            I comandi verranno collegati nei prossimi checkpoint.
+          </small>
+        </section>
+      </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel__heading">
+          <p className="admin-panel__label">
+            Partecipanti alla chiamata
+          </p>
+
+          <span>
+            {cockpit?.teams.length ?? 0} squadre
+          </span>
+        </div>
+
+        <div className="admin-call-teams">
+          {cockpit?.teams.map((team) => (
+            <article
+              key={team.auctionSessionTeamId}
+              data-status={
+                team.callStatus ?? "NONE"
+              }
+            >
+              <strong
+                className="admin-call-teams__name"
+                title={team.teamName}
+              >
+                {team.teamName}
+              </strong>
+
+              <span>
+                {team.callStatus ?? "-"}
+              </span>
+
+              <small>
+                Max {team.maximumBid ?? "-"}
+              </small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-panel admin-panel--new-call">
+        <div>
+          <p className="admin-panel__label">
+            Nuova chiamata
+          </p>
+
+          <h2>
+            Cerca e apri il prossimo giocatore
+          </h2>
+        </div>
+
+        <div className="admin-new-call">
+          <input
+            type="search"
+            placeholder="Cerca giocatore..."
+            disabled
+          />
+
+          <button disabled>
+            Apri chiamata
+          </button>
+        </div>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel__heading">
+          <p className="admin-panel__label">
+            Situazione rapida squadre
+          </p>
+
+          <span>
+            Crediti · slot · stato
+          </span>
+        </div>
+
+        <div className="admin-team-table">
+          {cockpit?.teams.map((team) => (
+            <article
+              key={team.auctionSessionTeamId}
+            >
+              <strong>
+                {team.tableOrder}. {team.teamName}
+              </strong>
+
+              <span>
+                {team.remainingCredits} cr
+              </span>
+
+              <span>
+                max {team.maximumBid ?? "-"}
+              </span>
+
+              <span>
+                {team.remainingRosterSlots} slot
+              </span>
+
+              <span
+                data-status={
+                  team.callStatus ?? "NONE"
+                }
+              >
+                {team.callStatus ?? "-"}
+              </span>
+            </article>
+          ))}
+        </div>
       </section>
     </main>
   );
