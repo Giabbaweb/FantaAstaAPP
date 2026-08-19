@@ -1,17 +1,16 @@
-import {
-  io,
-  type Socket
+import type {
+  Socket
 } from "socket.io-client";
 
-import {
-  realtimeAuctionSnapshotSchema,
-  realtimeConnectedPayloadSchema,
-  realtimeErrorSchema,
-  realtimeRegisteredPayloadSchema,
-  type RealtimeAuctionSnapshot,
-  type RealtimeError,
-  type RealtimeRegisteredPayload
+import type {
+  RealtimeAuctionSnapshot,
+  RealtimeError,
+  RealtimeRegisteredPayload
 } from "@fantaastaapp/contracts";
+
+import {
+  createRealtimeClient
+} from "../shared/realtime-client.js";
 
 export type PublicDisplayRealtimeClientOptions = {
   deviceId: string;
@@ -38,22 +37,11 @@ export type PublicDisplayRealtimeClient = {
 export function createPublicDisplayRealtimeClient(
   options: PublicDisplayRealtimeClientOptions
 ): PublicDisplayRealtimeClient {
-  const socket = io({
-    autoConnect: false
-  });
-
-  socket.on(
-    "realtime:connected",
-    (payload: unknown) => {
-      const parsed =
-        realtimeConnectedPayloadSchema.safeParse(
-          payload
-        );
-
-      if (!parsed.success) {
-        return;
-      }
-
+  return createRealtimeClient({
+    onConnected: (
+      _payload,
+      socket
+    ) => {
       socket.emit(
         "realtime:register",
         {
@@ -63,72 +51,32 @@ export function createPublicDisplayRealtimeClient(
             options.auctionSessionId
         }
       );
-    }
-  );
+    },
 
-  socket.on(
-    "realtime:registered",
-    (payload: unknown) => {
-      const parsed =
-        realtimeRegisteredPayloadSchema.safeParse(
-          payload
-        );
-
+    onRegistered: (payload) => {
       if (
-        !parsed.success ||
-        parsed.data.kind !== "PUBLIC_DISPLAY"
+        payload.kind !== "PUBLIC_DISPLAY"
       ) {
         return;
       }
 
       options.onRegistered?.(
-        parsed.data
+        payload
       );
-    }
-  );
+    },
 
-  socket.on(
-    "auction:snapshot",
-    (payload: unknown) => {
-      const parsed =
-        realtimeAuctionSnapshotSchema.safeParse(
-          payload
-        );
+    ...(options.onSnapshot
+      ? {
+          onSnapshot:
+            options.onSnapshot
+        }
+      : {}),
 
-      if (!parsed.success) {
-        return;
-      }
-
-      options.onSnapshot?.(
-        parsed.data
-      );
-    }
-  );
-
-  socket.on(
-    "realtime:error",
-    (payload: unknown) => {
-      const parsed =
-        realtimeErrorSchema.safeParse(
-          payload
-        );
-
-      if (!parsed.success) {
-        return;
-      }
-
-      options.onError?.(
-        parsed.data
-      );
-    }
-  );
-
-  socket.connect();
-
-  return {
-    socket,
-    disconnect: () => {
-      socket.disconnect();
-    }
-  };
+    ...(options.onError
+      ? {
+          onError:
+            options.onError
+        }
+      : {})
+  });
 }
