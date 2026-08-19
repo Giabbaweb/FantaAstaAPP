@@ -159,12 +159,22 @@ export function createSocketServer(
                       registration.auctionSessionTeamId,
                     role: registration.role
                   }
-                : {
-                    kind: "PUBLIC_DISPLAY",
-                    deviceId: registration.deviceId,
-                    auctionSessionId:
-                      registration.auctionSessionId
-                  }
+                : registration.kind ===
+                    "PUBLIC_DISPLAY"
+                  ? {
+                      kind: "PUBLIC_DISPLAY",
+                      deviceId:
+                        registration.deviceId,
+                      auctionSessionId:
+                        registration.auctionSessionId
+                    }
+                  : {
+                      kind: "ADMIN",
+                      deviceId:
+                        registration.deviceId,
+                      auctionSessionId:
+                        registration.auctionSessionId
+                    }
             );
 
           await socket.join(
@@ -211,19 +221,34 @@ export function createSocketServer(
                     registeredAt:
                       registeredConnection.registeredAt
                   }
-                : {
-                    kind: "PUBLIC_DISPLAY",
-                    socketId:
-                      registeredConnection.socketId,
-                    deviceId:
-                      registeredConnection.deviceId,
-                    auctionSessionId:
-                      registeredConnection.auctionSessionId,
-                    connectedAt:
-                      registeredConnection.connectedAt,
-                    registeredAt:
-                      registeredConnection.registeredAt
-                  };
+                : registeredConnection.kind ===
+                    "PUBLIC_DISPLAY"
+                  ? {
+                      kind: "PUBLIC_DISPLAY",
+                      socketId:
+                        registeredConnection.socketId,
+                      deviceId:
+                        registeredConnection.deviceId,
+                      auctionSessionId:
+                        registeredConnection.auctionSessionId,
+                      connectedAt:
+                        registeredConnection.connectedAt,
+                      registeredAt:
+                        registeredConnection.registeredAt
+                    }
+                  : {
+                      kind: "ADMIN",
+                      socketId:
+                        registeredConnection.socketId,
+                      deviceId:
+                        registeredConnection.deviceId,
+                      auctionSessionId:
+                        registeredConnection.auctionSessionId,
+                      connectedAt:
+                        registeredConnection.connectedAt,
+                      registeredAt:
+                        registeredConnection.registeredAt
+                    };
 
           socket.emit(
             "realtime:registered",

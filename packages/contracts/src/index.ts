@@ -799,10 +799,19 @@ export const realtimePublicDisplayRegistrationRequestSchema =
       z.string().trim().min(1).max(100)
   });
 
+export const realtimeAdminRegistrationRequestSchema =
+  z.object({
+    kind: z.literal("ADMIN"),
+    deviceId: z.string().trim().min(1).max(100),
+    auctionSessionId:
+      z.string().trim().min(1).max(100)
+  });
+
 export const realtimeRegistrationRequestSchema =
   z.discriminatedUnion("kind", [
     realtimeTeamRegistrationRequestSchema,
-    realtimePublicDisplayRegistrationRequestSchema
+    realtimePublicDisplayRegistrationRequestSchema,
+    realtimeAdminRegistrationRequestSchema
   ]);
 
 export type RealtimeRegistrationRequest = z.infer<
@@ -840,10 +849,21 @@ export const realtimePublicDisplayRegisteredPayloadSchema =
     registeredAt: z.string().min(1)
   });
 
+export const realtimeAdminRegisteredPayloadSchema =
+  z.object({
+    kind: z.literal("ADMIN"),
+    socketId: z.string().min(1),
+    deviceId: z.string().min(1),
+    auctionSessionId: z.string().min(1),
+    connectedAt: z.string().min(1),
+    registeredAt: z.string().min(1)
+  });
+
 export const realtimeRegisteredPayloadSchema =
   z.discriminatedUnion("kind", [
     realtimeTeamRegisteredPayloadSchema,
-    realtimePublicDisplayRegisteredPayloadSchema
+    realtimePublicDisplayRegisteredPayloadSchema,
+    realtimeAdminRegisteredPayloadSchema
   ]);
 
 export type RealtimeRegisteredPayload = z.infer<

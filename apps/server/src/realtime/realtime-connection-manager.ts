@@ -25,6 +25,12 @@ type RegisterRealtimeConnectionInput =
       deviceId: string;
       auctionSessionId: string;
       registeredAt?: string;
+    }
+  | {
+      kind: "ADMIN";
+      deviceId: string;
+      auctionSessionId: string;
+      registeredAt?: string;
     };
 
 export class RealtimeConnectionManager {

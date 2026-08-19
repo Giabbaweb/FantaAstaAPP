@@ -126,4 +126,35 @@ describe("realtime connection identity", () => {
         "2026-08-01T20:01:00.000Z"
     });
   });
+
+  it("registers an ADMIN connection", () => {
+    const connection =
+      createUnregisteredRealtimeConnection({
+        socketId: "admin-socket",
+        connectedAt:
+          "2026-08-01T20:00:00.000Z"
+      });
+
+    const registeredConnection =
+      registerRealtimeConnection(connection, {
+        kind: "ADMIN",
+        deviceId: "admin-device-1",
+        auctionSessionId: "session-1",
+        registeredAt:
+          "2026-08-01T20:01:00.000Z"
+      });
+
+    expect(registeredConnection).toEqual({
+      status: "REGISTERED",
+      kind: "ADMIN",
+      socketId: "admin-socket",
+      deviceId: "admin-device-1",
+      auctionSessionId: "session-1",
+      connectedAt:
+        "2026-08-01T20:00:00.000Z",
+      registeredAt:
+        "2026-08-01T20:01:00.000Z"
+    });
+
+  });
 });

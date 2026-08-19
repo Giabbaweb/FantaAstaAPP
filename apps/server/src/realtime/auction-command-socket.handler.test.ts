@@ -319,6 +319,73 @@ describe("AuctionCommandSocketHandler", () => {
     ).not.toHaveBeenCalled();
   });
 
+
+  it("rejects admin connections", async () => {
+    const connectionManager =
+      new RealtimeConnectionManager();
+
+    connectionManager.connect({
+      socketId: "admin-socket"
+    });
+
+    connectionManager.register(
+      "admin-socket",
+      {
+        kind: "ADMIN",
+        deviceId: "admin-device-1",
+        auctionSessionId: "session-1"
+      }
+    );
+
+    const auctionCallReader = {
+      getById:
+        vi.fn().mockResolvedValue(
+          aggregate
+        )
+    };
+
+    const coordinator = {
+      placeBid: vi.fn(),
+      passTurn: vi.fn(),
+      undoPass: vi.fn()
+    };
+
+    const handler =
+      new AuctionCommandSocketHandler(
+        connectionManager,
+        auctionCallReader,
+        coordinator
+      );
+
+    await expect(
+      handler.handle(
+        "admin-socket",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "PASS",
+          metadata,
+          auctionSessionTeamId:
+            "session-team-1"
+        }
+      )
+    ).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: "UNAUTHORIZED"
+      }
+    });
+
+    expect(
+      auctionCallReader.getById
+    ).not.toHaveBeenCalled();
+
+    expect(
+      coordinator.passTurn
+    ).not.toHaveBeenCalled();
+  });
+
+
   it("rejects commands for another team", async () => {
     const {
       coordinator,
