@@ -16,6 +16,9 @@ import {
 } from "../shared/app-api.js";
 
 import {
+  createAdminCockpitProjection
+} from "./admin-cockpit.js";
+import {
   createAdminRealtimeClient
 } from "./admin-realtime.js";
 
@@ -229,6 +232,13 @@ export function AdminApp() {
         candidate.id === session.leagueId
     ) ?? null;
 
+  const cockpit =
+    snapshot
+      ? createAdminCockpitProjection(
+          snapshot
+        )
+      : null;
+
   return (
     <main>
       <h1>FantaAstaAPP</h1>
@@ -256,17 +266,128 @@ export function AdminApp() {
           <dd>
             {snapshot?.stateVersion ?? "-"}
           </dd>
-
-          <dt>Crediti iniziali</dt>
-          <dd>{session.initialCredits}</dd>
-
-          <dt>Confermati massimi</dt>
-          <dd>
-            {
-              session.maximumInitialRosterEntries
-            }
-          </dd>
         </dl>
+      </section>
+
+      <section>
+        <h3>Chiamata corrente</h3>
+
+        {cockpit?.currentPlayer ? (
+          <>
+            <p>
+              <strong>
+                {cockpit.currentPlayer.name}
+              </strong>
+              {" · "}
+              {cockpit.currentPlayer.role}
+              {cockpit.currentPlayer.realTeamName
+                ? ` · ${cockpit.currentPlayer.realTeamName}`
+                : ""}
+            </p>
+
+            <dl>
+              <dt>Prezzo corrente</dt>
+              <dd>
+                {cockpit.currentBid ?? "-"}
+              </dd>
+
+              <dt>Leader</dt>
+              <dd>
+                {
+                  cockpit.currentLeaderName ??
+                  "-"
+                }
+              </dd>
+
+              <dt>Turno</dt>
+              <dd>
+                {
+                  cockpit.currentTurnName ??
+                  "-"
+                }
+              </dd>
+            </dl>
+          </>
+        ) : (
+          <p>
+            Nessun giocatore in chiamata.
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h3>Situazione squadre</h3>
+
+        {cockpit ? (
+          <div>
+            {cockpit.teams.map((team) => (
+              <article
+                key={
+                  team.auctionSessionTeamId
+                }
+              >
+                <h4>
+                  {team.tableOrder}.{" "}
+                  {team.teamName}
+                </h4>
+
+                <dl>
+                  <dt>Crediti</dt>
+                  <dd>
+                    {team.remainingCredits}
+                  </dd>
+
+                  <dt>Massimo rilancio</dt>
+                  <dd>
+                    {team.maximumBid ?? "-"}
+                  </dd>
+
+                  <dt>Rosa</dt>
+                  <dd>
+                    {team.rosterSize}
+                    {" / "}
+                    {
+                      team.rosterSize +
+                      team.remainingRosterSlots
+                    }
+                  </dd>
+
+                  <dt>Slot residui</dt>
+                  <dd>
+                    {
+                      team.remainingRosterSlots
+                    }
+                  </dd>
+
+                  <dt>Stato chiamata</dt>
+                  <dd>
+                    {
+                      team.callStatus ??
+                      "-"
+                    }
+                  </dd>
+
+                  {team.exclusionReason && (
+                    <>
+                      <dt>
+                        Motivo esclusione
+                      </dt>
+                      <dd>
+                        {
+                          team.exclusionReason
+                        }
+                      </dd>
+                    </>
+                  )}
+                </dl>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p>
+            Snapshot realtime non ancora disponibile.
+          </p>
+        )}
       </section>
     </main>
   );
