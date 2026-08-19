@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import type {
+  AdminActivityItem,
   AuctionSession,
   League,
   RealtimeAuctionSnapshot,
@@ -12,6 +13,7 @@ import type {
 
 import {
   fetchActiveAuctionSession,
+  fetchAdminActivity,
   fetchLeagues
 } from "../shared/app-api.js";
 
@@ -29,6 +31,125 @@ type AdminStatus =
   | "CONNECTING"
   | "READY"
   | "ERROR";
+
+function formatActivityTime(
+  createdAt: string
+): string {
+  const normalized =
+    createdAt.includes("T")
+      ? createdAt
+      : createdAt.replace(" ", "T");
+
+  const date =
+    new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) {
+    return createdAt.slice(11, 16);
+  }
+
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  ).format(date);
+}
+
+function getActivityLabel(
+  item: AdminActivityItem
+): string {
+  switch (item.eventType) {
+    case "AUCTION_AWARD_CONFIRMED":
+      return "Aggiudicazione";
+
+    case "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY":
+      return "Inserimento rosa";
+
+    case "MANUAL_ROSTER_ASSIGNMENT_ADDED":
+      return "Assegnazione manuale";
+
+    case "TECHNICAL_ROSTER_CORRECTION":
+      return "Correzione";
+
+    case "SESSION_SUSPENDED":
+      return "Sospensione";
+
+    case "SESSION_RESUMED":
+      return "Ripresa";
+
+    case "SESSION_REOPENED":
+      return "Riapertura";
+  }
+}
+
+function getActivityDescription(
+  item: AdminActivityItem
+): string {
+  switch (item.eventType) {
+    case "AUCTION_AWARD_CONFIRMED":
+      return [
+        item.playerName,
+        item.teamName
+          ? `→ ${item.teamName}`
+          : null,
+        item.amount !== null
+          ? `${item.amount} cr`
+          : null
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+    case "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY":
+    case "MANUAL_ROSTER_ASSIGNMENT_ADDED":
+      return [
+        item.playerName,
+        item.teamName
+          ? `→ ${item.teamName}`
+          : null,
+        item.amount !== null
+          ? `${item.amount} cr`
+          : null,
+        item.actorName
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+    case "TECHNICAL_ROSTER_CORRECTION": {
+      const before = [
+        item.beforePlayerName,
+        item.beforeTeamName,
+        item.beforeAmount !== null
+          ? `${item.beforeAmount} cr`
+          : null
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      const after = [
+        item.afterPlayerName,
+        item.afterTeamName,
+        item.afterAmount !== null
+          ? `${item.afterAmount} cr`
+          : null
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      return `${before} → ${after}`;
+    }
+
+    case "SESSION_SUSPENDED":
+      return item.suspensionReason ??
+        "Sessione sospesa";
+
+    case "SESSION_RESUMED":
+      return "Sessione ripresa";
+
+    case "SESSION_REOPENED":
+      return "Sessione riaperta";
+  }
+}
 
 function createAdminDeviceId(): string {
   const storageKey =
@@ -81,6 +202,16 @@ export function AdminApp() {
   ] = useState<RealtimeAuctionSnapshot | null>(
     null
   );
+
+  const [
+    activity,
+    setActivity
+  ] = useState<AdminActivityItem[]>([]);
+
+  const [
+    activityError,
+    setActivityError
+  ] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -182,6 +313,53 @@ export function AdminApp() {
       disconnect?.();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setActivity([]);
+      setActivityError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadActivity =
+      async () => {
+        try {
+          const items =
+            await fetchAdminActivity(
+              session.id,
+              8
+            );
+
+          if (cancelled) {
+            return;
+          }
+
+          setActivity(items);
+          setActivityError(null);
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+
+          setActivityError(
+            error instanceof Error
+              ? error.message
+              : "Errore nel caricamento attività."
+          );
+        }
+      };
+
+    void loadActivity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.id,
+    snapshot?.stateVersion
+  ]);
 
   if (
     status === "LOADING" ||
@@ -505,9 +683,71 @@ export function AdminApp() {
       </section>
 
       <section className="admin-cockpit__workspace">
-        <p>
-          Spazio disponibile per strumenti operativi aggiuntivi.
-        </p>
+        <div className="admin-activity">
+          <div className="admin-activity__heading">
+            <div>
+              <p className="admin-panel__label">
+                Attività recenti
+              </p>
+
+              <h2>
+                Ultime operazioni
+              </h2>
+            </div>
+
+            <span>
+              {activity.length} eventi
+            </span>
+          </div>
+
+          {activityError ? (
+            <p className="admin-activity__error">
+              {activityError}
+            </p>
+          ) : activity.length === 0 ? (
+            <p className="admin-activity__empty">
+              Nessuna attività registrata.
+            </p>
+          ) : (
+            <div className="admin-activity__list">
+              {activity.map((item) => (
+                <article key={item.eventId}>
+                  <time>
+                    {
+                      formatActivityTime(
+                        item.createdAt
+                      )
+                    }
+                  </time>
+
+                  <strong>
+                    {getActivityLabel(item)}
+                  </strong>
+
+                  <span>
+                    {
+                      getActivityDescription(
+                        item
+                      )
+                    }
+                  </span>
+
+                  {item.comment && (
+                    <small title={item.comment}>
+                      {item.comment}
+                    </small>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <aside className="admin-workspace__future">
+          <span>
+            Audit · Backup · Correzioni
+          </span>
+        </aside>
       </section>
     </main>
   );

@@ -1,4 +1,5 @@
 import type {
+  AdminActivityItem,
   AuctionSession,
   League
 } from "@fantaastaapp/contracts";
@@ -18,5 +19,14 @@ export async function fetchLeagues():
   Promise<League[]> {
   return apiRequest<League[]>(
     "/api/leagues"
+  );
+}
+
+export async function fetchAdminActivity(
+  auctionSessionId: string,
+  limit = 10
+): Promise<AdminActivityItem[]> {
+  return apiRequest<AdminActivityItem[]>(
+    `/api/auction-sessions/${auctionSessionId}/activity?limit=${limit}`
   );
 }

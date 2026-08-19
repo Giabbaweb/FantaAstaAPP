@@ -325,14 +325,126 @@ input {
 
 
 .admin-cockpit__workspace {
-  min-height: 130px;
-  max-width: 1100px;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(260px, 1fr);
+  gap: 16px;
+  min-height: 150px;
+  max-width: 1180px;
   margin: 8px auto 0;
-  border: 1px dashed #c7d2de;
+}
+
+.admin-activity,
+.admin-workspace__future {
+  border: 1px solid #d8e1eb;
   border-radius: 12px;
+  background: #ffffff;
+}
+
+.admin-activity {
+  padding: 14px 16px;
+}
+
+.admin-activity__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.admin-activity__heading .admin-panel__label {
+  margin-bottom: 3px;
+}
+
+.admin-activity__heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-activity__heading > span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.admin-activity__list {
+  display: grid;
+}
+
+.admin-activity__list article {
+  display: grid;
+  grid-template-columns:
+    48px
+    140px
+    minmax(0, 1fr)
+    minmax(0, 180px);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 0;
+  border-top: 1px solid #edf1f5;
+}
+
+.admin-activity__list time {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-activity__list strong {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.admin-activity__list span,
+.admin-activity__list small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-activity__list span {
+  font-size: 0.82rem;
+}
+
+.admin-activity__list small {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.admin-activity__empty,
+.admin-activity__error {
+  margin: 18px 0 8px;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.admin-activity__error {
+  color: #b42318;
+}
+
+.admin-workspace__future {
   display: grid;
   place-items: center;
+  border-style: dashed;
   color: #94a3b8;
-  background: rgba(255, 255, 255, 0.45);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1100px) {
+  .admin-cockpit__workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-activity__list article {
+    grid-template-columns:
+      48px
+      130px
+      minmax(0, 1fr);
+  }
+
+  .admin-activity__list small {
+    display: none;
+  }
 }

@@ -305,6 +305,109 @@ const transaction =
         );
       }
     );
+
+    const insertActivityEvent =
+      sqlite.prepare(`
+        INSERT INTO auction_events (
+          id,
+          auction_session_id,
+          auction_call_id,
+          event_type,
+          auction_session_team_id,
+          player_id,
+          amount,
+          credits_before,
+          credits_after,
+          contract_year,
+          actor_name,
+          actor_role,
+          comment,
+          manual_assignment_reason,
+          suspension_reason,
+          created_at
+        )
+        VALUES (
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?
+        )
+      `);
+
+    insertActivityEvent.run(
+      `${DEMO_PREFIX}event-roster-1`,
+      SESSION_ID,
+      null,
+      "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+      `${DEMO_PREFIX}session-team-1`,
+      `${DEMO_PREFIX}roster-player-1`,
+      18,
+      265,
+      247,
+      1,
+      "Admin Demo",
+      "ADMINISTRATOR",
+      "Inserimento rosa iniziale",
+      null,
+      null,
+      "2026-09-16 19:05:00"
+    );
+
+    insertActivityEvent.run(
+      `${DEMO_PREFIX}event-roster-2`,
+      SESSION_ID,
+      null,
+      "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+      `${DEMO_PREFIX}session-team-4`,
+      `${DEMO_PREFIX}roster-player-4`,
+      44,
+      198,
+      154,
+      1,
+      "Admin Demo",
+      "ADMINISTRATOR",
+      "Inserimento rosa iniziale",
+      null,
+      null,
+      "2026-09-16 19:12:00"
+    );
+
+    insertActivityEvent.run(
+      `${DEMO_PREFIX}event-suspended`,
+      SESSION_ID,
+      null,
+      "SESSION_SUSPENDED",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "PIZZA_BREAK",
+      "2026-09-16 20:30:00"
+    );
+
+    insertActivityEvent.run(
+      `${DEMO_PREFIX}event-resumed`,
+      SESSION_ID,
+      null,
+      "SESSION_RESUMED",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "2026-09-16 20:55:00"
+    );
   });
 
 try {
