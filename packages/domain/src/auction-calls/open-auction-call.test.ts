@@ -21,6 +21,7 @@ function createAuctionCall(
     currentBid: null,
     currentLeaderAuctionSessionTeamId: null,
     currentTurnAuctionSessionTeamId: null,
+    currentTurnStartedAt: null,
     provisionalWinnerAuctionSessionTeamId: null,
     createdAt: "2026-07-30T20:00:00.000Z",
     updatedAt: "2026-07-30T20:00:00.000Z",
@@ -63,6 +64,7 @@ describe("openAuctionCall", () => {
       currentBid: 1,
       currentLeaderAuctionSessionTeamId: "team-1",
       currentTurnAuctionSessionTeamId: "team-2",
+      currentTurnStartedAt: null,
       provisionalWinnerAuctionSessionTeamId: null
     });
   });
@@ -120,6 +122,7 @@ describe("openAuctionCall", () => {
     expect(result.auctionCall).toMatchObject({
       status: "PROVISIONAL_AWARD",
       currentTurnAuctionSessionTeamId: null,
+      currentTurnStartedAt: null,
       provisionalWinnerAuctionSessionTeamId: "team-1"
     });
   });

@@ -45,6 +45,17 @@ export interface AuctionCallReader {
 
 export interface AuctionCallRepository
   extends AuctionCallReader {
+  findOperationalByAuctionSessionIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionSessionId: string
+  ): AuctionCallAggregate | null;
+
+  updateCurrentTurnStartedAtWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionCallId: string,
+    currentTurnStartedAt: string | null
+  ): void;
+
   save(
     aggregate: AuctionCallAggregate
   ): Promise<AuctionCallAggregate>;
@@ -111,7 +122,18 @@ export class SqliteAuctionCallRepository
   async findOperationalByAuctionSessionId(
     auctionSessionId: string
   ): Promise<AuctionCallAggregate | null> {
-    const [call] = await db
+    return this
+      .findOperationalByAuctionSessionIdWithExecutor(
+        db,
+        auctionSessionId
+      );
+  }
+
+  findOperationalByAuctionSessionIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionSessionId: string
+  ): AuctionCallAggregate | null {
+    const [call] = executor
       .select()
       .from(auctionCalls)
       .where(
@@ -130,20 +152,44 @@ export class SqliteAuctionCallRepository
         desc(auctionCalls.createdAt),
         desc(auctionCalls.id)
       )
-      .limit(1);
+      .limit(1)
+      .all();
 
     if (!call) {
       return null;
     }
 
-    const teams = await this.findTeamsByAuctionCallId(
-      call.id
-    );
+    const teams =
+      this.findTeamsByAuctionCallIdWithExecutor(
+        executor,
+        call.id
+      );
 
     return {
       call,
       teams
     };
+  }
+
+  updateCurrentTurnStartedAtWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionCallId: string,
+    currentTurnStartedAt: string | null
+  ): void {
+    executor
+      .update(auctionCalls)
+      .set({
+        currentTurnStartedAt,
+        updatedAt:
+          sql`CURRENT_TIMESTAMP`
+      })
+      .where(
+        eq(
+          auctionCalls.id,
+          auctionCallId
+        )
+      )
+      .run();
   }
 
   async save(
@@ -212,6 +258,8 @@ export class SqliteAuctionCallRepository
           currentTurnAuctionSessionTeamId:
             aggregate.call
               .currentTurnAuctionSessionTeamId,
+          currentTurnStartedAt:
+            aggregate.call.currentTurnStartedAt,
           provisionalWinnerAuctionSessionTeamId:
             aggregate.call
               .provisionalWinnerAuctionSessionTeamId,
@@ -260,6 +308,8 @@ export class SqliteAuctionCallRepository
           currentTurnAuctionSessionTeamId:
             aggregate.call
               .currentTurnAuctionSessionTeamId,
+          currentTurnStartedAt:
+            aggregate.call.currentTurnStartedAt,
           provisionalWinnerAuctionSessionTeamId:
             aggregate.call
               .provisionalWinnerAuctionSessionTeamId,

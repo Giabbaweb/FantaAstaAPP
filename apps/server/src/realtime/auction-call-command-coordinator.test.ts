@@ -32,6 +32,7 @@ describe("AuctionCallCommandCoordinator", () => {
         "auction-session-team-2",
       currentTurnAuctionSessionTeamId:
         "auction-session-team-3",
+      currentTurnStartedAt: null,
       provisionalWinnerAuctionSessionTeamId:
         null,
       createdAt:

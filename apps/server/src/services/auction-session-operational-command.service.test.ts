@@ -19,6 +19,9 @@ import {
   SqliteAuctionEventRepository
 } from "../repositories/auction-event.repository.js";
 import {
+  SqliteAuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import {
@@ -51,7 +54,8 @@ describe(
           sessionRepository,
           new SqliteAuctionSessionStateRepository(),
           new SqliteCommandRegistryRepository(),
-          new SqliteAuctionEventRepository()
+          new SqliteAuctionEventRepository(),
+          new SqliteAuctionCallRepository()
         );
 
       service =

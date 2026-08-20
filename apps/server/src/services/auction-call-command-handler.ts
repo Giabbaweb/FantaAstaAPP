@@ -12,6 +12,40 @@ import type {
 } from "../repositories/auction-call.repository.js";
 
 export class AuctionCallCommandHandler {
+  constructor(
+    private readonly now:
+      () => string =
+        () => new Date().toISOString()
+  ) {}
+
+  private applyTurnStartedAt(
+    before: AuctionCallAggregate,
+    after: AuctionCallAggregate
+  ): AuctionCallAggregate {
+    const previousTurn =
+      before.call
+        .currentTurnAuctionSessionTeamId;
+
+    const nextTurn =
+      after.call
+        .currentTurnAuctionSessionTeamId;
+
+    if (previousTurn === nextTurn) {
+      return after;
+    }
+
+    return {
+      ...after,
+      call: {
+        ...after.call,
+        currentTurnStartedAt:
+          nextTurn === null
+            ? null
+            : this.now()
+      }
+    };
+  }
+
   open(
     aggregate: AuctionCallAggregate,
     openingBid: number
@@ -22,10 +56,13 @@ export class AuctionCallCommandHandler {
       openingBid
     });
 
-    return {
-      call: opened.auctionCall,
-      teams: opened.teams
-    };
+    return this.applyTurnStartedAt(
+      aggregate,
+      {
+        call: opened.auctionCall,
+        teams: opened.teams
+      }
+    );
   }
 
   placeBid(
@@ -40,10 +77,13 @@ export class AuctionCallCommandHandler {
       bid
     });
 
-    return {
-      call: updated.auctionCall,
-      teams: updated.teams
-    };
+    return this.applyTurnStartedAt(
+      aggregate,
+      {
+        call: updated.auctionCall,
+        teams: updated.teams
+      }
+    );
   }
 
   passTurn(
@@ -56,10 +96,13 @@ export class AuctionCallCommandHandler {
       auctionSessionTeamId
     });
 
-    return {
-      call: updated.auctionCall,
-      teams: updated.teams
-    };
+    return this.applyTurnStartedAt(
+      aggregate,
+      {
+        call: updated.auctionCall,
+        teams: updated.teams
+      }
+    );
   }
 
   undoPass(
@@ -72,10 +115,13 @@ export class AuctionCallCommandHandler {
       auctionSessionTeamId
     });
 
-    return {
-      call: updated.auctionCall,
-      teams: updated.teams
-    };
+    return this.applyTurnStartedAt(
+      aggregate,
+      {
+        call: updated.auctionCall,
+        teams: updated.teams
+      }
+    );
   }
 
   confirmAuctionCall(
@@ -86,10 +132,13 @@ export class AuctionCallCommandHandler {
         auctionCall: aggregate.call
       });
 
-    return {
-      call: confirmed.auctionCall,
-      teams: aggregate.teams
-    };
+    return this.applyTurnStartedAt(
+      aggregate,
+      {
+        call: confirmed.auctionCall,
+        teams: aggregate.teams
+      }
+    );
   }
 
   cancelAuctionCall(
@@ -100,9 +149,12 @@ export class AuctionCallCommandHandler {
         auctionCall: aggregate.call
       });
 
-    return {
-      call: cancelled.auctionCall,
-      teams: aggregate.teams
-    };
+    return this.applyTurnStartedAt(
+      aggregate,
+      {
+        call: cancelled.auctionCall,
+        teams: aggregate.teams
+      }
+    );
   }
 }

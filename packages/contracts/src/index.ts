@@ -986,6 +986,8 @@ export const auctionCallSchema = z.object({
     z.string().min(1).nullable(),
   currentTurnAuctionSessionTeamId:
     z.string().min(1).nullable(),
+  currentTurnStartedAt:
+    z.string().min(1).nullable(),
   provisionalWinnerAuctionSessionTeamId:
     z.string().min(1).nullable(),
   createdAt: z.string().min(1),

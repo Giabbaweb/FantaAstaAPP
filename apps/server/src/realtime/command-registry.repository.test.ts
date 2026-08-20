@@ -38,6 +38,7 @@ describe("SqliteCommandRegistryRepository", () => {
         "session-team-1",
       currentTurnAuctionSessionTeamId:
         "session-team-1",
+      currentTurnStartedAt: null,
       provisionalWinnerAuctionSessionTeamId:
         null,
       createdAt:

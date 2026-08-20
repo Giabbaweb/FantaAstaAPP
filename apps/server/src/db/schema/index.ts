@@ -432,6 +432,10 @@ export const auctionCalls = sqliteTable(
       onDelete: "restrict"
     }),
 
+    currentTurnStartedAt: text(
+      "current_turn_started_at"
+    ),
+
     provisionalWinnerAuctionSessionTeamId: text(
       "provisional_winner_auction_session_team_id"
     ).references(() => auctionSessionTeams.id, {

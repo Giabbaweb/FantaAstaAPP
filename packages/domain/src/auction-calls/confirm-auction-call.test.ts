@@ -20,6 +20,7 @@ function createAuctionCall(
     currentBid: 5,
     currentLeaderAuctionSessionTeamId: "team-2",
     currentTurnAuctionSessionTeamId: null,
+    currentTurnStartedAt: null,
     provisionalWinnerAuctionSessionTeamId: "team-2",
     createdAt: "2026-07-30T00:00:00.000Z",
     updatedAt: "2026-07-30T00:00:00.000Z",
@@ -38,6 +39,7 @@ describe("confirmAuctionCall", () => {
       currentBid: 5,
       currentLeaderAuctionSessionTeamId: "team-2",
       currentTurnAuctionSessionTeamId: null,
+      currentTurnStartedAt: null,
       provisionalWinnerAuctionSessionTeamId: "team-2"
     });
   });

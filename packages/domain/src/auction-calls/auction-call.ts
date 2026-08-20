@@ -35,6 +35,7 @@ export type AuctionCall = {
   currentBid: number | null;
   currentLeaderAuctionSessionTeamId: string | null;
   currentTurnAuctionSessionTeamId: string | null;
+  currentTurnStartedAt: string | null;
   provisionalWinnerAuctionSessionTeamId: string | null;
   createdAt: string;
   updatedAt: string;

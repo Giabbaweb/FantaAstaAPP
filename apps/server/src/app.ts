@@ -319,7 +319,8 @@ export async function buildApp(
       auctionSessionRepository,
       new SqliteAuctionSessionStateRepository(),
       new SqliteCommandRegistryRepository(),
-      new SqliteAuctionEventRepository()
+      new SqliteAuctionEventRepository(),
+      auctionCallRepository
     );
 
   const auctionSessionOperationalCommandService =

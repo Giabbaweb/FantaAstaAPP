@@ -13,6 +13,9 @@ import type {
   CreateAuctionEventInput
 } from "../repositories/auction-event.repository.js";
 import type {
+  AuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import type {
   AuctionSessionOperationalStateUpdate,
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
@@ -75,7 +78,12 @@ export class AtomicAuctionSessionCommandExecutor {
     private readonly commandRegistryRepository:
       CommandRegistryRepository,
     private readonly auctionEventRepository:
-      AuctionEventRepository
+      AuctionEventRepository,
+    private readonly auctionCallRepository:
+      AuctionCallRepository,
+    private readonly now:
+      () => string =
+        () => new Date().toISOString()
   ) {}
 
   async execute(
@@ -185,6 +193,30 @@ export class AtomicAuctionSessionCommandExecutor {
           "STALE_STATE",
           `Auction session "${input.auctionSessionId}" no longer matches state version ${input.expectedStateVersion}`
         );
+      }
+
+      if (
+        input.commandType ===
+          "RESUME_SESSION"
+      ) {
+        const operationalCall =
+          this.auctionCallRepository
+            .findOperationalByAuctionSessionIdWithExecutor(
+              tx,
+              input.auctionSessionId
+            );
+
+        if (
+          operationalCall?.call
+            .currentTurnAuctionSessionTeamId
+        ) {
+          this.auctionCallRepository
+            .updateCurrentTurnStartedAtWithExecutor(
+              tx,
+              operationalCall.call.id,
+              this.now()
+            );
+        }
       }
 
       const persistedSession =
