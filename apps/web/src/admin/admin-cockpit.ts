@@ -51,6 +51,7 @@ export type AdminCockpitProjection = {
   currentBid: number | null;
   currentLeaderName: string | null;
   currentTurnName: string | null;
+  currentTurnStartedAt: string | null;
   teams: AdminCockpitTeam[];
 };
 
@@ -109,6 +110,11 @@ export function createAdminCockpitProjection(
             currentTurnId
           ) ?? null
         : null,
+
+    currentTurnStartedAt:
+      operationalCall?.call
+        .currentTurnStartedAt ??
+      null,
 
     teams:
       snapshot.publicDisplay.teams

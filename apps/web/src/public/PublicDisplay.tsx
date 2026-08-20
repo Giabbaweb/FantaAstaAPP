@@ -5,6 +5,7 @@ import {
 
 import type {
   AuctionSession,
+  PublicDisplayControlState,
   RealtimeAuctionSnapshot,
   RealtimeError
 } from "@fantaastaapp/contracts";
@@ -16,6 +17,10 @@ import {
 import {
   createPublicDisplayRealtimeClient
 } from "./public-display-realtime.js";
+
+import {
+  fetchPublicDisplayControl
+} from "../shared/public-display-control-api.js";
 
 import {
   RosterOverview
@@ -30,15 +35,66 @@ type PublicDisplayStatus =
   | "LIVE"
   | "ERROR";
 
-type PublicDisplayMode =
-  | "STANDARD"
-  | "HIGH_CONTRAST_OUTDOOR"
-  | "COMPACT"
-  | "DARK";
+function parseServerTime(
+  value: string
+): number {
+  const normalized =
+    value.includes("T")
+      ? value
+      : `${value.replace(" ", "T")}Z`;
 
-type PublicDisplayView =
-  | "AUCTION"
-  | "ROSTER_OVERVIEW";
+  return new Date(normalized).getTime();
+}
+
+function formatPublicClock(
+  now: number
+): string {
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }
+  ).format(new Date(now));
+}
+
+function formatPublicTurnElapsed(
+  startedAt: string | null,
+  endAt: number
+): string {
+  if (!startedAt) {
+    return "--:--";
+  }
+
+  const started =
+    parseServerTime(startedAt);
+
+  if (Number.isNaN(started)) {
+    return "--:--";
+  }
+
+  const elapsedSeconds =
+    Math.max(
+      0,
+      Math.floor(
+        (endAt - started) / 1000
+      )
+    );
+
+  const minutes =
+    Math.floor(
+      elapsedSeconds / 60
+    );
+
+  const seconds =
+    elapsedSeconds % 60;
+
+  return [
+    String(minutes).padStart(2, "0"),
+    String(seconds).padStart(2, "0")
+  ].join(":");
+}
 
 function createPublicDisplayDeviceId(): string {
   const storageKey =
@@ -93,6 +149,80 @@ export function PublicDisplay():
   ] = useState<string | null>(
     null
   );
+
+  const [
+    now,
+    setNow
+  ] = useState(
+    () => Date.now()
+  );
+
+
+  const [
+    displayControl,
+    setDisplayControl
+  ] = useState<PublicDisplayControlState>({
+    displayMode: "STANDARD",
+    activeView: "AUCTION"
+  });
+
+  useEffect(() => {
+    const timer =
+      window.setInterval(
+        () => {
+          setNow(Date.now());
+        },
+        1000
+      );
+
+    return () => {
+      window.clearInterval(
+        timer
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    let disposed = false;
+
+    const refreshControl =
+      async (): Promise<void> => {
+        try {
+          const next =
+            await fetchPublicDisplayControl(
+              session.id
+            );
+
+          if (!disposed) {
+            setDisplayControl(next);
+          }
+        } catch {
+          /*
+           * Presentation control is non-critical.
+           * Keep the last valid display state.
+           */
+        }
+      };
+
+    void refreshControl();
+
+    const timer =
+      window.setInterval(
+        () => {
+          void refreshControl();
+        },
+        750
+      );
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [session?.id]);
 
   useEffect(() => {
     let disposed = false;
@@ -329,14 +459,14 @@ export function PublicDisplay():
         )
       : "-";
 
-  const displayMode: PublicDisplayMode =
-    "STANDARD";
+  const displayMode =
+    displayControl.displayMode;
 
   const activeView =
-    "AUCTION" as PublicDisplayView;
+    displayControl.activeView;
 
   const displayModeLabel: Record<
-    PublicDisplayMode,
+    PublicDisplayControlState["displayMode"],
     string
   > = {
     STANDARD: "Standard",
@@ -399,23 +529,39 @@ export function PublicDisplay():
           </div>
         </div>
 
-        <div className="public-display__session-meta">
-          <span
-            className="public-display__status"
-            data-status={
-              snapshot.session.status
-            }
-          >
-            {snapshot.session.status}
-          </span>
+        <div className="public-display__runtime">
+          {activeView === "AUCTION" && (
+            <div
+              className="public-display__stadium-clock"
+              aria-label="Ora attuale"
+            >
+              <span>ORA</span>
 
-          <small>
-            Stato #{snapshot.stateVersion}
-          </small>
+              <strong>
+                {formatPublicClock(now)}
+              </strong>
+            </div>
+          )}
+
+          <div className="public-display__session-meta">
+            <span
+              className="public-display__status"
+              data-status={
+                snapshot.session.status
+              }
+            >
+              {snapshot.session.status}
+            </span>
+
+            <small>
+              Stato #{snapshot.stateVersion}
+            </small>
+          </div>
         </div>
       </header>
 
-      {snapshot.session.status === "SUSPENDED" && (
+      {snapshot.session.status === "SUSPENDED" &&
+        activeView === "AUCTION" && (
         <section className="public-display__suspended-banner">
           <strong>
             ASTA TEMPORANEAMENTE SOSPESA
@@ -515,14 +661,45 @@ export function PublicDisplay():
             </strong>
           </article>
 
-          <article className="public-display__metric">
-            <span>
-              Turno
-            </span>
+          <article className="public-display__metric public-display__metric--turn">
+            <div className="public-display__turn-team">
+              <span>
+                Turno
+              </span>
 
-            <strong>
-              {currentTurn}
-            </strong>
+              <strong>
+                {currentTurn}
+              </strong>
+            </div>
+
+            <div className="public-display__turn-timer">
+              <span
+                className="public-display__turn-timer-icon"
+                aria-hidden="true"
+              >
+                ⏱
+              </span>
+
+              <div>
+                <strong>
+                  {formatPublicTurnElapsed(
+                    operationalCall?.call
+                      .currentTurnStartedAt ??
+                      null,
+                    snapshot.session.status ===
+                      "SUSPENDED"
+                      ? parseServerTime(
+                          snapshot.session.updatedAt
+                        )
+                      : now
+                  )}
+                </strong>
+
+                <small>
+                  tempo trascorso
+                </small>
+              </div>
+            </div>
           </article>
         </div>
       </section>

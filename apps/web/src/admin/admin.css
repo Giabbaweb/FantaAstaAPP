@@ -62,8 +62,37 @@ input {
   font-size: 0.86rem;
 }
 
-.admin-cockpit__state {
+.admin-cockpit__runtime {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.admin-cockpit__clock,
+.admin-cockpit__turn-timer {
+  min-width: 76px;
+  text-align: center;
+}
+
+.admin-cockpit__clock span {
+  display: block;
+  margin-bottom: 2px;
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-cockpit__clock strong {
+  display: block;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.admin-cockpit__state {
   text-align: right;
 }
 
@@ -164,6 +193,60 @@ input {
 
 .admin-call-metrics strong {
   font-size: 1.05rem;
+}
+
+.admin-call-metric--turn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-turn-team {
+  min-width: 0;
+}
+
+.admin-turn-team > strong {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-turn-timer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  text-align: right;
+}
+
+.admin-turn-timer__icon {
+  margin: 0;
+  color: #1976d2;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.admin-turn-timer div {
+  min-width: 68px;
+}
+
+.admin-turn-timer div > strong {
+  display: block;
+  color: #1976d2;
+  font-size: 1.55rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.admin-turn-timer small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.62rem;
+  white-space: nowrap;
 }
 
 .admin-controls {
@@ -447,4 +530,95 @@ input {
   .admin-activity__list small {
     display: none;
   }
+}
+
+/* Public Display remote controls */
+
+.admin-public-display-controls {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #dce4ed;
+}
+
+.admin-public-display-controls__title {
+  margin: 0 0 8px;
+  color: #506078;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.admin-public-display-modes {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.admin-public-display-modes button,
+.admin-public-display-view {
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #bac7d5;
+  border-radius: 7px;
+  background: #f7f9fb;
+  color: #526174;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-public-display-modes button[data-active="true"] {
+  border-color: #2874c6;
+  background: #eaf3ff;
+  color: #155ea8;
+}
+
+.admin-public-display-view {
+  width: 100%;
+  margin-top: 7px;
+}
+
+.admin-public-display-view[data-active="true"] {
+  border-color: #7357ad;
+  background: #f2edff;
+  color: #6941a5;
+}
+
+.admin-public-display-controls__error {
+  display: block;
+  margin-top: 7px;
+  color: #b42318;
+}
+
+
+/* Foglione — print / export */
+
+.admin-public-display-export {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.admin-public-display-export button {
+  min-height: 38px;
+  border: 1px solid #c5ced9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243247;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-public-display-export button:hover:not(:disabled) {
+  border-color: #8e9bae;
+  background: #f5f7fa;
+}
+
+.admin-public-display-export button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

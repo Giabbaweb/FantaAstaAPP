@@ -43,6 +43,9 @@ import {
   adminActivityRoutes
 } from "./routes/admin-activity.routes.js";
 import {
+  publicDisplayControlRoutes
+} from "./routes/public-display-control.routes.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -621,6 +624,7 @@ export async function buildApp(
   await app.register(dbHealthRoutes);
   await app.register(leagueRoutes);
   await app.register(adminActivityRoutes);
+  await app.register(publicDisplayControlRoutes);
   await app.register(
     manualBackupRoutes(
       manualBackupService

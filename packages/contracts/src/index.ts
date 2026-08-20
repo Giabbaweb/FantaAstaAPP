@@ -1261,3 +1261,47 @@ export const adminActivityItemSchema = z.object({
 export type AdminActivityItem = z.infer<
   typeof adminActivityItemSchema
 >;
+
+export const publicDisplayModeSchema = z.enum([
+  "STANDARD",
+  "HIGH_CONTRAST_OUTDOOR",
+  "COMPACT",
+  "DARK"
+]);
+
+export type PublicDisplayMode = z.infer<
+  typeof publicDisplayModeSchema
+>;
+
+export const publicDisplayViewSchema = z.enum([
+  "AUCTION",
+  "ROSTER_OVERVIEW"
+]);
+
+export type PublicDisplayView = z.infer<
+  typeof publicDisplayViewSchema
+>;
+
+export const publicDisplayControlStateSchema =
+  z.object({
+    displayMode:
+      publicDisplayModeSchema,
+    activeView:
+      publicDisplayViewSchema
+  });
+
+export type PublicDisplayControlState = z.infer<
+  typeof publicDisplayControlStateSchema
+>;
+
+export const publicDisplayControlPatchSchema =
+  z.object({
+    displayMode:
+      publicDisplayModeSchema.optional(),
+    activeView:
+      publicDisplayViewSchema.optional()
+  });
+
+export type PublicDisplayControlPatch = z.infer<
+  typeof publicDisplayControlPatchSchema
+>;

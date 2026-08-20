@@ -3,10 +3,14 @@ import {
   useState
 } from "react";
 
+import * as XLSX from "xlsx";
+
 import type {
   AdminActivityItem,
   AuctionSession,
   League,
+  PublicDisplayControlState,
+  PublicDisplayMode,
   RealtimeAuctionSnapshot,
   RealtimeError
 } from "@fantaastaapp/contracts";
@@ -16,6 +20,11 @@ import {
   fetchAdminActivity,
   fetchLeagues
 } from "../shared/app-api.js";
+
+import {
+  fetchPublicDisplayControl,
+  updatePublicDisplayControl
+} from "../shared/public-display-control-api.js";
 
 import {
   createAdminCockpitProjection
@@ -31,6 +40,70 @@ type AdminStatus =
   | "CONNECTING"
   | "READY"
   | "ERROR";
+
+function formatCurrentTime(
+  now: number
+): string {
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }
+  ).format(new Date(now));
+}
+
+function formatTurnElapsed(
+  startedAt: string | null,
+  now: number
+): string {
+  if (!startedAt) {
+    return "--:--";
+  }
+
+  const started =
+    new Date(startedAt).getTime();
+
+  if (Number.isNaN(started)) {
+    return "--:--";
+  }
+
+  const elapsedSeconds =
+    Math.max(
+      0,
+      Math.floor(
+        (now - started) / 1000
+      )
+    );
+
+  const minutes =
+    Math.floor(elapsedSeconds / 60);
+
+  const seconds =
+    elapsedSeconds % 60;
+
+  return [
+    String(minutes).padStart(2, "0"),
+    String(seconds).padStart(2, "0")
+  ].join(":");
+}
+
+function escapePrintHtml(
+  value: string | number | null
+): string {
+  const text =
+    value === null
+      ? ""
+      : String(value);
+
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 function formatActivityTime(
   createdAt: string
@@ -213,6 +286,43 @@ export function AdminApp() {
     setActivityError
   ] = useState<string | null>(null);
 
+  const [
+    now,
+    setNow
+  ] = useState(() => Date.now());
+
+  const [
+    publicDisplayControl,
+    setPublicDisplayControl
+  ] = useState<PublicDisplayControlState>({
+    displayMode: "STANDARD",
+    activeView: "AUCTION"
+  });
+
+  const [
+    publicDisplayControlPending,
+    setPublicDisplayControlPending
+  ] = useState(false);
+
+  const [
+    publicDisplayControlError,
+    setPublicDisplayControlError
+  ] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer =
+      window.setInterval(
+        () => {
+          setNow(Date.now());
+        },
+        1000
+      );
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     let disconnect:
@@ -234,6 +344,27 @@ export function AdminApp() {
 
         setSession(activeSession);
         setLeagues(availableLeagues);
+
+        if (activeSession) {
+          try {
+            const displayControl =
+              await fetchPublicDisplayControl(
+                activeSession.id
+              );
+
+            if (!cancelled) {
+              setPublicDisplayControl(
+                displayControl
+              );
+            }
+          } catch {
+            /*
+             * Un problema al telecomando dello
+             * Schermo Pubblico non deve impedire
+             * il caricamento della Console Admin.
+             */
+          }
+        }
 
         if (!activeSession) {
           setStatus("READY");
@@ -361,6 +492,627 @@ export function AdminApp() {
     snapshot?.stateVersion
   ]);
 
+  const exportRosterOverviewExcel =
+    (): void => {
+      if (!snapshot || !session) {
+        return;
+      }
+
+      const roleOrder = [
+        "P",
+        "D",
+        "C",
+        "A"
+      ] as const;
+
+      const teamBlockWidth = 4;
+      const teamsPerRow = 4;
+
+      /*
+       * Ogni blocco squadra occupa:
+       *
+       * riga 1  nome squadra
+       * riga 2  crediti / max offerta
+       * riga 3  intestazioni
+       * righe 4-27  i 24 slot della rosa
+       *
+       * Poi una riga vuota prima della
+       * seconda fascia di quattro squadre.
+       */
+      const blockHeight = 28;
+
+      const sheetData:
+        Array<Array<string | number>> =
+          [];
+
+      const ensureCell = (
+        rowIndex: number,
+        columnIndex: number,
+        value: string | number
+      ): void => {
+        while (
+          sheetData.length <= rowIndex
+        ) {
+          sheetData.push([]);
+        }
+
+        const row =
+          sheetData[rowIndex];
+
+        if (!row) {
+          throw new Error(
+            "Unable to create Excel worksheet row"
+          );
+        }
+
+        while (
+          row.length <= columnIndex
+        ) {
+          row.push("");
+        }
+
+        row[columnIndex] = value;
+      };
+
+      const merges:
+        XLSX.Range[] = [];
+
+      snapshot.publicDisplay.teams
+        .forEach(
+          (team, teamIndex) => {
+            const blockRow =
+              Math.floor(
+                teamIndex /
+                  teamsPerRow
+              );
+
+            const blockColumn =
+              teamIndex %
+              teamsPerRow;
+
+            const startRow =
+              blockRow *
+              blockHeight;
+
+            const startColumn =
+              blockColumn *
+              teamBlockWidth;
+
+            ensureCell(
+              startRow,
+              startColumn,
+              team.teamName
+            );
+
+            merges.push({
+              s: {
+                r: startRow,
+                c: startColumn
+              },
+              e: {
+                r: startRow,
+                c:
+                  startColumn +
+                  teamBlockWidth -
+                  1
+              }
+            });
+
+            ensureCell(
+              startRow + 1,
+              startColumn,
+              "Crediti"
+            );
+
+            ensureCell(
+              startRow + 1,
+              startColumn + 1,
+              team.remainingCredits
+            );
+
+            ensureCell(
+              startRow + 1,
+              startColumn + 2,
+              "Max offerta"
+            );
+
+            ensureCell(
+              startRow + 1,
+              startColumn + 3,
+              team.maximumBid ?? ""
+            );
+
+            [
+              "Ruolo",
+              "Giocatore",
+              "Squadra reale",
+              "Costo"
+            ].forEach(
+              (
+                header,
+                columnOffset
+              ) => {
+                ensureCell(
+                  startRow + 2,
+                  startColumn +
+                    columnOffset,
+                  header
+                );
+              }
+            );
+
+            let slotRow =
+              startRow + 3;
+
+            for (
+              const role of roleOrder
+            ) {
+              const entries =
+                team.roster.entries
+                  .filter(
+                    (entry) =>
+                      entry.role === role
+                  )
+                  .sort(
+                    (first, second) =>
+                      first.playerName.localeCompare(
+                        second.playerName,
+                        "it"
+                      )
+                  );
+
+              const limit =
+                team.roster[role]
+                  .limit;
+
+              for (
+                let slotIndex = 0;
+                slotIndex < limit;
+                slotIndex += 1
+              ) {
+                const entry =
+                  entries[
+                    slotIndex
+                  ];
+
+                ensureCell(
+                  slotRow,
+                  startColumn,
+                  role
+                );
+
+                ensureCell(
+                  slotRow,
+                  startColumn + 1,
+                  entry
+                    ? entry.playerName
+                    : ""
+                );
+
+                ensureCell(
+                  slotRow,
+                  startColumn + 2,
+                  entry?.realTeamName ??
+                    ""
+                );
+
+                ensureCell(
+                  slotRow,
+                  startColumn + 3,
+                  entry
+                    ? entry.acquisitionCost
+                    : ""
+                );
+
+                slotRow += 1;
+              }
+            }
+          }
+        );
+
+      const worksheet =
+        XLSX.utils.aoa_to_sheet(
+          sheetData
+        );
+
+      worksheet["!merges"] =
+        merges;
+
+      /*
+       * Larghezze ripetute per ciascun
+       * blocco squadra.
+       */
+      worksheet["!cols"] =
+        Array.from(
+          {
+            length:
+              teamBlockWidth *
+              teamsPerRow
+          },
+          (_, index) => {
+            const position =
+              index %
+              teamBlockWidth;
+
+            switch (position) {
+              case 0:
+                return {
+                  wch: 8
+                };
+
+              case 1:
+                return {
+                  wch: 22
+                };
+
+              case 2:
+                return {
+                  wch: 16
+                };
+
+              default:
+                return {
+                  wch: 8
+                };
+            }
+          }
+        );
+
+      const workbook =
+        XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Foglione"
+      );
+
+      XLSX.writeFile(
+        workbook,
+        `foglione-${session.season.replaceAll(
+          "/",
+          "-"
+        )}.xlsx`
+      );
+    };
+
+  const printRosterOverview =
+    (): void => {
+      if (!snapshot || !session) {
+        return;
+      }
+
+      const printWindow =
+        window.open(
+          "",
+          "_blank"
+        );
+
+      if (!printWindow) {
+        window.alert(
+          "Il browser ha bloccato la finestra di stampa."
+        );
+        return;
+      }
+
+      const roleOrder = [
+        "P",
+        "D",
+        "C",
+        "A"
+      ] as const;
+
+      const teamsHtml =
+        snapshot.publicDisplay.teams
+          .map((team) => {
+            const rolesHtml =
+              roleOrder
+                .map((role) => {
+                  const entries =
+                    team.roster.entries
+                      .filter(
+                        (entry) =>
+                          entry.role === role
+                      )
+                      .sort(
+                        (first, second) =>
+                          first.playerName.localeCompare(
+                            second.playerName,
+                            "it"
+                          )
+                      );
+
+                  const rowsHtml =
+                    entries
+                      .map(
+                        (entry) => `
+                          <tr>
+                            <td class="role">
+                              ${escapePrintHtml(
+                                role
+                              )}
+                            </td>
+                            <td class="player">
+                              ${escapePrintHtml(
+                                entry.playerName
+                              )}
+                              ${
+                                entry.realTeamName
+                                  ? `<small>${escapePrintHtml(
+                                      entry.realTeamName
+                                    )}</small>`
+                                  : ""
+                              }
+                            </td>
+                            <td class="cost">
+                              ${escapePrintHtml(
+                                entry.acquisitionCost
+                              )}
+                            </td>
+                          </tr>
+                        `
+                      )
+                      .join("");
+
+                  const freeSlots =
+                    Math.max(
+                      0,
+                      team.roster[role].limit -
+                        entries.length
+                    );
+
+                  const freeRowsHtml =
+                    Array.from(
+                      {
+                        length: freeSlots
+                      },
+                      () => `
+                        <tr class="free">
+                          <td class="role">
+                            ${escapePrintHtml(
+                              role
+                            )}
+                          </td>
+                          <td class="player">
+                            libero
+                          </td>
+                          <td class="cost"></td>
+                        </tr>
+                      `
+                    ).join("");
+
+                  return (
+                    rowsHtml +
+                    freeRowsHtml
+                  );
+                })
+                .join("");
+
+            return `
+              <section class="team">
+                <header>
+                  <strong>
+                    ${escapePrintHtml(
+                      team.teamName
+                    )}
+                  </strong>
+                  <span>
+                    Cr ${escapePrintHtml(
+                      team.remainingCredits
+                    )}
+                  </span>
+                </header>
+
+                <table>
+                  <tbody>
+                    ${rolesHtml}
+                  </tbody>
+                </table>
+              </section>
+            `;
+          })
+          .join("");
+
+      printWindow.document.write(`
+        <!doctype html>
+        <html lang="it">
+          <head>
+            <meta charset="utf-8">
+            <title>
+              Foglione ${escapePrintHtml(
+                session.season
+              )}
+            </title>
+
+            <style>
+              @page {
+                size: A3 landscape;
+                margin: 4mm;
+              }
+
+              * {
+                box-sizing: border-box;
+              }
+
+              html,
+              body {
+                margin: 0;
+                padding: 0;
+                font-family:
+                  Arial,
+                  Helvetica,
+                  sans-serif;
+                color: #111;
+                background: #fff;
+              }
+
+              body {
+                padding: 0;
+              }
+
+              .grid {
+                display: grid;
+                grid-template-columns:
+                  repeat(4, minmax(0, 1fr));
+                gap: 5px;
+              }
+
+              .team {
+                min-width: 0;
+                border: 1px solid #555;
+              }
+
+              .team > header {
+                min-height: 40px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 4px;
+                border-bottom: 2px solid #555;
+                background: #eee;
+              }
+
+              .team > header strong {
+                overflow: hidden;
+                font-size: 11px;
+                line-height: 1.1;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+
+              .team > header span {
+                margin-top: 3px;
+                font-size: 8px;
+                font-weight: 700;
+              }
+
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+              }
+
+              td {
+                height: 18px;
+                padding: 0 2px;
+                border-top: 1px solid #bbb;
+                vertical-align: middle;
+                font-size: 8px;
+              }
+
+              tr:first-child td {
+                border-top: 0;
+              }
+
+              td.role {
+                width: 15px;
+                text-align: center;
+                font-weight: 900;
+              }
+
+              td.player {
+                overflow: hidden;
+                font-weight: 700;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+
+              td.player small {
+                display: block;
+                overflow: hidden;
+                color: #555;
+                font-size: 6px;
+                font-weight: 400;
+                line-height: 1;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+
+              td.cost {
+                width: 19px;
+                text-align: right;
+                font-weight: 900;
+              }
+
+              tr.free {
+                color: #999;
+              }
+
+              tr.free td.player {
+                font-style: italic;
+                font-weight: 400;
+              }
+
+              @media print {
+                body {
+                  padding: 0;
+                }
+              }
+            </style>
+          </head>
+
+          <body>
+            <main class="grid">
+              ${teamsHtml}
+            </main>
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+
+      printWindow.addEventListener(
+        "load",
+        () => {
+          printWindow.focus();
+          printWindow.print();
+        },
+        {
+          once: true
+        }
+      );
+    };
+
+  const changePublicDisplay =
+    async (
+      next:
+        Partial<PublicDisplayControlState>
+    ): Promise<void> => {
+      if (!session) {
+        return;
+      }
+
+      setPublicDisplayControlPending(
+        true
+      );
+
+      setPublicDisplayControlError(
+        null
+      );
+
+      try {
+        const updated =
+          await updatePublicDisplayControl(
+            session.id,
+            next
+          );
+
+        setPublicDisplayControl(
+          updated
+        );
+      } catch (error) {
+        setPublicDisplayControlError(
+          error instanceof Error
+            ? error.message
+            : "Errore controllo schermo pubblico."
+        );
+      } finally {
+        setPublicDisplayControlPending(
+          false
+        );
+      }
+    };
+
   if (
     status === "LOADING" ||
     status === "CONNECTING"
@@ -446,14 +1198,23 @@ export function AdminApp() {
           </span>
         </div>
 
-        <div className="admin-cockpit__state">
-          <span data-status={session.status}>
-            {session.status}
-          </span>
+        <div className="admin-cockpit__runtime">
+          <div className="admin-cockpit__clock">
+            <span>Ora</span>
+            <strong>
+              {formatCurrentTime(now)}
+            </strong>
+          </div>
 
-          <small>
-            Stato #{snapshot?.stateVersion ?? "-"}
-          </small>
+          <div className="admin-cockpit__state">
+            <span data-status={session.status}>
+              {session.status}
+            </span>
+
+            <small>
+              Stato #{snapshot?.stateVersion ?? "-"}
+            </small>
+          </div>
         </div>
       </header>
 
@@ -521,14 +1282,40 @@ export function AdminApp() {
               </strong>
             </article>
 
-            <article>
-              <span>Turno</span>
-              <strong>
-                {
-                  cockpit?.currentTurnName ??
-                  "-"
-                }
-              </strong>
+            <article className="admin-call-metric--turn">
+              <div className="admin-turn-team">
+                <span>Turno</span>
+
+                <strong>
+                  {
+                    cockpit?.currentTurnName ??
+                    "-"
+                  }
+                </strong>
+              </div>
+
+              <div className="admin-turn-timer">
+                <span
+                  className="admin-turn-timer__icon"
+                  aria-hidden="true"
+                >
+                  ⏱
+                </span>
+
+                <div>
+                  <strong>
+                    {formatTurnElapsed(
+                      cockpit?.currentTurnStartedAt ??
+                        null,
+                      now
+                    )}
+                  </strong>
+
+                  <small>
+                    tempo trascorso
+                  </small>
+                </div>
+              </div>
             </article>
           </div>
         </section>
@@ -559,6 +1346,116 @@ export function AdminApp() {
           <small className="admin-controls__note">
             I comandi verranno collegati nei prossimi checkpoint.
           </small>
+
+
+          <div className="admin-public-display-controls">
+            <p className="admin-public-display-controls__title">
+              Schermo pubblico
+            </p>
+
+            <div className="admin-public-display-modes">
+              {(
+                [
+                  [
+                    "STANDARD",
+                    "STD"
+                  ],
+                  [
+                    "DARK",
+                    "DARK"
+                  ],
+                  [
+                    "HIGH_CONTRAST_OUTDOOR",
+                    "OUT"
+                  ],
+                  [
+                    "COMPACT",
+                    "COMPACT"
+                  ]
+                ] as const
+              ).map(
+                ([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={
+                      publicDisplayControlPending
+                    }
+                    data-active={
+                      publicDisplayControl
+                        .displayMode ===
+                      mode
+                    }
+                    onClick={() => {
+                      void changePublicDisplay({
+                        displayMode:
+                          mode as PublicDisplayMode
+                      });
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+
+            <button
+              className="admin-public-display-view"
+              type="button"
+              disabled={
+                publicDisplayControlPending
+              }
+              data-active={
+                publicDisplayControl.activeView ===
+                "ROSTER_OVERVIEW"
+              }
+              onClick={() => {
+                void changePublicDisplay({
+                  activeView:
+                    publicDisplayControl
+                      .activeView ===
+                    "ROSTER_OVERVIEW"
+                      ? "AUCTION"
+                      : "ROSTER_OVERVIEW"
+                });
+              }}
+            >
+              {
+                publicDisplayControl.activeView ===
+                "ROSTER_OVERVIEW"
+                  ? "Nascondi foglione"
+                  : "Mostra foglione"
+              }
+            </button>
+
+            <div className="admin-public-display-export">
+              <button
+                type="button"
+                disabled={!snapshot}
+                onClick={
+                  printRosterOverview
+                }
+              >
+                Stampa / PDF
+              </button>
+
+              <button
+                type="button"
+                disabled={!snapshot}
+                onClick={
+                  exportRosterOverviewExcel
+                }
+              >
+                Esporta Excel
+              </button>
+            </div>
+
+            {publicDisplayControlError && (
+              <small className="admin-public-display-controls__error">
+                {publicDisplayControlError}
+              </small>
+            )}
+          </div>
         </section>
       </div>
 
