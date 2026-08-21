@@ -647,3 +647,66 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.admin-config-session {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-config__summary article input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid #b8c8d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #14283a;
+  font: inherit;
+  font-weight: 700;
+}
+
+.admin-config-session__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  gap: 12px;
+}
+
+.admin-config-session__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.admin-config-session__actions button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #b7c5d1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #294257;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-config-session__actions button:last-child {
+  border-color: #4f8d67;
+  color: #22633a;
+}
+
+.admin-config-session__actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.admin-config-session__error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.76rem;
+  font-weight: 700;
+}

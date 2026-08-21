@@ -23,6 +23,10 @@ import {
 } from "../shared/app-api.js";
 
 import {
+  fetchAuctionSessions
+} from "../shared/admin-config-api.js";
+
+import {
   fetchPublicDisplayControl,
   updatePublicDisplayControl
 } from "../shared/public-display-control-api.js";
@@ -394,9 +398,11 @@ export function AdminApp() {
       try {
         const [
           activeSession,
+          availableSessions,
           availableLeagues
         ] = await Promise.all([
           fetchActiveAuctionSession(),
+          fetchAuctionSessions(),
           fetchLeagues()
         ]);
 
@@ -404,7 +410,22 @@ export function AdminApp() {
           return;
         }
 
-        setSession(activeSession);
+        const setupSession =
+          activeSession
+            ? null
+            : (
+                availableSessions.find(
+                  (candidate) =>
+                    candidate.status ===
+                      "SETUP"
+                ) ?? null
+              );
+
+        const selectedSession =
+          activeSession ??
+          setupSession;
+
+        setSession(selectedSession);
         setLeagues(availableLeagues);
 
         if (activeSession) {
@@ -1375,6 +1396,96 @@ export function AdminApp() {
       (candidate) =>
         candidate.id === session.leagueId
     ) ?? null;
+
+  if (session.status === "SETUP") {
+    return (
+      <main className="admin-cockpit">
+        <header className="admin-cockpit__header">
+          <div>
+            <strong className="admin-cockpit__brand">
+              FantaAstaAPP
+            </strong>
+
+            <span className="admin-cockpit__surface">
+              Console Admin
+            </span>
+          </div>
+
+          <div className="admin-cockpit__session">
+            <strong>
+              {league?.name ?? session.leagueId}
+            </strong>
+
+            <span>
+              {session.season}
+            </span>
+
+            <span>
+              {session.editionNumber}ª edizione
+            </span>
+          </div>
+
+          <div className="admin-cockpit__runtime">
+            <div className="admin-cockpit__state">
+              <span data-status={session.status}>
+                {session.status}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <section className="admin__setup-panel">
+          <p className="admin__eyebrow">
+            Preparazione asta
+          </p>
+
+          <h2>
+            Sessione in configurazione
+          </h2>
+
+          <p>
+            La sessione non è ancora pronta per
+            l'operatività del cockpit. Completa la
+            configurazione dell'asta prima di
+            procedere.
+          </p>
+
+          <dl className="admin__setup-summary">
+            <div>
+              <dt>Crediti iniziali</dt>
+              <dd>
+                {session.initialCredits}
+              </dd>
+            </div>
+
+            <div>
+              <dt>Max confermati</dt>
+              <dd>
+                {
+                  session
+                    .maximumInitialRosterEntries
+                }
+              </dd>
+            </div>
+
+            <div>
+              <dt>Stato</dt>
+              <dd>
+                {session.status}
+              </dd>
+            </div>
+          </dl>
+
+          <a
+            className="admin__setup-action"
+            href="/admin/config"
+          >
+            Configurazione asta
+          </a>
+        </section>
+      </main>
+    );
+  }
 
   const cockpit =
     snapshot

@@ -766,3 +766,76 @@ input {
   font-size: 0.72rem;
   font-weight: 700;
 }
+
+
+.admin__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin__config-link,
+.admin__setup-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 1px solid #b8c6d2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #294257;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.admin__setup-panel {
+  max-width: 760px;
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #d7e1e8;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.admin__eyebrow {
+  margin: 0 0 6px;
+  color: #1976d2;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin__setup-panel h2 {
+  margin: 0 0 8px;
+}
+
+.admin__setup-summary {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+
+.admin__setup-summary div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin__setup-summary dt {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin__setup-summary dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.admin__setup-action {
+  border-color: #4f8d67;
+  color: #22633a;
+}

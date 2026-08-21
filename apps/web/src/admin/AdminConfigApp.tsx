@@ -14,7 +14,6 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import {
-  fetchActiveAuctionSession,
   fetchLeagues
 } from "../shared/app-api.js";
 
@@ -23,11 +22,13 @@ import {
   createOwner,
   createTeamOwner,
   deleteTeamOwner,
+  fetchAuctionSessions,
   fetchAuctionSessionTeams,
   fetchOwners,
   fetchTeamOwners,
   fetchTeamsByLeague,
   reorderAuctionSessionTeams,
+  updateAuctionSession,
   updateLeague,
   updateTeam,
   updateTeamOwner,
@@ -47,6 +48,13 @@ type TeamOwnerMap =
 
 const NEW_OWNER_VALUE =
   "__NEW_OWNER__";
+
+type SessionEditDraft = {
+  season: string;
+  editionNumber: string;
+  initialCredits: string;
+  maximumInitialRosterEntries: string;
+};
 
 type LeagueEditMode =
   | "CREATE"
@@ -95,6 +103,25 @@ export function AdminConfigApp() {
     leagues,
     setLeagues
   ] = useState<League[]>([]);
+
+  const [
+    sessionEditDraft,
+    setSessionEditDraft
+  ] = useState<SessionEditDraft | null>(
+    null
+  );
+
+  const [
+    sessionEditPending,
+    setSessionEditPending
+  ] = useState(false);
+
+  const [
+    sessionEditError,
+    setSessionEditError
+  ] = useState<string | null>(
+    null
+  );
 
   const [
     teams,
@@ -209,16 +236,29 @@ export function AdminConfigApp() {
     const load = async () => {
       try {
         const [
-          activeSession,
+          availableSessions,
           availableLeagues
         ] = await Promise.all([
-          fetchActiveAuctionSession(),
+          fetchAuctionSessions(),
           fetchLeagues()
         ]);
 
         if (cancelled) {
           return;
         }
+
+        const activeSession =
+          availableSessions.find(
+            (candidate) =>
+              candidate.status === "READY" ||
+              candidate.status === "RUNNING" ||
+              candidate.status === "SUSPENDED"
+          ) ??
+          availableSessions.find(
+            (candidate) =>
+              candidate.status === "SETUP"
+          ) ??
+          null;
 
         setSession(activeSession);
         setLeagues(availableLeagues);
@@ -404,6 +444,134 @@ export function AdminConfigApp() {
         sessionTeamByTeamId
       ]
     );
+
+  function beginSessionEdit(): void {
+    if (
+      !session ||
+      sessionEditPending
+    ) {
+      return;
+    }
+
+    setSessionEditError(null);
+
+    setSessionEditDraft({
+      season: session.season,
+      editionNumber:
+        String(session.editionNumber),
+      initialCredits:
+        String(session.initialCredits),
+      maximumInitialRosterEntries:
+        String(
+          session.maximumInitialRosterEntries
+        )
+    });
+  }
+
+  function cancelSessionEdit(): void {
+    if (sessionEditPending) {
+      return;
+    }
+
+    setSessionEditDraft(null);
+    setSessionEditError(null);
+  }
+
+  async function saveSessionEdit(): Promise<void> {
+    if (
+      !session ||
+      !sessionEditDraft ||
+      sessionEditPending
+    ) {
+      return;
+    }
+
+    const season =
+      sessionEditDraft.season.trim();
+
+    const editionNumber =
+      Number(
+        sessionEditDraft.editionNumber
+      );
+
+    const initialCredits =
+      Number(
+        sessionEditDraft.initialCredits
+      );
+
+    const maximumInitialRosterEntries =
+      Number(
+        sessionEditDraft
+          .maximumInitialRosterEntries
+      );
+
+    if (!season) {
+      setSessionEditError(
+        "Inserisci la stagione."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(editionNumber) ||
+      editionNumber <= 0
+    ) {
+      setSessionEditError(
+        "L'edizione deve essere un numero intero positivo."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(initialCredits) ||
+      initialCredits < 0
+    ) {
+      setSessionEditError(
+        "I crediti iniziali devono essere un numero intero non negativo."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(
+        maximumInitialRosterEntries
+      ) ||
+      maximumInitialRosterEntries < 0 ||
+      maximumInitialRosterEntries > 24
+    ) {
+      setSessionEditError(
+        "Il numero massimo di confermati deve essere compreso tra 0 e 24."
+      );
+      return;
+    }
+
+    setSessionEditPending(true);
+    setSessionEditError(null);
+
+    try {
+      const updatedSession =
+        await updateAuctionSession(
+          session.id,
+          {
+            season,
+            editionNumber,
+            initialCredits,
+            maximumInitialRosterEntries
+          }
+        );
+
+      setSession(updatedSession);
+      setSessionEditDraft(null);
+    } catch (error) {
+      setSessionEditError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il salvataggio della sessione."
+      );
+    } finally {
+      setSessionEditPending(false);
+    }
+  }
 
   function clearLeagueLogoPreview(): void {
     if (leagueLogoPreviewUrl) {
@@ -1399,69 +1567,240 @@ export function AdminConfigApp() {
         </p>
       </section>
 
-      <section className="admin-config__summary">
-        <article>
-          <span>
-            Lega
-          </span>
+      <section className="admin-config-session">
+        <div className="admin-config__summary">
+          <article>
+            <span>
+              Lega
+            </span>
 
-          <strong>
-            {league?.name ?? "-"}
-          </strong>
-        </article>
+            <strong>
+              {league?.name ?? "-"}
+            </strong>
+          </article>
 
-        <article>
-          <span>
-            Stagione
-          </span>
+          <article>
+            <span>
+              Stagione
+            </span>
 
-          <strong>
-            {session.season}
-          </strong>
-        </article>
+            {sessionEditDraft
+              ? (
+                  <input
+                    type="text"
+                    value={
+                      sessionEditDraft.season
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      setSessionEditDraft(
+                        (current) =>
+                          current
+                            ? {
+                                ...current,
+                                season:
+                                  event.target.value
+                              }
+                            : current
+                      );
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {session.season}
+                  </strong>
+                )}
+          </article>
 
-        <article>
-          <span>
-            Edizione
-          </span>
+          <article>
+            <span>
+              Edizione
+            </span>
 
-          <strong>
-            {session.editionNumber}ª
-          </strong>
-        </article>
+            {sessionEditDraft
+              ? (
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={
+                      sessionEditDraft
+                        .editionNumber
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      setSessionEditDraft(
+                        (current) =>
+                          current
+                            ? {
+                                ...current,
+                                editionNumber:
+                                  event.target.value
+                              }
+                            : current
+                      );
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {session.editionNumber}ª
+                  </strong>
+                )}
+          </article>
 
-        <article>
-          <span>
-            Crediti iniziali
-          </span>
+          <article>
+            <span>
+              Crediti iniziali
+            </span>
 
-          <strong>
-            {session.initialCredits}
-          </strong>
-        </article>
+            {sessionEditDraft
+              ? (
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={
+                      sessionEditDraft
+                        .initialCredits
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      setSessionEditDraft(
+                        (current) =>
+                          current
+                            ? {
+                                ...current,
+                                initialCredits:
+                                  event.target.value
+                              }
+                            : current
+                      );
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {session.initialCredits}
+                  </strong>
+                )}
+          </article>
 
-        <article>
-          <span>
-            Max confermati
-          </span>
+          <article>
+            <span>
+              Max confermati
+            </span>
 
-          <strong>
-            {
-              session
-                .maximumInitialRosterEntries
-            }
-          </strong>
-        </article>
+            {sessionEditDraft
+              ? (
+                  <input
+                    type="number"
+                    min="0"
+                    max="24"
+                    step="1"
+                    value={
+                      sessionEditDraft
+                        .maximumInitialRosterEntries
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      setSessionEditDraft(
+                        (current) =>
+                          current
+                            ? {
+                                ...current,
+                                maximumInitialRosterEntries:
+                                  event.target.value
+                              }
+                            : current
+                      );
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {
+                      session
+                        .maximumInitialRosterEntries
+                    }
+                  </strong>
+                )}
+          </article>
 
-        <article>
-          <span>
-            Stato
-          </span>
+          <article>
+            <span>
+              Stato
+            </span>
 
-          <strong>
-            {session.status}
-          </strong>
-        </article>
+            <strong>
+              {session.status}
+            </strong>
+          </article>
+        </div>
+
+        <div className="admin-config-session__footer">
+          <div>
+            {sessionEditError && (
+              <p className="admin-config-session__error">
+                {sessionEditError}
+              </p>
+            )}
+          </div>
+
+          <div className="admin-config-session__actions">
+            {sessionEditDraft
+              ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={
+                        sessionEditPending
+                      }
+                      onClick={
+                        cancelSessionEdit
+                      }
+                    >
+                      Annulla
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        sessionEditPending
+                      }
+                      onClick={() => {
+                        void saveSessionEdit();
+                      }}
+                    >
+                      {
+                        sessionEditPending
+                          ? "Salvataggio..."
+                          : "Salva parametri"
+                      }
+                    </button>
+                  </>
+                )
+              : (
+                  <button
+                    type="button"
+                    onClick={
+                      beginSessionEdit
+                    }
+                  >
+                    Modifica parametri
+                  </button>
+                )}
+          </div>
+        </div>
       </section>
 
       <section className="admin-config__panel">

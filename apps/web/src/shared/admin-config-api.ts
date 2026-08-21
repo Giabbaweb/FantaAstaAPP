@@ -1,4 +1,5 @@
 import type {
+  AuctionSession,
   AuctionSessionTeam,
   CreateLeagueInput,
   CreateOwnerInput,
@@ -7,6 +8,7 @@ import type {
   Owner,
   Team,
   TeamOwner,
+  UpdateAuctionSessionInput,
   UpdateLeagueInput,
   UpdateOwnerInput,
   UpdateTeamInput,
@@ -91,6 +93,29 @@ export function fetchTeamOwners(
 ): Promise<TeamOwner[]> {
   return apiRequest<TeamOwner[]>(
     `/api/teams/${teamId}/owners`
+  );
+}
+
+export function fetchAuctionSessions():
+  Promise<AuctionSession[]> {
+  return apiRequest<AuctionSession[]>(
+    "/api/auction-sessions"
+  );
+}
+
+export function updateAuctionSession(
+  auctionSessionId: string,
+  input: UpdateAuctionSessionInput
+): Promise<AuctionSession> {
+  return apiRequest<AuctionSession>(
+    `/api/auction-sessions/${auctionSessionId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
   );
 }
 
