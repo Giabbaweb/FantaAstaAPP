@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import type {
   AdminActivityItem,
   AuctionSession,
+  AuctionSessionSuspensionReason,
   League,
   PublicDisplayControlState,
   PublicDisplayMode,
@@ -25,6 +26,16 @@ import {
   fetchPublicDisplayControl,
   updatePublicDisplayControl
 } from "../shared/public-display-control-api.js";
+
+import {
+  resumeAuctionSession,
+  suspendAuctionSession
+} from "../shared/auction-session-command-api.js";
+
+import {
+  cancelAuctionCall,
+  confirmAuctionCall
+} from "../shared/auction-call-command-api.js";
 
 import {
   createAdminCockpitProjection
@@ -108,10 +119,20 @@ function escapePrintHtml(
 function formatActivityTime(
   createdAt: string
 ): string {
+  /*
+   * I timestamp SQLite prodotti da
+   * CURRENT_TIMESTAMP sono UTC ma vengono
+   * serializzati senza timezone:
+   *
+   *   2026-08-20 20:15:00
+   *
+   * Li interpretiamo esplicitamente come UTC
+   * e li visualizziamo nell'ora di Roma.
+   */
   const normalized =
     createdAt.includes("T")
       ? createdAt
-      : createdAt.replace(" ", "T");
+      : `${createdAt.replace(" ", "T")}Z`;
 
   const date =
     new Date(normalized);
@@ -123,6 +144,7 @@ function formatActivityTime(
   return new Intl.DateTimeFormat(
     "it-IT",
     {
+      timeZone: "Europe/Rome",
       hour: "2-digit",
       minute: "2-digit"
     }
@@ -307,6 +329,46 @@ export function AdminApp() {
   const [
     publicDisplayControlError,
     setPublicDisplayControlError
+  ] = useState<string | null>(null);
+
+  const [
+    suspensionReason,
+    setSuspensionReason
+  ] = useState<
+    Exclude<
+      AuctionSessionSuspensionReason,
+      "RECOVERY_RESTART"
+    >
+  >("PIZZA_BREAK");
+
+  const [
+    sessionCommandPending,
+    setSessionCommandPending
+  ] = useState(false);
+
+  const [
+    sessionCommandError,
+    setSessionCommandError
+  ] = useState<string | null>(null);
+
+  const [
+    confirmAwardPending,
+    setConfirmAwardPending
+  ] = useState(false);
+
+  const [
+    confirmAwardError,
+    setConfirmAwardError
+  ] = useState<string | null>(null);
+
+  const [
+    cancelCallPending,
+    setCancelCallPending
+  ] = useState(false);
+
+  const [
+    cancelCallError,
+    setCancelCallError
   ] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1073,6 +1135,156 @@ export function AdminApp() {
       );
     };
 
+  const executeCancelCall =
+    async (): Promise<void> => {
+      const operationalCall =
+        snapshot?.operationalAuctionCall;
+
+      if (
+        !snapshot ||
+        !operationalCall
+      ) {
+        return;
+      }
+
+      const cancellableStatuses = [
+        "DRAFT",
+        "OPEN",
+        "SUSPENDED"
+      ] as const;
+
+      if (
+        !cancellableStatuses.includes(
+          operationalCall.call.status as
+            typeof cancellableStatuses[number]
+        )
+      ) {
+        return;
+      }
+
+      setCancelCallPending(true);
+      setCancelCallError(null);
+
+      try {
+        await cancelAuctionCall(
+          operationalCall.call.id,
+          snapshot.stateVersion
+        );
+
+        /*
+         * Lo snapshot realtime aggiornerà
+         * automaticamente chiamata e cockpit.
+         */
+      } catch (error) {
+        setCancelCallError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante l'annullamento della chiamata."
+        );
+      } finally {
+        setCancelCallPending(false);
+      }
+    };
+
+  const executeConfirmAward =
+    async (): Promise<void> => {
+      const operationalCall =
+        snapshot?.operationalAuctionCall;
+
+      if (
+        !snapshot ||
+        !operationalCall ||
+        operationalCall.call.status !==
+          "PROVISIONAL_AWARD"
+      ) {
+        return;
+      }
+
+      setConfirmAwardPending(true);
+      setConfirmAwardError(null);
+
+      try {
+        await confirmAuctionCall(
+          operationalCall.call.id,
+          snapshot.stateVersion
+        );
+
+        /*
+         * La proiezione definitiva di rosa,
+         * crediti, recent awards e chiamata
+         * arriverà dallo snapshot realtime.
+         */
+      } catch (error) {
+        setConfirmAwardError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante la conferma dell'aggiudicazione."
+        );
+      } finally {
+        setConfirmAwardPending(false);
+      }
+    };
+
+  const executeSessionOperationalCommand =
+    async (): Promise<void> => {
+      if (!session || !snapshot) {
+        return;
+      }
+
+      if (
+        session.status !== "RUNNING" &&
+        session.status !== "SUSPENDED"
+      ) {
+        return;
+      }
+
+      setSessionCommandPending(true);
+      setSessionCommandError(null);
+
+      try {
+        const result =
+          session.status === "RUNNING"
+            ? await suspendAuctionSession(
+                session.id,
+                snapshot.stateVersion,
+                suspensionReason
+              )
+            : await resumeAuctionSession(
+                session.id,
+                snapshot.stateVersion
+              );
+
+        /*
+         * Il realtime invierà comunque lo snapshot
+         * ufficiale. Aggiorniamo subito anche lo stato
+         * locale per evitare un breve intervallo con
+         * stateVersion obsoleta.
+         */
+        setSession(result.session);
+
+        setSnapshot(
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  session:
+                    result.session,
+                  stateVersion:
+                    result.stateVersion
+                }
+              : current
+        );
+      } catch (error) {
+        setSessionCommandError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante il comando di sessione."
+        );
+      } finally {
+        setSessionCommandPending(false);
+      }
+    };
+
   const changePublicDisplay =
     async (
       next:
@@ -1272,14 +1484,56 @@ export function AdminApp() {
               </strong>
             </article>
 
-            <article>
-              <span>Leader</span>
-              <strong>
-                {
-                  cockpit?.currentLeaderName ??
-                  "-"
+            <article className="admin-call-metric--leader">
+              <div className="admin-leader-info">
+                <span>Leader</span>
+
+                <strong>
+                  {
+                    cockpit?.currentLeaderName ??
+                    "-"
+                  }
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                className="admin-confirm-award"
+                disabled={
+                  confirmAwardPending ||
+                  snapshot
+                    ?.operationalAuctionCall
+                    ?.call.status !==
+                    "PROVISIONAL_AWARD"
                 }
-              </strong>
+                onClick={() => {
+                  void executeConfirmAward();
+                }}
+              >
+                {
+                  confirmAwardPending
+                    ? (
+                        <>
+                          Conferma
+                          <br />
+                          ...
+                        </>
+                      )
+                    : (
+                        <>
+                          Conferma
+                          <br />
+                          aggiudicazione
+                        </>
+                      )
+                }
+              </button>
+
+              {confirmAwardError && (
+                <small className="admin-confirm-award__error">
+                  {confirmAwardError}
+                </small>
+              )}
             </article>
 
             <article className="admin-call-metric--turn">
@@ -1326,25 +1580,85 @@ export function AdminApp() {
           </p>
 
           <div className="admin-controls">
-            <button disabled>
-              Sospendi sessione
-            </button>
+            <div className="admin-session-control">
+              {session.status === "RUNNING" && (
+                <select
+                  value={suspensionReason}
+                  disabled={sessionCommandPending}
+                  aria-label="Causale sospensione"
+                  onChange={(event) => {
+                    setSuspensionReason(
+                      event.target.value as
+                        Exclude<
+                          AuctionSessionSuspensionReason,
+                          "RECOVERY_RESTART"
+                        >
+                    );
+                  }}
+                >
+                  <option value="PIZZA_BREAK">
+                    Pizza break
+                  </option>
 
-            <button disabled>
-              Conferma aggiudicazione
-            </button>
+                  <option value="TECHNICAL_BREAK">
+                    Pausa tecnica
+                  </option>
 
-            <button disabled>
-              Annulla chiamata
-            </button>
+                  <option value="ORGANIZATIONAL_BREAK">
+                    Pausa organizzativa
+                  </option>
+
+                  <option value="NETWORK_ISSUE">
+                    Problema rete
+                  </option>
+
+                  <option value="OTHER">
+                    Altro
+                  </option>
+                </select>
+              )}
+
+              <button
+                type="button"
+                disabled={
+                  sessionCommandPending ||
+                  (
+                    session.status !== "RUNNING" &&
+                    session.status !== "SUSPENDED"
+                  )
+                }
+                data-action={
+                  session.status === "SUSPENDED"
+                    ? "resume"
+                    : "suspend"
+                }
+                onClick={() => {
+                  void executeSessionOperationalCommand();
+                }}
+              >
+                {
+                  sessionCommandPending
+                    ? "Operazione..."
+                    : session.status === "SUSPENDED"
+                      ? "Riprendi sessione"
+                      : "Sospendi sessione"
+                }
+              </button>
+            </div>
 
             <button disabled>
               Correzione amministrativa
             </button>
           </div>
 
+          {sessionCommandError && (
+            <small className="admin-session-control__error">
+              {sessionCommandError}
+            </small>
+          )}
+
           <small className="admin-controls__note">
-            I comandi verranno collegati nei prossimi checkpoint.
+            Gli altri comandi verranno collegati nei prossimi checkpoint.
           </small>
 
 
@@ -1576,7 +1890,43 @@ export function AdminApp() {
           <button disabled>
             Apri chiamata
           </button>
+
+          <button
+            type="button"
+            className="admin-cancel-call"
+            disabled={
+              cancelCallPending ||
+              !snapshot
+                ?.operationalAuctionCall ||
+              !(
+                snapshot
+                  .operationalAuctionCall
+                  .call.status === "DRAFT" ||
+                snapshot
+                  .operationalAuctionCall
+                  .call.status === "OPEN" ||
+                snapshot
+                  .operationalAuctionCall
+                  .call.status === "SUSPENDED"
+              )
+            }
+            onClick={() => {
+              void executeCancelCall();
+            }}
+          >
+            {
+              cancelCallPending
+                ? "Annullamento..."
+                : "Annulla chiamata"
+            }
+          </button>
         </div>
+
+        {cancelCallError && (
+          <small className="admin-cancel-call__error">
+            {cancelCallError}
+          </small>
+        )}
       </section>
 
       <section className="admin-cockpit__workspace">

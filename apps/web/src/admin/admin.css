@@ -622,3 +622,147 @@ input {
   cursor: not-allowed;
   opacity: 0.5;
 }
+
+
+/* Session operational control */
+
+.admin-session-control {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr);
+  gap: 6px;
+}
+
+.admin-session-control select {
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid #bac7d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.admin-session-control button[data-action="resume"] {
+  border-color: #4b8f5f;
+  background: #eaf7ee;
+  color: #236238;
+}
+
+.admin-session-control button[data-action="suspend"] {
+  border-color: #d6a64c;
+  background: #fff7e5;
+  color: #805b0b;
+}
+
+.admin-session-control__error {
+  display: block;
+  margin-top: 8px;
+  color: #b42318;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Confirm provisional award */
+
+.admin-call-metric--leader {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  grid-template-areas:
+    "info action"
+    "error error";
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.admin-leader-info {
+  grid-area: info;
+  min-width: 0;
+}
+
+.admin-leader-info > strong {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-confirm-award {
+  grid-area: action;
+  width: 132px;
+  min-height: 58px;
+  padding: 8px 12px;
+  border: 1px solid #4d9362;
+  border-radius: 9px;
+  background: #eaf7ee;
+  color: #245f38;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+}
+
+.admin-confirm-award:hover:not(:disabled) {
+  background: #dff2e5;
+}
+
+.admin-confirm-award:disabled {
+  border-color: #a8cdb3;
+  background: #eef8f1;
+  color: #7aa087;
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.admin-confirm-award__error {
+  grid-area: error;
+  display: block;
+  margin-top: 2px;
+  color: #b42318;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+
+/* Cancel auction call */
+
+.admin-new-call {
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    auto;
+}
+
+.admin-cancel-call {
+  min-width: 132px;
+  border-color: #d8a3a3 !important;
+  background: #fff1f1 !important;
+  color: #9b2c2c !important;
+}
+
+.admin-cancel-call:hover:not(:disabled) {
+  background: #ffe4e4 !important;
+}
+
+.admin-cancel-call:disabled {
+  border-color: #e0caca !important;
+  background: #faf3f3 !important;
+  color: #b48c8c !important;
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.admin-cancel-call__error {
+  display: block;
+  margin-top: 7px;
+  color: #b42318;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
