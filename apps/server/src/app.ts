@@ -97,6 +97,9 @@ import {
   teamAccessRoutes
 } from "./routes/team-access.routes.js";
 import {
+  teamOwnerRoutes
+} from "./routes/team-owner.routes.js";
+import {
   teamRoutes
 } from "./routes/team.routes.js";
 import {
@@ -664,6 +667,7 @@ export async function buildApp(
   await app.register(teamAccessRoutes);
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
+  await app.register(teamOwnerRoutes);
   await app.register(auctionSessionTeamRoutes);
   await app.register(playerRoutes);
   await app.register(playerImportRoutes);
