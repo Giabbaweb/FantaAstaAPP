@@ -22,7 +22,8 @@ import {
   fetchAuctionSessionTeams,
   fetchOwners,
   fetchTeamOwners,
-  fetchTeamsByLeague
+  fetchTeamsByLeague,
+  reorderAuctionSessionTeams
 } from "../shared/admin-config-api.js";
 
 import "./admin-config.css";
@@ -83,6 +84,18 @@ export function AdminConfigApp() {
     teamOwners,
     setTeamOwners
   ] = useState<TeamOwnerMap>({});
+
+  const [
+    tableOrderPending,
+    setTableOrderPending
+  ] = useState(false);
+
+  const [
+    tableOrderError,
+    setTableOrderError
+  ] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -264,6 +277,92 @@ export function AdminConfigApp() {
       ]
     );
 
+  async function moveTeam(
+    teamId: string,
+    direction: -1 | 1
+  ): Promise<void> {
+    if (
+      !session ||
+      tableOrderPending
+    ) {
+      return;
+    }
+
+    const currentIndex =
+      orderedTeams.findIndex(
+        (team) =>
+          team.id === teamId
+      );
+
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const targetIndex =
+      currentIndex + direction;
+
+    if (
+      targetIndex < 0 ||
+      targetIndex >=
+        orderedTeams.length
+    ) {
+      return;
+    }
+
+    const reorderedTeams =
+      [...orderedTeams];
+
+    const currentTeam =
+      reorderedTeams[
+        currentIndex
+      ];
+
+    const targetTeam =
+      reorderedTeams[
+        targetIndex
+      ];
+
+    if (
+      !currentTeam ||
+      !targetTeam
+    ) {
+      return;
+    }
+
+    reorderedTeams[
+      currentIndex
+    ] = targetTeam;
+
+    reorderedTeams[
+      targetIndex
+    ] = currentTeam;
+
+    setTableOrderPending(true);
+    setTableOrderError(null);
+
+    try {
+      const reorderedSessionTeams =
+        await reorderAuctionSessionTeams(
+          session.id,
+          reorderedTeams.map(
+            (team) => team.id
+          )
+        );
+
+      setSessionTeams(
+        reorderedSessionTeams
+      );
+    } catch (error) {
+      setTableOrderError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il riordino del girotavolo."
+      );
+    } finally {
+      setTableOrderPending(false);
+    }
+  }
+
   if (status === "LOADING") {
     return (
       <main className="admin-config">
@@ -435,6 +534,12 @@ export function AdminConfigApp() {
           </span>
         </div>
 
+        {tableOrderError && (
+          <p className="admin-config__table-order-error">
+            {tableOrderError}
+          </p>
+        )}
+
         <div className="admin-config__teams">
           {orderedTeams.map(
             (team) => {
@@ -466,12 +571,55 @@ export function AdminConfigApp() {
                   key={team.id}
                   className="admin-config-team"
                 >
-                  <div className="admin-config-team__order">
-                    {
-                      sessionTeam
-                        ?.tableOrder ??
-                      "-"
-                    }
+                  <div className="admin-config-team__table-order">
+                    <div className="admin-config-team__order">
+                      {
+                        sessionTeam
+                          ?.tableOrder ??
+                        "-"
+                      }
+                    </div>
+
+                    <div className="admin-config-team__order-actions">
+                      <button
+                        type="button"
+                        aria-label={`Sposta ${team.name} verso l'alto`}
+                        title="Sposta verso l'alto"
+                        disabled={
+                          tableOrderPending ||
+                          !sessionTeam ||
+                          sessionTeam.tableOrder === 1
+                        }
+                        onClick={() => {
+                          void moveTeam(
+                            team.id,
+                            -1
+                          );
+                        }}
+                      >
+                        ↑
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-label={`Sposta ${team.name} verso il basso`}
+                        title="Sposta verso il basso"
+                        disabled={
+                          tableOrderPending ||
+                          !sessionTeam ||
+                          sessionTeam.tableOrder ===
+                            sessionTeams.length
+                        }
+                        onClick={() => {
+                          void moveTeam(
+                            team.id,
+                            1
+                          );
+                        }}
+                      >
+                        ↓
+                      </button>
+                    </div>
                   </div>
 
                   <div className="admin-config-team__identity">

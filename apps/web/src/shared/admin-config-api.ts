@@ -41,3 +41,21 @@ export function fetchAuctionSessionTeams(
     `/api/auction-sessions/${auctionSessionId}/teams`
   );
 }
+
+export function reorderAuctionSessionTeams(
+  auctionSessionId: string,
+  teamIds: string[]
+): Promise<AuctionSessionTeam[]> {
+  return apiRequest<AuctionSessionTeam[]>(
+    `/api/auction-sessions/${auctionSessionId}/teams/reorder`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        teamIds
+      })
+    }
+  );
+}

@@ -249,3 +249,52 @@
       80px;
   }
 }
+
+.admin-config-team__table-order {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-config-team__order-actions {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-config-team__order-actions button {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #bdcbd7;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #334a5e;
+  font-size: 0.85rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-config-team__order-actions button:hover:not(:disabled) {
+  border-color: #1976d2;
+  background: #eef6fd;
+  color: #1976d2;
+}
+
+.admin-config-team__order-actions button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.admin-config__table-order-error {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 1px solid #efc1bc;
+  border-radius: 8px;
+  background: #fff4f2;
+  color: #b42318;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
