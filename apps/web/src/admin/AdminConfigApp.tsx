@@ -47,6 +47,8 @@ const NEW_OWNER_VALUE =
 type TeamEditDraft = {
   name: string;
   shortName: string;
+  primaryColor: string;
+  secondaryColor: string;
   primaryOwnerId: string;
   primaryOwnerNewName: string;
   secondaryOwnerId: string;
@@ -431,6 +433,10 @@ export function AdminConfigApp() {
       name: team.name,
       shortName:
         team.shortName ?? "",
+      primaryColor:
+        team.primaryColor ?? "#1976D2",
+      secondaryColor:
+        team.secondaryColor ?? "#FFFFFF",
       primaryOwnerId:
         primary?.ownerId ?? "",
       primaryOwnerNewName: "",
@@ -503,6 +509,23 @@ export function AdminConfigApp() {
       return;
     }
 
+    const hexColorPattern =
+      /^#[0-9A-Fa-f]{6}$/;
+
+    if (
+      !hexColorPattern.test(
+        teamEditDraft.primaryColor
+      ) ||
+      !hexColorPattern.test(
+        teamEditDraft.secondaryColor
+      )
+    ) {
+      setTeamEditError(
+        "I colori devono essere nel formato #RRGGBB."
+      );
+      return;
+    }
+
     setTeamEditPending(true);
     setTeamEditError(null);
 
@@ -544,7 +567,13 @@ export function AdminConfigApp() {
             name,
             shortName:
               teamEditDraft.shortName
-                .trim() || null
+                .trim() || null,
+            primaryColor:
+              teamEditDraft.primaryColor
+                .toUpperCase(),
+            secondaryColor:
+              teamEditDraft.secondaryColor
+                .toUpperCase()
           }
         );
 
@@ -1005,6 +1034,114 @@ export function AdminConfigApp() {
                               );
                             }}
                           />
+                        </label>
+
+                        <label>
+                          <span>
+                            Colore principale
+                          </span>
+
+                          <div className="admin-config-team__color-field">
+                            <input
+                              type="color"
+                              value={
+                                teamEditDraft.primaryColor
+                              }
+                              disabled={
+                                teamEditPending
+                              }
+                              onChange={(event) => {
+                                setTeamEditDraft(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          primaryColor:
+                                            event.target.value
+                                              .toUpperCase()
+                                        }
+                                      : current
+                                );
+                              }}
+                            />
+
+                            <input
+                              type="text"
+                              value={
+                                teamEditDraft.primaryColor
+                              }
+                              maxLength={7}
+                              disabled={
+                                teamEditPending
+                              }
+                              onChange={(event) => {
+                                setTeamEditDraft(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          primaryColor:
+                                            event.target.value
+                                        }
+                                      : current
+                                );
+                              }}
+                            />
+                          </div>
+                        </label>
+
+                        <label>
+                          <span>
+                            Colore secondario
+                          </span>
+
+                          <div className="admin-config-team__color-field">
+                            <input
+                              type="color"
+                              value={
+                                teamEditDraft.secondaryColor
+                              }
+                              disabled={
+                                teamEditPending
+                              }
+                              onChange={(event) => {
+                                setTeamEditDraft(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          secondaryColor:
+                                            event.target.value
+                                              .toUpperCase()
+                                        }
+                                      : current
+                                );
+                              }}
+                            />
+
+                            <input
+                              type="text"
+                              value={
+                                teamEditDraft.secondaryColor
+                              }
+                              maxLength={7}
+                              disabled={
+                                teamEditPending
+                              }
+                              onChange={(event) => {
+                                setTeamEditDraft(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          secondaryColor:
+                                            event.target.value
+                                        }
+                                      : current
+                                );
+                              }}
+                            />
+                          </div>
                         </label>
                       </div>
 

@@ -370,3 +370,36 @@
   font-size: 0.72rem;
   font-weight: 700;
 }
+
+
+.admin-config-team__color-field {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-config-team__color-field input[type="color"] {
+  width: 42px;
+  height: 34px;
+  min-height: 34px;
+  padding: 2px;
+  border: 1px solid #c8d3dd;
+  border-radius: 7px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.admin-config-team__color-field input[type="text"] {
+  min-width: 0;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.admin-config-team__color-field input:disabled {
+  cursor: not-allowed;
+}
