@@ -176,7 +176,8 @@ export type SetTeamAccessPinInput = z.infer<
 export const auctionSessionTeamSchema = z.object({
   auctionSessionId: z.string().min(1),
   teamId: z.string().min(1),
-  tableOrder: z.number().int().positive(),
+  tableOrder:
+    z.number().int().min(1).max(8),
   renewalCredits: z.number().int().nonnegative(),
   remainingCredits: z.number().int().nonnegative()
 });
@@ -187,7 +188,8 @@ export type AuctionSessionTeam = z.infer<
 
 export const createAuctionSessionTeamSchema = z.object({
   teamId: z.string().min(1),
-  tableOrder: z.number().int().positive(),
+  tableOrder:
+    z.number().int().min(1).max(8),
   renewalCredits: z.number().int().nonnegative().default(0),
   remainingCredits: z.number().int().nonnegative()
 });
@@ -198,7 +200,8 @@ export type CreateAuctionSessionTeamInput = z.infer<
 
 export const updateAuctionSessionTeamSchema = z
   .object({
-    tableOrder: z.number().int().positive().optional(),
+    tableOrder:
+      z.number().int().min(1).max(8).optional(),
     renewalCredits: z.number().int().nonnegative().optional(),
     remainingCredits: z.number().int().nonnegative().optional()
   })
@@ -1304,4 +1307,22 @@ export const publicDisplayControlPatchSchema =
 
 export type PublicDisplayControlPatch = z.infer<
   typeof publicDisplayControlPatchSchema
+>;
+
+export const reorderAuctionSessionTeamsSchema = z.object({
+  teamIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(8)
+    .refine(
+      (teamIds) =>
+        new Set(teamIds).size === teamIds.length,
+      {
+        message: "Team IDs must be unique"
+      }
+    )
+});
+
+export type ReorderAuctionSessionTeamsInput = z.infer<
+  typeof reorderAuctionSessionTeamsSchema
 >;

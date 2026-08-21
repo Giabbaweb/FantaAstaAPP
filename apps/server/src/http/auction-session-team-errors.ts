@@ -2,6 +2,14 @@ import {
   AuctionSessionTeamServiceError
 } from "../services/auction-session-team.service.js";
 
+export type AuctionSessionTeamInvalidReorderResponse = {
+  data: null;
+  error: {
+    code: "AUCTION_SESSION_TEAM_REORDER_INVALID";
+    message: string;
+  };
+};
+
 export type AuctionSessionTeamNotFoundResponse = {
   data: null;
   error: {
@@ -10,10 +18,15 @@ export type AuctionSessionTeamNotFoundResponse = {
   };
 };
 
-export type AuctionSessionTeamErrorMapping = {
-  statusCode: 404;
-  body: AuctionSessionTeamNotFoundResponse;
-};
+export type AuctionSessionTeamErrorMapping =
+  | {
+      statusCode: 400;
+      body: AuctionSessionTeamInvalidReorderResponse;
+    }
+  | {
+      statusCode: 404;
+      body: AuctionSessionTeamNotFoundResponse;
+    };
 
 export function mapAuctionSessionTeamError(
   error: unknown
@@ -28,6 +41,19 @@ export function mapAuctionSessionTeamError(
   }
 
   switch (error.code) {
+    case "AUCTION_SESSION_TEAM_REORDER_INVALID":
+      return {
+        statusCode: 400,
+        body: {
+          data: null,
+          error: {
+            code:
+              "AUCTION_SESSION_TEAM_REORDER_INVALID",
+            message: error.message
+          }
+        }
+      };
+
     case "AUCTION_SESSION_TEAM_NOT_FOUND":
       return {
         statusCode: 404,

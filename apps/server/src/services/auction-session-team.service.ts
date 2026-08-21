@@ -11,7 +11,8 @@ import type {
 export type AuctionSessionTeamServiceErrorCode =
   | "AUCTION_SESSION_TEAM_NOT_FOUND"
   | "AUCTION_SESSION_TEAM_UPDATE_FAILED"
-  | "AUCTION_SESSION_TEAM_DELETE_FAILED";
+  | "AUCTION_SESSION_TEAM_DELETE_FAILED"
+  | "AUCTION_SESSION_TEAM_REORDER_INVALID";
 
 export class AuctionSessionTeamServiceError
   extends Error
@@ -88,6 +89,83 @@ export class AuctionSessionTeamService {
     }
 
     return updatedSessionTeam;
+  }
+
+  async reorderSessionTeams(
+    auctionSessionId: string,
+    teamIds: string[]
+  ): Promise<AuctionSessionTeam[]> {
+    const current =
+      await this.repository
+        .findByAuctionSessionId(
+          auctionSessionId
+        );
+
+    if (current.length === 0) {
+      throw new AuctionSessionTeamServiceError(
+        "AUCTION_SESSION_TEAM_REORDER_INVALID",
+        `Auction session "${auctionSessionId}" has no participating teams`
+      );
+    }
+
+    if (
+      teamIds.length !== current.length
+    ) {
+      throw new AuctionSessionTeamServiceError(
+        "AUCTION_SESSION_TEAM_REORDER_INVALID",
+        `Table order must contain exactly ${current.length} teams`
+      );
+    }
+
+    const requestedTeamIds =
+      new Set(teamIds);
+
+    if (
+      requestedTeamIds.size !==
+      teamIds.length
+    ) {
+      throw new AuctionSessionTeamServiceError(
+        "AUCTION_SESSION_TEAM_REORDER_INVALID",
+        "Table order contains duplicate teams"
+      );
+    }
+
+    const currentTeamIds =
+      new Set(
+        current.map(
+          (sessionTeam) =>
+            sessionTeam.teamId
+        )
+      );
+
+    const hasUnknownTeam =
+      teamIds.some(
+        (teamId) =>
+          !currentTeamIds.has(teamId)
+      );
+
+    const hasMissingTeam =
+      current.some(
+        (sessionTeam) =>
+          !requestedTeamIds.has(
+            sessionTeam.teamId
+          )
+      );
+
+    if (
+      hasUnknownTeam ||
+      hasMissingTeam
+    ) {
+      throw new AuctionSessionTeamServiceError(
+        "AUCTION_SESSION_TEAM_REORDER_INVALID",
+        "Table order must contain exactly the teams participating in the auction session"
+      );
+    }
+
+    return this.repository.reorder(
+      auctionSessionId,
+      teamIds
+    );
   }
 
   async deleteSessionTeam(

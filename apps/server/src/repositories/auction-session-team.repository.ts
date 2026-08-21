@@ -7,7 +7,10 @@ import type {
 } from "@fantaastaapp/contracts";
 import { and, asc, eq } from "drizzle-orm";
 
-import { db } from "../db/client.js";
+import {
+  db,
+  sqlite
+} from "../db/client.js";
 import type { DatabaseWriteExecutor } from "../db/client.js";
 import {
   auctionSessionTeams
@@ -75,6 +78,11 @@ export interface AuctionSessionTeamRepository {
     teamId: string,
     input: UpdateAuctionSessionTeamInput
   ): Promise<AuctionSessionTeam | null>;
+
+  reorder(
+    auctionSessionId: string,
+    teamIds: string[]
+  ): Promise<AuctionSessionTeam[]>;
 
   delete(
     auctionSessionId: string,
@@ -175,6 +183,87 @@ export class SqliteAuctionSessionTeamRepository
       );
 
     return auctionSessionTeam ?? null;
+  }
+
+  async reorder(
+    auctionSessionId: string,
+    teamIds: string[]
+  ): Promise<AuctionSessionTeam[]> {
+    const executeReorder =
+      sqlite.transaction(() => {
+        /*
+         * table_order è UNIQUE per sessione.
+         *
+         * Uno scambio diretto 1 <-> 2 non è
+         * possibile con l'indice attivo perché
+         * SQLite verifica l'unicità durante
+         * ciascun UPDATE.
+         *
+         * L'indice viene quindi rimosso e
+         * ricreato all'interno della stessa
+         * transaction. Gli ID persistenti delle
+         * auction_session_teams non cambiano mai.
+         */
+        sqlite.exec(`
+          DROP INDEX
+          auction_session_teams_table_order_unique
+        `);
+
+        const update =
+          sqlite.prepare(`
+            UPDATE auction_session_teams
+            SET table_order = ?
+            WHERE auction_session_id = ?
+              AND team_id = ?
+          `);
+
+        for (
+          let index = 0;
+          index < teamIds.length;
+          index += 1
+        ) {
+          const teamId =
+            teamIds[index];
+
+          if (!teamId) {
+            throw new Error(
+              "Invalid team ID during table reorder"
+            );
+          }
+
+          const result =
+            update.run(
+              index + 1,
+              auctionSessionId,
+              teamId
+            );
+
+          if (result.changes !== 1) {
+            throw new Error(
+              `Failed to reorder team "${teamId}" in auction session "${auctionSessionId}"`
+            );
+          }
+        }
+
+        sqlite.exec(`
+          CREATE UNIQUE INDEX
+          auction_session_teams_table_order_unique
+          ON auction_session_teams (
+            auction_session_id,
+            table_order
+          )
+        `);
+      });
+
+    /*
+     * IMMEDIATE acquisisce il write lock prima
+     * di modificare temporaneamente l'indice.
+     */
+    executeReorder.immediate();
+
+    return this.findByAuctionSessionId(
+      auctionSessionId
+    );
   }
 
   findByIdWithExecutor(
