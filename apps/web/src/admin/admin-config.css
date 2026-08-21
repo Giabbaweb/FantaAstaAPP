@@ -121,10 +121,11 @@
 .admin-config-team {
   display: grid;
   grid-template-columns:
-    54px
+    76px
     minmax(220px, 1.15fr)
     minmax(220px, 1fr)
-    100px;
+    90px
+    90px;
   align-items: center;
   gap: 14px;
   min-height: 70px;
@@ -243,10 +244,11 @@
 
   .admin-config-team {
     grid-template-columns:
-      50px
-      minmax(180px, 1fr)
-      minmax(180px, 1fr)
-      80px;
+      70px
+      minmax(170px, 1fr)
+      minmax(170px, 1fr)
+      70px
+      82px;
   }
 }
 
@@ -296,5 +298,75 @@
   background: #fff4f2;
   color: #b42318;
   font-size: 0.78rem;
+  font-weight: 700;
+}
+
+
+.admin-config-team__actions,
+.admin-config-team__edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.admin-config-team__actions button,
+.admin-config-team__edit-actions button {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #b8c6d3;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #334a5e;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-config-team__edit-actions button:first-child {
+  border-color: #4d9362;
+  background: #eaf7ee;
+  color: #245f38;
+}
+
+.admin-config-team__actions button:disabled,
+.admin-config-team__edit-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-config-team__edit-identity,
+.admin-config-team__edit-owners {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-config-team__edit-identity label,
+.admin-config-team__edit-owners label {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-config-team__edit-identity input,
+.admin-config-team__edit-owners input,
+.admin-config-team__edit-owners select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: 1px solid #c8d3dd;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #263746;
+  font: inherit;
+}
+
+.admin-config-team__edit-error {
+  grid-column: 2 / -1;
+  margin: 2px 0 0;
+  padding: 7px 9px;
+  border: 1px solid #efc1bc;
+  border-radius: 7px;
+  background: #fff4f2;
+  color: #b42318;
+  font-size: 0.72rem;
   font-weight: 700;
 }

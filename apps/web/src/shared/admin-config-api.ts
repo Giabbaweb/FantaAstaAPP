@@ -1,8 +1,13 @@
 import type {
   AuctionSessionTeam,
+  CreateOwnerInput,
+  CreateTeamOwnerInput,
   Owner,
   Team,
-  TeamOwner
+  TeamOwner,
+  UpdateOwnerInput,
+  UpdateTeamInput,
+  UpdateTeamOwnerInput
 } from "@fantaastaapp/contracts";
 
 import {
@@ -56,6 +61,99 @@ export function reorderAuctionSessionTeams(
       body: JSON.stringify({
         teamIds
       })
+    }
+  );
+}
+
+
+export function updateTeam(
+  teamId: string,
+  input: UpdateTeamInput
+): Promise<Team> {
+  return apiRequest<Team>(
+    `/api/teams/${teamId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function createOwner(
+  input: CreateOwnerInput
+): Promise<Owner> {
+  return apiRequest<Owner>(
+    "/api/owners",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function updateOwner(
+  ownerId: string,
+  input: UpdateOwnerInput
+): Promise<Owner> {
+  return apiRequest<Owner>(
+    `/api/owners/${ownerId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function createTeamOwner(
+  teamId: string,
+  input: CreateTeamOwnerInput
+): Promise<TeamOwner> {
+  return apiRequest<TeamOwner>(
+    `/api/teams/${teamId}/owners`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function updateTeamOwner(
+  teamId: string,
+  ownerId: string,
+  input: UpdateTeamOwnerInput
+): Promise<TeamOwner> {
+  return apiRequest<TeamOwner>(
+    `/api/teams/${teamId}/owners/${ownerId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function deleteTeamOwner(
+  teamId: string,
+  ownerId: string
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/teams/${teamId}/owners/${ownerId}`,
+    {
+      method: "DELETE"
     }
   );
 }

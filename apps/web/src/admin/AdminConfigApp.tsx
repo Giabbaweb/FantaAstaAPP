@@ -19,11 +19,16 @@ import {
 } from "../shared/app-api.js";
 
 import {
+  createOwner,
+  createTeamOwner,
+  deleteTeamOwner,
   fetchAuctionSessionTeams,
   fetchOwners,
   fetchTeamOwners,
   fetchTeamsByLeague,
-  reorderAuctionSessionTeams
+  reorderAuctionSessionTeams,
+  updateTeam,
+  updateTeamOwner
 } from "../shared/admin-config-api.js";
 
 import "./admin-config.css";
@@ -35,6 +40,18 @@ type ConfigStatus =
 
 type TeamOwnerMap =
   Record<string, TeamOwner[]>;
+
+const NEW_OWNER_VALUE =
+  "__NEW_OWNER__";
+
+type TeamEditDraft = {
+  name: string;
+  shortName: string;
+  primaryOwnerId: string;
+  primaryOwnerNewName: string;
+  secondaryOwnerId: string;
+  secondaryOwnerNewName: string;
+};
 
 export function AdminConfigApp() {
   const [
@@ -93,6 +110,32 @@ export function AdminConfigApp() {
   const [
     tableOrderError,
     setTableOrderError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    editingTeamId,
+    setEditingTeamId
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    teamEditDraft,
+    setTeamEditDraft
+  ] = useState<TeamEditDraft | null>(
+    null
+  );
+
+  const [
+    teamEditPending,
+    setTeamEditPending
+  ] = useState(false);
+
+  const [
+    teamEditError,
+    setTeamEditError
   ] = useState<string | null>(
     null
   );
@@ -363,6 +406,288 @@ export function AdminConfigApp() {
     }
   }
 
+  function beginTeamEdit(
+    team: Team
+  ): void {
+    const associations =
+      teamOwners[team.id] ?? [];
+
+    const primary =
+      associations.find(
+        (association) =>
+          association.isPrimary
+      );
+
+    const secondary =
+      associations.find(
+        (association) =>
+          !association.isPrimary
+      );
+
+    setEditingTeamId(team.id);
+    setTeamEditError(null);
+
+    setTeamEditDraft({
+      name: team.name,
+      shortName:
+        team.shortName ?? "",
+      primaryOwnerId:
+        primary?.ownerId ?? "",
+      primaryOwnerNewName: "",
+      secondaryOwnerId:
+        secondary?.ownerId ?? "",
+      secondaryOwnerNewName: ""
+    });
+  }
+
+  function cancelTeamEdit(): void {
+    if (teamEditPending) {
+      return;
+    }
+
+    setEditingTeamId(null);
+    setTeamEditDraft(null);
+    setTeamEditError(null);
+  }
+
+  async function resolveOwnerId(
+    selectedOwnerId: string,
+    newOwnerName: string
+  ): Promise<string | null> {
+    if (!selectedOwnerId) {
+      return null;
+    }
+
+    if (
+      selectedOwnerId !==
+      NEW_OWNER_VALUE
+    ) {
+      return selectedOwnerId;
+    }
+
+    const name =
+      newOwnerName.trim();
+
+    if (!name) {
+      throw new Error(
+        "Inserisci il nome del nuovo Presidente."
+      );
+    }
+
+    const owner =
+      await createOwner({
+        name
+      });
+
+    return owner.id;
+  }
+
+  async function saveTeamEdit(
+    team: Team
+  ): Promise<void> {
+    if (
+      !teamEditDraft ||
+      editingTeamId !== team.id ||
+      teamEditPending
+    ) {
+      return;
+    }
+
+    const name =
+      teamEditDraft.name.trim();
+
+    if (!name) {
+      setTeamEditError(
+        "Il nome della squadra è obbligatorio."
+      );
+      return;
+    }
+
+    setTeamEditPending(true);
+    setTeamEditError(null);
+
+    try {
+      const primaryOwnerId =
+        await resolveOwnerId(
+          teamEditDraft.primaryOwnerId,
+          teamEditDraft
+            .primaryOwnerNewName
+        );
+
+      if (!primaryOwnerId) {
+        throw new Error(
+          "Seleziona il Presidente principale."
+        );
+      }
+
+      const secondaryOwnerId =
+        await resolveOwnerId(
+          teamEditDraft.secondaryOwnerId,
+          teamEditDraft
+            .secondaryOwnerNewName
+        );
+
+      if (
+        secondaryOwnerId &&
+        secondaryOwnerId ===
+          primaryOwnerId
+      ) {
+        throw new Error(
+          "Presidente e co-presidente devono essere persone diverse."
+        );
+      }
+
+      const updatedTeam =
+        await updateTeam(
+          team.id,
+          {
+            name,
+            shortName:
+              teamEditDraft.shortName
+                .trim() || null
+          }
+        );
+
+      const currentAssociations =
+        teamOwners[team.id] ?? [];
+
+      const desiredOwnerIds =
+        new Set(
+          [
+            primaryOwnerId,
+            secondaryOwnerId
+          ].filter(
+            (
+              ownerId
+            ): ownerId is string =>
+              Boolean(ownerId)
+          )
+        );
+
+      for (
+        const association
+        of currentAssociations
+      ) {
+        if (
+          !desiredOwnerIds.has(
+            association.ownerId
+          )
+        ) {
+          await deleteTeamOwner(
+            team.id,
+            association.ownerId
+          );
+        }
+      }
+
+      const primaryAssociation =
+        currentAssociations.find(
+          (association) =>
+            association.ownerId ===
+            primaryOwnerId
+        );
+
+      if (primaryAssociation) {
+        if (
+          !primaryAssociation.isPrimary
+        ) {
+          await updateTeamOwner(
+            team.id,
+            primaryOwnerId,
+            {
+              isPrimary: true
+            }
+          );
+        }
+      } else {
+        await createTeamOwner(
+          team.id,
+          {
+            ownerId:
+              primaryOwnerId,
+            isPrimary: true
+          }
+        );
+      }
+
+      if (secondaryOwnerId) {
+        const secondaryAssociation =
+          currentAssociations.find(
+            (association) =>
+              association.ownerId ===
+              secondaryOwnerId
+          );
+
+        if (secondaryAssociation) {
+          if (
+            secondaryAssociation.isPrimary
+          ) {
+            await updateTeamOwner(
+              team.id,
+              secondaryOwnerId,
+              {
+                isPrimary: false
+              }
+            );
+          }
+        } else {
+          await createTeamOwner(
+            team.id,
+            {
+              ownerId:
+                secondaryOwnerId,
+              isPrimary: false
+            }
+          );
+        }
+      }
+
+      const [
+        refreshedOwners,
+        refreshedAssociations
+      ] = await Promise.all([
+        fetchOwners(),
+        fetchTeamOwners(
+          team.id
+        )
+      ]);
+
+      setTeams(
+        (currentTeams) =>
+          currentTeams.map(
+            (currentTeam) =>
+              currentTeam.id ===
+              updatedTeam.id
+                ? updatedTeam
+                : currentTeam
+          )
+      );
+
+      setOwners(
+        refreshedOwners
+      );
+
+      setTeamOwners(
+        (current) => ({
+          ...current,
+          [team.id]:
+            refreshedAssociations
+        })
+      );
+
+      setEditingTeamId(null);
+      setTeamEditDraft(null);
+    } catch (error) {
+      setTeamEditError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il salvataggio della squadra."
+      );
+    } finally {
+      setTeamEditPending(false);
+    }
+  }
+
   if (status === "LOADING") {
     return (
       <main className="admin-config">
@@ -622,100 +947,378 @@ export function AdminConfigApp() {
                     </div>
                   </div>
 
-                  <div className="admin-config-team__identity">
-                    <div className="admin-config-team__logo">
-                      {team.logoPath ? (
-                        <img
-                          src={team.logoPath}
-                          alt=""
-                        />
-                      ) : (
-                        <span>
-                          {
-                            team.shortName
-                              ?.slice(
-                                0,
-                                3
-                              ) ??
-                            team.name
-                              .slice(
-                                0,
-                                2
+                  {editingTeamId === team.id &&
+                  teamEditDraft ? (
+                    <>
+                      <div className="admin-config-team__edit-identity">
+                        <label>
+                          <span>
+                            Nome squadra
+                          </span>
+
+                          <input
+                            type="text"
+                            value={
+                              teamEditDraft.name
+                            }
+                            disabled={
+                              teamEditPending
+                            }
+                            onChange={(event) => {
+                              setTeamEditDraft(
+                                (current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        name:
+                                          event.target.value
+                                      }
+                                    : current
+                              );
+                            }}
+                          />
+                        </label>
+
+                        <label>
+                          <span>
+                            Nome breve
+                          </span>
+
+                          <input
+                            type="text"
+                            value={
+                              teamEditDraft.shortName
+                            }
+                            disabled={
+                              teamEditPending
+                            }
+                            onChange={(event) => {
+                              setTeamEditDraft(
+                                (current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        shortName:
+                                          event.target.value
+                                      }
+                                    : current
+                              );
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="admin-config-team__edit-owners">
+                        <label>
+                          <span>
+                            Presidente
+                          </span>
+
+                          <select
+                            value={
+                              teamEditDraft.primaryOwnerId
+                            }
+                            disabled={
+                              teamEditPending
+                            }
+                            onChange={(event) => {
+                              setTeamEditDraft(
+                                (current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        primaryOwnerId:
+                                          event.target.value,
+                                        primaryOwnerNewName:
+                                          ""
+                                      }
+                                    : current
+                              );
+                            }}
+                          >
+                            <option value="">
+                              Seleziona...
+                            </option>
+
+                            {owners.map(
+                              (owner) => (
+                                <option
+                                  key={owner.id}
+                                  value={owner.id}
+                                >
+                                  {owner.name}
+                                </option>
                               )
+                            )}
+
+                            <option
+                              value={
+                                NEW_OWNER_VALUE
+                              }
+                            >
+                              + Nuovo Presidente
+                            </option>
+                          </select>
+
+                          {teamEditDraft.primaryOwnerId ===
+                            NEW_OWNER_VALUE && (
+                            <input
+                              type="text"
+                              placeholder="Nome nuovo Presidente"
+                              value={
+                                teamEditDraft
+                                  .primaryOwnerNewName
+                              }
+                              disabled={
+                                teamEditPending
+                              }
+                              onChange={(event) => {
+                                setTeamEditDraft(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          primaryOwnerNewName:
+                                            event.target.value
+                                        }
+                                      : current
+                                );
+                              }}
+                            />
+                          )}
+                        </label>
+
+                        <label>
+                          <span>
+                            Co-presidente
+                          </span>
+
+                          <select
+                            value={
+                              teamEditDraft.secondaryOwnerId
+                            }
+                            disabled={
+                              teamEditPending
+                            }
+                            onChange={(event) => {
+                              setTeamEditDraft(
+                                (current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        secondaryOwnerId:
+                                          event.target.value,
+                                        secondaryOwnerNewName:
+                                          ""
+                                      }
+                                    : current
+                              );
+                            }}
+                          >
+                            <option value="">
+                              Nessuno
+                            </option>
+
+                            {owners.map(
+                              (owner) => (
+                                <option
+                                  key={owner.id}
+                                  value={owner.id}
+                                >
+                                  {owner.name}
+                                </option>
+                              )
+                            )}
+
+                            <option
+                              value={
+                                NEW_OWNER_VALUE
+                              }
+                            >
+                              + Nuovo co-presidente
+                            </option>
+                          </select>
+
+                          {teamEditDraft.secondaryOwnerId ===
+                            NEW_OWNER_VALUE && (
+                            <input
+                              type="text"
+                              placeholder="Nome nuovo co-presidente"
+                              value={
+                                teamEditDraft
+                                  .secondaryOwnerNewName
+                              }
+                              disabled={
+                                teamEditPending
+                              }
+                              onChange={(event) => {
+                                setTeamEditDraft(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          secondaryOwnerNewName:
+                                            event.target.value
+                                        }
+                                      : current
+                                );
+                              }}
+                            />
+                          )}
+                        </label>
+                      </div>
+
+                      <div className="admin-config-team__edit-actions">
+                        <button
+                          type="button"
+                          disabled={
+                            teamEditPending
                           }
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      <strong>
-                        {team.name}
-                      </strong>
-
-                      {team.shortName && (
-                        <small>
+                          onClick={() => {
+                            void saveTeamEdit(
+                              team
+                            );
+                          }}
+                        >
                           {
-                            team.shortName
+                            teamEditPending
+                              ? "Salvataggio..."
+                              : "Salva"
                           }
-                        </small>
-                      )}
-                    </div>
-                  </div>
+                        </button>
 
-                  <div className="admin-config-team__owners">
-                    <span>
-                      Presidente
-                    </span>
+                        <button
+                          type="button"
+                          disabled={
+                            teamEditPending
+                          }
+                          onClick={
+                            cancelTeamEdit
+                          }
+                        >
+                          Annulla
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="admin-config-team__identity">
+                        <div className="admin-config-team__logo">
+                          {team.logoPath ? (
+                            <img
+                              src={team.logoPath}
+                              alt=""
+                            />
+                          ) : (
+                            <span>
+                              {
+                                team.shortName
+                                  ?.slice(
+                                    0,
+                                    3
+                                  ) ??
+                                team.name.slice(
+                                  0,
+                                  2
+                                )
+                              }
+                            </span>
+                          )}
+                        </div>
 
-                    <strong>
-                      {
-                        primaryOwner
-                          ? ownerById.get(
-                              primaryOwner
-                                .ownerId
-                            )?.name ??
+                        <div>
+                          <strong>
+                            {team.name}
+                          </strong>
+
+                          {team.shortName && (
+                            <small>
+                              {team.shortName}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="admin-config-team__owners">
+                        <span>
+                          Presidente
+                        </span>
+
+                        <strong>
+                          {
                             primaryOwner
-                              .ownerId
-                          : "Non assegnato"
-                      }
-                    </strong>
-
-                    {secondaryOwners.length >
-                      0 && (
-                      <small>
-                        Co-presidente:{" "}
-                        {
-                          secondaryOwners
-                            .map(
-                              (
-                                association
-                              ) =>
-                                ownerById.get(
-                                  association
-                                    .ownerId
+                              ? ownerById.get(
+                                  primaryOwner.ownerId
                                 )?.name ??
-                                association
-                                  .ownerId
-                            )
-                            .join(", ")
-                        }
-                      </small>
-                    )}
-                  </div>
+                                primaryOwner.ownerId
+                              : "Non assegnato"
+                          }
+                        </strong>
 
-                  <div className="admin-config-team__credits">
-                    <span>
-                      Crediti
-                    </span>
+                        {secondaryOwners.length >
+                          0 && (
+                          <small>
+                            Co-presidente:{" "}
+                            {
+                              secondaryOwners
+                                .slice(
+                                  0,
+                                  1
+                                )
+                                .map(
+                                  (
+                                    association
+                                  ) =>
+                                    ownerById.get(
+                                      association.ownerId
+                                    )?.name ??
+                                    association.ownerId
+                                )
+                                .join(", ")
+                            }
+                          </small>
+                        )}
+                      </div>
 
-                    <strong>
-                      {
-                        sessionTeam
-                          ?.remainingCredits ??
-                        "-"
-                      }
-                    </strong>
-                  </div>
+                      <div className="admin-config-team__credits">
+                        <span>
+                          Crediti
+                        </span>
+
+                        <strong>
+                          {
+                            sessionTeam
+                              ?.remainingCredits ??
+                            "-"
+                          }
+                        </strong>
+                      </div>
+
+                      <div className="admin-config-team__actions">
+                        <button
+                          type="button"
+                          disabled={
+                            teamEditPending ||
+                            tableOrderPending
+                          }
+                          onClick={() => {
+                            beginTeamEdit(
+                              team
+                            );
+                          }}
+                        >
+                          Modifica
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {editingTeamId === team.id &&
+                    teamEditError && (
+                    <p className="admin-config-team__edit-error">
+                      {teamEditError}
+                    </p>
+                  )}
                 </article>
               );
             }
