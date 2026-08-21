@@ -5,6 +5,9 @@ import {
   AdminApp
 } from "./admin/AdminApp.js";
 import {
+  AdminConfigApp
+} from "./admin/AdminConfigApp.js";
+import {
   PublicDisplay
 } from "./public/PublicDisplay.js";
 import {
@@ -26,9 +29,11 @@ const pathname =
 const app =
   pathname === "/public"
     ? <PublicDisplay />
-    : pathname === "/admin"
-      ? <AdminApp />
-      : pathname === "/remote"
+    : pathname === "/admin/config"
+      ? <AdminConfigApp />
+      : pathname === "/admin"
+        ? <AdminApp />
+        : pathname === "/remote"
         ? <RemoteApp />
         : (
             <main>

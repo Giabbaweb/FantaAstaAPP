@@ -1,0 +1,251 @@
+.admin-config {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 24px;
+  background: #eef2f6;
+  color: #17212b;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.admin-config__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+  padding: 22px 24px;
+  border: 1px solid #d4dde6;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.admin-config__header h1 {
+  margin: 2px 0 5px;
+  font-size: 2rem;
+}
+
+.admin-config__header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.admin-config__header > a {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid #b8c5d1;
+  border-radius: 9px;
+  background: #f7f9fb;
+  color: #263746;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.admin-config__eyebrow {
+  margin: 0;
+  color: #1976d2 !important;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-config__summary {
+  display: grid;
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-config__summary article {
+  padding: 14px 16px;
+  border: 1px solid #d4dde6;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.admin-config__summary span,
+.admin-config-team span {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-config__summary strong {
+  font-size: 1.05rem;
+}
+
+.admin-config__panel {
+  padding: 20px;
+  border: 1px solid #d4dde6;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.admin-config__section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.admin-config__section-heading h2 {
+  margin: 3px 0 0;
+}
+
+.admin-config__section-heading > span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #eef4fa;
+  color: #496174;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.admin-config__teams {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-config-team {
+  display: grid;
+  grid-template-columns:
+    54px
+    minmax(220px, 1.15fr)
+    minmax(220px, 1fr)
+    100px;
+  align-items: center;
+  gap: 14px;
+  min-height: 70px;
+  padding: 10px 14px;
+  border: 1px solid #dde5ec;
+  border-radius: 10px;
+  background: #fafcfd;
+}
+
+.admin-config-team__order {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #1976d2;
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.admin-config-team__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-config-team__identity strong {
+  display: block;
+  overflow: hidden;
+  font-size: 1rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-config-team__identity small {
+  display: block;
+  margin-top: 3px;
+  color: #718096;
+}
+
+.admin-config-team__logo {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid #d6dfe7;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #617385;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.admin-config-team__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.admin-config-team__owners {
+  min-width: 0;
+}
+
+.admin-config-team__owners strong {
+  display: block;
+}
+
+.admin-config-team__owners small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #718096;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-config-team__credits {
+  text-align: right;
+}
+
+.admin-config-team__credits strong {
+  font-size: 1.15rem;
+}
+
+.admin-config__next {
+  margin-top: 18px;
+  padding: 15px 18px;
+  border: 1px dashed #9eb6ca;
+  border-radius: 11px;
+  background: #f6f9fc;
+}
+
+.admin-config__next span {
+  display: block;
+  margin-bottom: 3px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-config__error {
+  color: #b42318;
+  font-weight: 700;
+}
+
+@media (max-width: 1000px) {
+  .admin-config__summary {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-config-team {
+    grid-template-columns:
+      50px
+      minmax(180px, 1fr)
+      minmax(180px, 1fr)
+      80px;
+  }
+}
