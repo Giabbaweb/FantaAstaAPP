@@ -14,6 +14,7 @@ export const leagues = sqliteTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
+    logoPath: text("logo_path"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),

@@ -44,6 +44,7 @@ export interface RealtimeSnapshotTeamReader {
 export type RealtimePublicDisplayLeagueData = {
   id: string;
   name: string;
+  logoPath: string | null;
 };
 
 export type RealtimePublicDisplayTeamData = {
@@ -201,7 +202,8 @@ export class SqliteRealtimePublicDisplayReader
     const [record] = await db
       .select({
         id: leagues.id,
-        name: leagues.name
+        name: leagues.name,
+        logoPath: leagues.logoPath
       })
       .from(auctionSessions)
       .innerJoin(

@@ -497,18 +497,20 @@ export function PublicDisplay():
         </div>
 
         <div className="public-display__league-brand">
-          <img
-            className="public-display__league-logo"
-            src={
-              `/league-logos/${snapshot.publicDisplay.league.id}.png`
-            }
-            alt=""
-            aria-hidden="true"
-            onError={(event) => {
-              event.currentTarget.style.display =
-                "none";
-            }}
-          />
+          {snapshot.publicDisplay.league.logoPath && (
+            <img
+              className="public-display__league-logo"
+              src={
+                snapshot.publicDisplay.league.logoPath
+              }
+              alt=""
+              aria-hidden="true"
+              onError={(event) => {
+                event.currentTarget.style.display =
+                  "none";
+              }}
+            />
+          )}
 
           <div className="public-display__league-copy">
             <strong className="public-display__league-name">

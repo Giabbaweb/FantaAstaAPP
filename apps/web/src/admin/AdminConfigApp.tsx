@@ -19,6 +19,7 @@ import {
 } from "../shared/app-api.js";
 
 import {
+  createLeague,
   createOwner,
   createTeamOwner,
   deleteTeamOwner,
@@ -27,8 +28,11 @@ import {
   fetchTeamOwners,
   fetchTeamsByLeague,
   reorderAuctionSessionTeams,
+  updateLeague,
   updateTeam,
-  updateTeamOwner
+  updateTeamOwner,
+  uploadLeagueLogo,
+  uploadTeamLogo
 } from "../shared/admin-config-api.js";
 
 import "./admin-config.css";
@@ -44,11 +48,21 @@ type TeamOwnerMap =
 const NEW_OWNER_VALUE =
   "__NEW_OWNER__";
 
+type LeagueEditMode =
+  | "CREATE"
+  | "EDIT";
+
+type LeagueEditDraft = {
+  name: string;
+  logoFile: File | null;
+};
+
 type TeamEditDraft = {
   name: string;
   shortName: string;
   primaryColor: string;
   secondaryColor: string;
+  logoFile: File | null;
   primaryOwnerId: string;
   primaryOwnerNewName: string;
   secondaryOwnerId: string;
@@ -86,6 +100,46 @@ export function AdminConfigApp() {
     teams,
     setTeams
   ] = useState<Team[]>([]);
+
+  const [
+    managedLeagueId,
+    setManagedLeagueId
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    leagueEditMode,
+    setLeagueEditMode
+  ] = useState<LeagueEditMode | null>(
+    null
+  );
+
+  const [
+    leagueEditDraft,
+    setLeagueEditDraft
+  ] = useState<LeagueEditDraft | null>(
+    null
+  );
+
+  const [
+    leagueEditPending,
+    setLeagueEditPending
+  ] = useState(false);
+
+  const [
+    leagueEditError,
+    setLeagueEditError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    leagueLogoPreviewUrl,
+    setLeagueLogoPreviewUrl
+  ] = useState<string | null>(
+    null
+  );
 
   const [
     owners,
@@ -142,6 +196,13 @@ export function AdminConfigApp() {
     null
   );
 
+  const [
+    teamLogoPreviewUrl,
+    setTeamLogoPreviewUrl
+  ] = useState<string | null>(
+    null
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -161,6 +222,12 @@ export function AdminConfigApp() {
 
         setSession(activeSession);
         setLeagues(availableLeagues);
+
+        setManagedLeagueId(
+          activeSession?.leagueId ??
+            availableLeagues[0]?.id ??
+            null
+        );
 
         if (!activeSession) {
           setStatus("READY");
@@ -256,6 +323,22 @@ export function AdminConfigApp() {
       ]
     );
 
+  const managedLeague =
+    useMemo(
+      () =>
+        managedLeagueId
+          ? leagues.find(
+              (candidate) =>
+                candidate.id ===
+                  managedLeagueId
+            ) ?? null
+          : null,
+      [
+        leagues,
+        managedLeagueId
+      ]
+    );
+
   const ownerById =
     useMemo(
       () =>
@@ -321,6 +404,166 @@ export function AdminConfigApp() {
         sessionTeamByTeamId
       ]
     );
+
+  function clearLeagueLogoPreview(): void {
+    if (leagueLogoPreviewUrl) {
+      URL.revokeObjectURL(
+        leagueLogoPreviewUrl
+      );
+    }
+
+    setLeagueLogoPreviewUrl(null);
+  }
+
+  function selectLeagueLogoFile(
+    file: File | null
+  ): void {
+    clearLeagueLogoPreview();
+
+    const previewUrl =
+      file
+        ? URL.createObjectURL(file)
+        : null;
+
+    setLeagueLogoPreviewUrl(
+      previewUrl
+    );
+
+    setLeagueEditDraft(
+      (current) =>
+        current
+          ? {
+              ...current,
+              logoFile: file
+            }
+          : current
+    );
+  }
+
+  function beginCreateLeague(): void {
+    if (leagueEditPending) {
+      return;
+    }
+
+    clearLeagueLogoPreview();
+
+    setLeagueEditError(null);
+    setLeagueEditMode("CREATE");
+    setLeagueEditDraft({
+      name: "",
+      logoFile: null
+    });
+  }
+
+  function beginEditLeague(): void {
+    if (
+      !managedLeague ||
+      leagueEditPending
+    ) {
+      return;
+    }
+
+    clearLeagueLogoPreview();
+
+    setLeagueEditError(null);
+    setLeagueEditMode("EDIT");
+    setLeagueEditDraft({
+      name: managedLeague.name,
+      logoFile: null
+    });
+  }
+
+  function cancelLeagueEdit(): void {
+    if (leagueEditPending) {
+      return;
+    }
+
+    clearLeagueLogoPreview();
+
+    setLeagueEditMode(null);
+    setLeagueEditDraft(null);
+    setLeagueEditError(null);
+  }
+
+  async function saveLeagueEdit(): Promise<void> {
+    if (
+      !leagueEditMode ||
+      !leagueEditDraft ||
+      leagueEditPending
+    ) {
+      return;
+    }
+
+    const name =
+      leagueEditDraft.name.trim();
+
+    if (!name) {
+      setLeagueEditError(
+        "Inserisci il nome della lega."
+      );
+      return;
+    }
+
+    setLeagueEditPending(true);
+    setLeagueEditError(null);
+
+    try {
+      let savedLeague: League;
+
+      if (leagueEditMode === "CREATE") {
+        savedLeague =
+          await createLeague({
+            name
+          });
+      } else {
+        if (!managedLeague) {
+          throw new Error(
+            "Lega da modificare non disponibile."
+          );
+        }
+
+        savedLeague =
+          await updateLeague(
+            managedLeague.id,
+            {
+              name
+            }
+          );
+      }
+
+      if (leagueEditDraft.logoFile) {
+        savedLeague =
+          await uploadLeagueLogo(
+            savedLeague.id,
+            leagueEditDraft.logoFile
+          );
+      }
+
+      const refreshedLeagues =
+        await fetchLeagues();
+
+      setLeagues(
+        refreshedLeagues
+      );
+
+      setManagedLeagueId(
+        savedLeague.id
+      );
+
+      clearLeagueLogoPreview();
+
+      setLeagueEditMode(null);
+      setLeagueEditDraft(null);
+    } catch (error) {
+      setLeagueEditError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il salvataggio della lega."
+      );
+    } finally {
+      setLeagueEditPending(false);
+    }
+  }
 
   async function moveTeam(
     teamId: string,
@@ -408,6 +651,35 @@ export function AdminConfigApp() {
     }
   }
 
+  function selectTeamLogoFile(
+    file: File | null
+  ): void {
+    if (teamLogoPreviewUrl) {
+      URL.revokeObjectURL(
+        teamLogoPreviewUrl
+      );
+    }
+
+    const previewUrl =
+      file
+        ? URL.createObjectURL(file)
+        : null;
+
+    setTeamLogoPreviewUrl(
+      previewUrl
+    );
+
+    setTeamEditDraft(
+      (current) =>
+        current
+          ? {
+              ...current,
+              logoFile: file
+            }
+          : current
+    );
+  }
+
   function beginTeamEdit(
     team: Team
   ): void {
@@ -426,6 +698,13 @@ export function AdminConfigApp() {
           !association.isPrimary
       );
 
+    if (teamLogoPreviewUrl) {
+      URL.revokeObjectURL(
+        teamLogoPreviewUrl
+      );
+    }
+
+    setTeamLogoPreviewUrl(null);
     setEditingTeamId(team.id);
     setTeamEditError(null);
 
@@ -437,6 +716,7 @@ export function AdminConfigApp() {
         team.primaryColor ?? "#1976D2",
       secondaryColor:
         team.secondaryColor ?? "#FFFFFF",
+      logoFile: null,
       primaryOwnerId:
         primary?.ownerId ?? "",
       primaryOwnerNewName: "",
@@ -451,6 +731,13 @@ export function AdminConfigApp() {
       return;
     }
 
+    if (teamLogoPreviewUrl) {
+      URL.revokeObjectURL(
+        teamLogoPreviewUrl
+      );
+    }
+
+    setTeamLogoPreviewUrl(null);
     setEditingTeamId(null);
     setTeamEditDraft(null);
     setTeamEditError(null);
@@ -560,7 +847,7 @@ export function AdminConfigApp() {
         );
       }
 
-      const updatedTeam =
+      let updatedTeam =
         await updateTeam(
           team.id,
           {
@@ -576,6 +863,16 @@ export function AdminConfigApp() {
                 .toUpperCase()
           }
         );
+
+      if (
+        teamEditDraft.logoFile
+      ) {
+        updatedTeam =
+          await uploadTeamLogo(
+            team.id,
+            teamEditDraft.logoFile
+          );
+      }
 
       const currentAssociations =
         teamOwners[team.id] ?? [];
@@ -704,6 +1001,13 @@ export function AdminConfigApp() {
         })
       );
 
+      if (teamLogoPreviewUrl) {
+        URL.revokeObjectURL(
+          teamLogoPreviewUrl
+        );
+      }
+
+      setTeamLogoPreviewUrl(null);
       setEditingTeamId(null);
       setTeamEditDraft(null);
     } catch (error) {
@@ -803,6 +1107,297 @@ export function AdminConfigApp() {
           Cockpit asta
         </a>
       </header>
+
+      <section className="admin-config__panel admin-config__league-panel">
+        <div className="admin-config__section-heading">
+          <div>
+            <p className="admin-config__eyebrow">
+              Archivio configurazione
+            </p>
+
+            <h2>
+              Gestione Leghe
+            </h2>
+          </div>
+
+          <span>
+            {leagues.length} {
+              leagues.length === 1
+                ? "lega"
+                : "leghe"
+            }
+          </span>
+        </div>
+
+        <div className="admin-config-league__toolbar">
+          <label>
+            <span>
+              Lega da gestire
+            </span>
+
+            <select
+              value={
+                managedLeagueId ?? ""
+              }
+              disabled={
+                leagueEditPending ||
+                leagueEditMode !== null
+              }
+              onChange={(event) => {
+                setManagedLeagueId(
+                  event.target.value ||
+                    null
+                );
+                setLeagueEditError(null);
+              }}
+            >
+              {leagues.length === 0 && (
+                <option value="">
+                  Nessuna lega
+                </option>
+              )}
+
+              {leagues.map(
+                (candidate) => (
+                  <option
+                    key={candidate.id}
+                    value={candidate.id}
+                  >
+                    {candidate.name}
+                    {
+                      session &&
+                      candidate.id ===
+                        session.leagueId
+                        ? " · sessione attiva"
+                        : ""
+                    }
+                  </option>
+                )
+              )}
+            </select>
+          </label>
+
+          <div className="admin-config-league__actions">
+            <button
+              type="button"
+              disabled={
+                leagueEditPending ||
+                leagueEditMode !== null
+              }
+              onClick={
+                beginCreateLeague
+              }
+            >
+              + Nuova lega
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                !managedLeague ||
+                leagueEditPending ||
+                leagueEditMode !== null
+              }
+              onClick={
+                beginEditLeague
+              }
+            >
+              Modifica lega
+            </button>
+          </div>
+        </div>
+
+        {leagueEditMode === null && (
+          <div className="admin-config-league__current">
+            <div className="admin-config-league__logo">
+              {managedLeague?.logoPath
+                ? (
+                    <img
+                      src={
+                        managedLeague.logoPath
+                      }
+                      alt={
+                        `Logo ${managedLeague.name}`
+                      }
+                    />
+                  )
+                : (
+                    <span>
+                      Nessun logo
+                    </span>
+                  )}
+            </div>
+
+            <div>
+              <strong>
+                {
+                  managedLeague?.name ??
+                  "Nessuna lega selezionata"
+                }
+              </strong>
+
+              {managedLeague && (
+                <>
+                  <small>
+                    ID: {managedLeague.id}
+                  </small>
+
+                  {session &&
+                    managedLeague.id ===
+                      session.leagueId && (
+                      <small className="admin-config-league__active">
+                        Lega della sessione attiva
+                      </small>
+                    )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {leagueEditMode &&
+          leagueEditDraft && (
+          <div className="admin-config-league__editor">
+            <label>
+              <span>
+                Nome lega
+              </span>
+
+              <input
+                type="text"
+                value={
+                  leagueEditDraft.name
+                }
+                disabled={
+                  leagueEditPending
+                }
+                autoFocus
+                onChange={(event) => {
+                  setLeagueEditDraft(
+                    (current) =>
+                      current
+                        ? {
+                            ...current,
+                            name:
+                              event.target.value
+                          }
+                        : current
+                  );
+                }}
+              />
+            </label>
+
+            <label>
+              <span>
+                Logo lega
+              </span>
+
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={
+                  leagueEditPending
+                }
+                onChange={(event) => {
+                  selectLeagueLogoFile(
+                    event.target.files?.[0] ??
+                      null
+                  );
+                }}
+              />
+            </label>
+
+            <div className="admin-config-league__preview">
+              <div>
+                {
+                  leagueLogoPreviewUrl
+                    ? (
+                        <img
+                          src={
+                            leagueLogoPreviewUrl
+                          }
+                          alt="Anteprima nuovo logo lega"
+                        />
+                      )
+                    : leagueEditMode ===
+                        "EDIT" &&
+                      managedLeague?.logoPath
+                      ? (
+                          <img
+                            src={
+                              managedLeague.logoPath
+                            }
+                            alt="Logo attuale lega"
+                          />
+                        )
+                      : (
+                          <span>
+                            Nessun logo
+                          </span>
+                        )
+                }
+              </div>
+
+              <small>
+                {
+                  leagueEditDraft.logoFile
+                    ? `Nuovo logo: ${leagueEditDraft.logoFile.name}`
+                    : leagueEditMode === "EDIT"
+                      ? "Logo attuale"
+                      : "Logo opzionale"
+                }
+              </small>
+            </div>
+
+            {leagueEditError && (
+              <p className="admin-config-league__error">
+                {leagueEditError}
+              </p>
+            )}
+
+            <div className="admin-config-league__editor-actions">
+              <button
+                type="button"
+                disabled={
+                  leagueEditPending
+                }
+                onClick={
+                  cancelLeagueEdit
+                }
+              >
+                Annulla
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  leagueEditPending
+                }
+                onClick={() => {
+                  void saveLeagueEdit();
+                }}
+              >
+                {
+                  leagueEditPending
+                    ? "Salvataggio..."
+                    : leagueEditMode ===
+                        "CREATE"
+                      ? "Crea lega"
+                      : "Salva"
+                }
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="admin-config-league__note">
+          Creare o modificare una lega non cambia
+          automaticamente la lega associata alla
+          sessione d'asta attiva. Squadre e girotavolo
+          mostrati sotto continuano a riferirsi alla
+          sessione corrente.
+        </p>
+      </section>
 
       <section className="admin-config__summary">
         <article>
@@ -1141,6 +1736,67 @@ export function AdminConfigApp() {
                                 );
                               }}
                             />
+                          </div>
+                        </label>
+
+                        <label>
+                          <span>
+                            Logo squadra
+                          </span>
+
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            disabled={
+                              teamEditPending
+                            }
+                            onChange={(event) => {
+                              const file =
+                                event.target.files?.[0] ??
+                                null;
+
+                              selectTeamLogoFile(
+                                file
+                              );
+                            }}
+                          />
+
+                          <div className="admin-config-team__logo-preview">
+                            <div>
+                              {
+                                teamLogoPreviewUrl
+                                  ? (
+                                      <img
+                                        src={
+                                          teamLogoPreviewUrl
+                                        }
+                                        alt="Anteprima nuovo logo"
+                                      />
+                                    )
+                                  : team.logoPath
+                                    ? (
+                                        <img
+                                          src={
+                                            team.logoPath
+                                          }
+                                          alt="Logo attuale"
+                                        />
+                                      )
+                                    : (
+                                        <span>
+                                          Nessun logo
+                                        </span>
+                                      )
+                              }
+                            </div>
+
+                            <small>
+                              {
+                                teamEditDraft.logoFile
+                                  ? `Nuovo logo: ${teamEditDraft.logoFile.name}`
+                                  : "Logo attuale"
+                              }
+                            </small>
                           </div>
                         </label>
                       </div>

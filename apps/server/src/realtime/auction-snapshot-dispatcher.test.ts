@@ -37,7 +37,8 @@ describe("AuctionSnapshotDispatcher", () => {
   publicDisplay: {
     league: {
       id: "league-1",
-      name: "SFL'92"
+      name: "SFL'92",
+      logoPath: null,
     },
     teams: [],
     currentPlayer: null,

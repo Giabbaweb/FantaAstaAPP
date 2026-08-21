@@ -1,0 +1,1 @@
+ALTER TABLE `leagues` ADD `logo_path` text;

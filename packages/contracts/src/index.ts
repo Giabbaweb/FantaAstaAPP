@@ -20,6 +20,7 @@ const nullableOptionalStringSchema = (
 export const leagueSchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1).max(100),
+  logoPath: z.string().trim().min(1).max(500).nullable(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1)
 });
@@ -29,7 +30,10 @@ export type League = z.infer<
 >;
 
 export const createLeagueSchema = z.object({
-  name: z.string().trim().min(1).max(100)
+  name: z.string().trim().min(1).max(100),
+  logoPath: nullableOptionalStringSchema(
+    z.string().trim().min(1).max(500)
+  )
 });
 
 export type CreateLeagueInput = z.infer<
@@ -38,7 +42,10 @@ export type CreateLeagueInput = z.infer<
 
 export const updateLeagueSchema = z
   .object({
-    name: z.string().trim().min(1).max(100).optional()
+    name: z.string().trim().min(1).max(100).optional(),
+    logoPath: nullableOptionalStringSchema(
+      z.string().trim().min(1).max(500)
+    )
   })
   .refine(
     (value) =>
@@ -1154,7 +1161,8 @@ export type RealtimePublicDisplayRecentAward = z.infer<
 export const realtimePublicDisplayLeagueSchema =
 z.object({
 id: z.string().min(1),
-name: z.string().min(1)
+name: z.string().min(1),
+logoPath: z.string().min(1).nullable()
 });
 
 export type RealtimePublicDisplayLeague = z.infer<

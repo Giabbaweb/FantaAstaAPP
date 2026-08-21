@@ -19,11 +19,13 @@ import {
 export type CreateLeaguePersistenceInput = {
   name: string;
   normalizedName: string;
+  logoPath?: string | null;
 };
 
 export type UpdateLeaguePersistenceInput = {
   name?: string;
   normalizedName?: string;
+  logoPath?: string | null;
 };
 
 export interface LeagueRepository {
@@ -55,6 +57,7 @@ export class SqliteLeagueRepository
       .select({
         id: leagues.id,
         name: leagues.name,
+        logoPath: leagues.logoPath,
         createdAt: leagues.createdAt,
         updatedAt: leagues.updatedAt
       })
@@ -72,6 +75,7 @@ export class SqliteLeagueRepository
       .select({
         id: leagues.id,
         name: leagues.name,
+        logoPath: leagues.logoPath,
         createdAt: leagues.createdAt,
         updatedAt: leagues.updatedAt
       })
@@ -91,6 +95,7 @@ export class SqliteLeagueRepository
       .select({
         id: leagues.id,
         name: leagues.name,
+        logoPath: leagues.logoPath,
         createdAt: leagues.createdAt,
         updatedAt: leagues.updatedAt
       })
@@ -115,11 +120,14 @@ export class SqliteLeagueRepository
         id: randomUUID(),
         name: input.name,
         normalizedName:
-          input.normalizedName
+          input.normalizedName,
+        logoPath:
+          input.logoPath ?? null
       })
       .returning({
         id: leagues.id,
         name: leagues.name,
+        logoPath: leagues.logoPath,
         createdAt: leagues.createdAt,
         updatedAt: leagues.updatedAt
       });
@@ -150,6 +158,7 @@ export class SqliteLeagueRepository
       .returning({
         id: leagues.id,
         name: leagues.name,
+        logoPath: leagues.logoPath,
         createdAt: leagues.createdAt,
         updatedAt: leagues.updatedAt
       });

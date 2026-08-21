@@ -34,7 +34,7 @@ const teams =
       ELSE 99
     END
   `).all(
-    "league-sfl92-public-test"
+    "league-sfl92"
   ) as TeamRow[];
 
 if (teams.length !== 8) {

@@ -1,10 +1,13 @@
 import type {
   AuctionSessionTeam,
+  CreateLeagueInput,
   CreateOwnerInput,
   CreateTeamOwnerInput,
+  League,
   Owner,
   Team,
   TeamOwner,
+  UpdateLeagueInput,
   UpdateOwnerInput,
   UpdateTeamInput,
   UpdateTeamOwnerInput
@@ -13,6 +16,58 @@ import type {
 import {
   apiRequest
 } from "./api-client.js";
+
+export function createLeague(
+  input: CreateLeagueInput
+): Promise<League> {
+  return apiRequest<League>(
+    "/api/leagues",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export function updateLeague(
+  leagueId: string,
+  input: UpdateLeagueInput
+): Promise<League> {
+  return apiRequest<League>(
+    `/api/leagues/${leagueId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function uploadLeagueLogo(
+  leagueId: string,
+  file: File
+): Promise<League> {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "file",
+    file
+  );
+
+  return apiRequest<League>(
+    `/api/leagues/${leagueId}/logo`,
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+}
 
 export function fetchTeamsByLeague(
   leagueId: string
@@ -154,6 +209,28 @@ export function deleteTeamOwner(
     `/api/teams/${teamId}/owners/${ownerId}`,
     {
       method: "DELETE"
+    }
+  );
+}
+
+
+export async function uploadTeamLogo(
+  teamId: string,
+  file: File
+): Promise<Team> {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "file",
+    file
+  );
+
+  return apiRequest<Team>(
+    `/api/teams/${teamId}/logo`,
+    {
+      method: "POST",
+      body: formData
     }
   );
 }

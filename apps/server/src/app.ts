@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 
 import type {
@@ -46,6 +47,9 @@ import {
   publicDisplayControlRoutes
 } from "./routes/public-display-control.routes.js";
 import {
+  runtimeAssetRoutes
+} from "./routes/runtime-asset.routes.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -66,6 +70,9 @@ import {
 import {
   fmsExportGoalkeeperRoutes
 } from "./routes/fms-export-goalkeeper.routes.js";
+import {
+  leagueLogoRoutes
+} from "./routes/league-logo.routes.js";
 import {
   leagueRoutes
 } from "./routes/league.routes.js";
@@ -96,6 +103,9 @@ import {
 import {
   teamAccessRoutes
 } from "./routes/team-access.routes.js";
+import {
+  teamLogoRoutes
+} from "./routes/team-logo.routes.js";
 import {
   teamOwnerRoutes
 } from "./routes/team-owner.routes.js";
@@ -664,7 +674,17 @@ export async function buildApp(
       auctionCallCommandCoordinator
     )
   );
+  await app.register(multipart, {
+    limits: {
+      files: 1,
+      fileSize: 2 * 1024 * 1024
+    }
+  });
+
+  await app.register(runtimeAssetRoutes);
+  await app.register(leagueLogoRoutes);
   await app.register(teamAccessRoutes);
+  await app.register(teamLogoRoutes);
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
   await app.register(teamOwnerRoutes);

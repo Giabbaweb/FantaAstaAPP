@@ -119,6 +119,11 @@ export class LeagueService {
         normalizedName;
     }
 
+    if (input.logoPath !== undefined) {
+      persistenceInput.logoPath =
+        input.logoPath;
+    }
+
     const updatedLeague =
       await this.repository.update(
         id,
