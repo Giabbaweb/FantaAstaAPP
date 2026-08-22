@@ -18,7 +18,8 @@ import {
   buildApp
 } from "./app.js";
 import {
-  db
+  db,
+  sqlite
 } from "./db/client.js";
 import {
   auctionEvents,
@@ -3833,6 +3834,636 @@ describe("GET /api/auction-sessions", () => {
     }
   );
 
+  describe(
+    "POST /api/auction-sessions/:id/reset-development-session",
+    () => {
+      const leagueId =
+        "league-http-development-reset";
+      const sessionId =
+        "session-http-development-reset";
+      const teamId =
+        "team-http-development-reset";
+      const sessionTeamId =
+        "session-team-http-development-reset";
+      const playerId =
+        "player-http-development-reset";
+
+      async function createFixture(
+        status:
+          | "COMPLETED"
+          | "CLOSED"
+      ): Promise<void> {
+        await db.insert(leagues).values({
+          id: leagueId,
+          name: "HTTP Development Reset League",
+          normalizedName:
+            "http development reset league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: sessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 94,
+          status,
+          initialCredits: 300,
+          stateVersion: 7
+        });
+
+        await db.insert(teams).values({
+          id: teamId,
+          leagueId,
+          name: "HTTP Development Reset Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: sessionTeamId,
+            auctionSessionId:
+              sessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 247
+          });
+
+        await db.insert(players).values({
+          id: playerId,
+          auctionSessionId:
+            sessionId,
+          fmsCode:
+            "HTTP-DEV-RESET-001",
+          name:
+            "HTTP Development Reset Player",
+          normalizedName:
+            "http development reset player",
+          role: "A",
+          availabilityStatus:
+            "AVAILABLE"
+        });
+      }
+
+      async function cleanupFixture():
+        Promise<void> {
+        await db
+          .delete(players)
+          .where(
+            eq(
+              players.auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams
+                .auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(teams)
+          .where(
+            eq(
+              teams.id,
+              teamId
+            )
+          );
+
+        await db
+          .delete(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(leagues)
+          .where(
+            eq(
+              leagues.id,
+              leagueId
+            )
+          );
+      }
+
+      it(
+        "resets a completed development session to SETUP",
+        async () => {
+          await createFixture(
+            "COMPLETED"
+          );
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-development-session`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(200);
+
+            const body = response.json<{
+              data: {
+                auctionSessionId: string;
+                status: string;
+                stateVersion: number;
+                deletedPlayers: number;
+                resetAuctionSessionTeams:
+                  number;
+              };
+              error: null;
+            }>();
+
+            expect(body).toMatchObject({
+              data: {
+                auctionSessionId:
+                  sessionId,
+                status: "SETUP",
+                stateVersion: 0,
+                deletedPlayers: 1,
+                resetAuctionSessionTeams:
+                  1
+              },
+              error: null
+            });
+
+            const [storedSession] =
+              await db
+                .select()
+                .from(auctionSessions)
+                .where(
+                  eq(
+                    auctionSessions.id,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedSession
+            ).toMatchObject({
+              status: "SETUP",
+              stateVersion: 0,
+              suspensionReason: null
+            });
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(auctionSessionTeams)
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(300);
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(0);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 409 for a CLOSED session without changing it",
+        async () => {
+          await createFixture(
+            "CLOSED"
+          );
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-development-session`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(
+              response.json()
+            ).toEqual({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_CLOSED",
+                message:
+                  `Auction session "${sessionId}" is closed and cannot be reset`
+              }
+            });
+
+            const [storedSession] =
+              await db
+                .select()
+                .from(auctionSessions)
+                .where(
+                  eq(
+                    auctionSessions.id,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedSession
+            ).toMatchObject({
+              status: "CLOSED",
+              stateVersion: 7
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(1);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 404 for a missing development session",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/missing-development-reset/reset-development-session"
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(404);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                'Auction session "missing-development-reset" was not found'
+            }
+          });
+        }
+      );
+    }
+  );
+
+  describe(
+    "POST /api/auction-sessions/:id/reset-setup-data",
+    () => {
+      const resetLeagueId =
+        "league-http-setup-reset";
+      const resetSessionId =
+        "session-http-setup-reset";
+      const resetTeamId =
+        "team-http-setup-reset";
+      const resetSessionTeamId =
+        "session-team-http-setup-reset";
+      const resetPlayerId =
+        "player-http-setup-reset";
+      const resetRosterEntryId =
+        "roster-http-setup-reset";
+
+      async function createResetFixture(
+        status:
+          | "SETUP"
+          | "READY" = "SETUP"
+      ): Promise<void> {
+        await db.insert(leagues).values({
+          id: resetLeagueId,
+          name: "HTTP Setup Reset League",
+          normalizedName:
+            "http setup reset league"
+        });
+
+        await db
+          .insert(auctionSessions)
+          .values({
+            id: resetSessionId,
+            leagueId: resetLeagueId,
+            season: "2026/2027",
+            editionNumber: 92,
+            status,
+            initialCredits: 300
+          });
+
+        await db.insert(teams).values({
+          id: resetTeamId,
+          leagueId: resetLeagueId,
+          name: "HTTP Setup Reset Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: resetSessionTeamId,
+            auctionSessionId:
+              resetSessionId,
+            teamId: resetTeamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 247
+          });
+
+        await db.insert(players).values({
+          id: resetPlayerId,
+          auctionSessionId:
+            resetSessionId,
+          fmsCode: "HTTP-RESET-001",
+          name: "HTTP Reset Player",
+          normalizedName:
+            "http reset player",
+          role: "A",
+          availabilityStatus:
+            "ROSTERED"
+        });
+
+        await db
+          .insert(rosterEntries)
+          .values({
+            id: resetRosterEntryId,
+            auctionSessionTeamId:
+              resetSessionTeamId,
+            playerId: resetPlayerId,
+            acquisitionCost: 53,
+            contractYear: 1,
+            source: "INITIAL_ROSTER"
+          });
+      }
+
+      async function cleanupResetFixture():
+        Promise<void> {
+        await db
+          .delete(rosterEntries)
+          .where(
+            eq(
+              rosterEntries
+                .auctionSessionTeamId,
+              resetSessionTeamId
+            )
+          );
+
+        await db
+          .delete(players)
+          .where(
+            eq(
+              players.auctionSessionId,
+              resetSessionId
+            )
+          );
+
+        await db
+          .delete(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams
+                .auctionSessionId,
+              resetSessionId
+            )
+          );
+
+        await db
+          .delete(teams)
+          .where(
+            eq(
+              teams.id,
+              resetTeamId
+            )
+          );
+
+        await db
+          .delete(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              resetSessionId
+            )
+          );
+
+        await db
+          .delete(leagues)
+          .where(
+            eq(
+              leagues.id,
+              resetLeagueId
+            )
+          );
+      }
+
+      it(
+        "resets setup archive roster and credits",
+        async () => {
+          await createResetFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${resetSessionId}/reset-setup-data`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(200);
+
+            expect(response.json()).toEqual({
+              data: {
+                deletedRosterEntries: 1,
+                deletedPlayers: 1,
+                resetTeams: 1
+              },
+              error: null
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    resetSessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(0);
+
+            const storedRosterEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedRosterEntries
+            ).toHaveLength(0);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(auctionSessionTeams)
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(300);
+          } finally {
+            await cleanupResetFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 409 outside SETUP without changing data",
+        async () => {
+          await createResetFixture(
+            "READY"
+          );
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${resetSessionId}/reset-setup-data`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(response.json()).toEqual({
+              data: null,
+              error: {
+                code:
+                  "INVALID_SESSION_STATUS",
+                message:
+                  "Setup data can only be reset while the auction session is in SETUP"
+              }
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    resetSessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(1);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(auctionSessionTeams)
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(247);
+          } finally {
+            await cleanupResetFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 404 for a missing session",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/missing-setup-reset/reset-setup-data"
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(404);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                'Auction session "missing-setup-reset" was not found'
+            }
+          });
+        }
+      );
+    }
+  );
+
   describe("POST /api/player-import/archive", () => {
     const validArchiveContent = [
       "Archivio giocatori FMS ReVo",
@@ -4011,6 +4642,59 @@ describe("GET /api/auction-sessions", () => {
           "1003",
           "1004"
         ]);
+      }
+    );
+
+    it(
+      "rolls back the whole archive when a database write fails",
+      async () => {
+        await createImportSession();
+
+        sqlite.exec(`
+          CREATE TRIGGER
+            player_import_force_failure
+          BEFORE INSERT ON players
+          WHEN NEW.auction_session_id =
+            'session-player-import'
+           AND NEW.fms_code = '1002'
+          BEGIN
+            SELECT RAISE(
+              ABORT,
+              'forced player import failure'
+            );
+          END;
+        `);
+
+        try {
+          const response = await app.inject({
+            method: "POST",
+            url: "/api/player-import/archive",
+            payload: {
+              auctionSessionId:
+                "session-player-import",
+              content: validArchiveContent
+            }
+          });
+
+          expect(response.statusCode).toBe(500);
+
+          const storedPlayers = await db
+            .select()
+            .from(players)
+            .where(
+              eq(
+                players.auctionSessionId,
+                "session-player-import"
+              )
+            );
+
+          expect(storedPlayers).toHaveLength(0);
+        } finally {
+          sqlite.exec(`
+            DROP TRIGGER IF EXISTS
+              player_import_force_failure;
+          `);
+        }
       }
     );
 

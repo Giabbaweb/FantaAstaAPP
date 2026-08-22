@@ -9,6 +9,9 @@ import type {
 } from "fastify";
 
 import {
+  db
+} from "../db/client.js";
+import {
   FmsRevoArchiveParser
 } from "../import/fms-revo-archive.parser.js";
 import type {
@@ -17,10 +20,6 @@ import type {
 import {
   SqlitePlayerRepository
 } from "../repositories/player.repository.js";
-import {
-  PlayerService,
-  PlayerServiceError
-} from "../services/player.service.js";
 
 type PlayerArchiveImportBody = {
   auctionSessionId?: string;
@@ -68,7 +67,6 @@ type ImportConflictResponse = {
 
 const parser = new FmsRevoArchiveParser();
 const repository = new SqlitePlayerRepository();
-const service = new PlayerService(repository);
 
 export const playerImportRoutes: FastifyPluginAsync =
   async (fastify) => {
@@ -209,36 +207,39 @@ export const playerImportRoutes: FastifyPluginAsync =
           }
         }
 
-        const importedPlayers: Player[] = [];
+        let importedPlayers: Player[] = [];
 
         try {
-          for (const playerInput of parseResult.players) {
-            const player =
-              await service.createPlayer(
-                playerInput
-              );
-
-            importedPlayers.push(player);
-          }
-        } catch (error) {
-          if (
-            error instanceof PlayerServiceError &&
-            (
-              error.code ===
-                "PLAYER_FMS_CODE_ALREADY_EXISTS" ||
-              error.code ===
-                "PLAYER_NAME_ALREADY_EXISTS"
+          importedPlayers = db.transaction((tx) =>
+            parseResult.players.map(
+              (playerInput) =>
+                repository.createWithExecutor(
+                  tx,
+                  {
+                    auctionSessionId:
+                      playerInput.auctionSessionId,
+                    fmsCode:
+                      playerInput.fmsCode,
+                    name:
+                      playerInput.name,
+                    normalizedName:
+                      normalizePlayerName(
+                        playerInput.name
+                      ),
+                    realTeamName:
+                      playerInput.realTeamName ??
+                      null,
+                    role:
+                      playerInput.role,
+                    availabilityStatus:
+                      playerInput
+                        .availabilityStatus ??
+                      "AVAILABLE"
+                  }
+                )
             )
-          ) {
-            return reply.code(409).send({
-              data: null,
-              error: {
-                code: error.code,
-                message: error.message
-              }
-            });
-          }
-
+          );
+        } catch (error) {
           throw error;
         }
 

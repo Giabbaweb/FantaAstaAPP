@@ -107,6 +107,12 @@ import {
   teamLogoRoutes
 } from "./routes/team-logo.routes.js";
 import {
+  setupDataResetRoutes
+} from "./routes/setup-data-reset.routes.js";
+import {
+  developmentSessionResetRoutes
+} from "./routes/development-session-reset.routes.js";
+import {
   teamOwnerRoutes
 } from "./routes/team-owner.routes.js";
 import {
@@ -211,6 +217,12 @@ import {
 import {
   ManualBackupService
 } from "./services/manual-backup.service.js";
+import {
+  SetupDataResetService
+} from "./services/setup-data-reset.service.js";
+import {
+  DevelopmentSessionResetService
+} from "./services/development-session-reset.service.js";
 import {
   RecoveryPointCatalogService
 } from "./services/recovery-point-catalog.service.js";
@@ -342,6 +354,17 @@ export async function buildApp(
   const auctionSessionOperationalCommandService =
     new AuctionSessionOperationalCommandService(
       atomicAuctionSessionCommandExecutor
+    );
+
+  const developmentSessionResetService =
+    new DevelopmentSessionResetService();
+
+  const setupDataResetService =
+    new SetupDataResetService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
     );
 
   const manualInitialRosterEntryService =
@@ -659,6 +682,18 @@ export async function buildApp(
       restoreRuntimeCoordinator
     )
   );
+  await app.register(
+    setupDataResetRoutes(
+      setupDataResetService
+    )
+  );
+
+  await app.register(
+    developmentSessionResetRoutes(
+      developmentSessionResetService
+    )
+  );
+
   await app.register(
     auctionSessionRoutes(
       auctionSessionOperationalCommandCoordinator,

@@ -11,6 +11,7 @@ import type {
 import {
   asc,
   eq,
+  inArray,
   sql
 } from "drizzle-orm";
 
@@ -18,6 +19,7 @@ import type {
   DatabaseWriteExecutor
 } from "../db/client.js";
 import {
+  auctionSessionTeams,
   rosterEntries
 } from "../db/schema/index.js";
 
@@ -90,6 +92,11 @@ export interface RosterEntryRepository {
     id: string,
     input: UpdateRosterEntryPersistenceInput
   ): RosterEntry | null;
+
+  deleteByAuctionSessionIdWithExecutor(
+    executor: RosterEntryWriteExecutor,
+    auctionSessionId: string
+  ): number;
 }
 
 export class SqliteRosterEntryRepository
@@ -189,5 +196,34 @@ export class SqliteRosterEntryRepository
     return record
       ? toRosterEntry(record)
       : null;
+  }
+
+  deleteByAuctionSessionIdWithExecutor(
+    executor: RosterEntryWriteExecutor,
+    auctionSessionId: string
+  ): number {
+    const sessionTeamIds = executor
+      .select({
+        id: auctionSessionTeams.id
+      })
+      .from(auctionSessionTeams)
+      .where(
+        eq(
+          auctionSessionTeams.auctionSessionId,
+          auctionSessionId
+        )
+      );
+
+    const result = executor
+      .delete(rosterEntries)
+      .where(
+        inArray(
+          rosterEntries.auctionSessionTeamId,
+          sessionTeamIds
+        )
+      )
+      .run();
+
+    return result.changes;
   }
 }
