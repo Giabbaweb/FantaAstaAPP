@@ -14,9 +14,14 @@ import {
 import {
   buildInitialRosterImportPlan
 } from "../import/initial-roster-import.planner.js";
+import {
+  InitialRosterResolutionError,
+  resolveInitialRosterImport
+} from "../import/initial-roster-import.resolutions.js";
 import type {
   InitialRosterImportIssue,
-  InitialRosterImportPlanIssue
+  InitialRosterImportPlanIssue,
+  InitialRosterImportResolution
 } from "../import/player-import.types.js";
 import {
   SqlitePlayerRepository
@@ -29,6 +34,7 @@ import {
 type InitialRosterImportBody = {
   auctionSessionId: string;
   content: string;
+  resolutions?: InitialRosterImportResolution[];
 };
 
 type InitialRosterImportSuccessResponse = {
@@ -70,6 +76,18 @@ type InvalidImportPlanResponse = {
   };
 };
 
+type InvalidResolutionResponse = {
+  data: null;
+  error: {
+    code:
+      | "INVALID_RESOLUTIONS"
+      | "DUPLICATE_RESOLUTION"
+      | "ROW_NOT_FOUND"
+      | "INVALID_RESOLUTION_TARGET";
+    message: string;
+  };
+};
+
 type InitialRosterImportConflictResponse = {
   data: null;
   error: {
@@ -94,12 +112,25 @@ export const initialRosterImportRoutes:
       fastify.post<{
         Body: InitialRosterImportBody;
         Reply:
-          | InitialRosterImportSuccessResponse
           | InvalidRequestResponse
           | InvalidImportPlanResponse
-          | InitialRosterImportConflictResponse;
+          | {
+              data: {
+                summary: {
+                  parsedRows: number;
+                  validEntries: number;
+                  parserIssueCount: number;
+                  planningIssueCount: number;
+                };
+                parserIssues:
+                  InitialRosterImportIssue[];
+                planningIssues:
+                  InitialRosterImportPlanIssue[];
+              };
+              error: null;
+            };
       }>(
-        "/api/player-import/initial-rosters",
+        "/api/player-import/initial-rosters/preview",
         async (request, reply) => {
           const body = request.body;
 
@@ -175,7 +206,160 @@ export const initialRosterImportRoutes:
               parseResult,
               sessionPlayers.map((player) => ({
                 id: player.id,
+                fmsCode: player.fmsCode,
                 name: player.name,
+                realTeamName:
+                  player.realTeamName,
+                role: player.role
+              })),
+              sessionTeams
+            );
+
+          return reply.code(200).send({
+            data: {
+              summary: plan.summary,
+              parserIssues:
+                plan.parserIssues,
+              planningIssues:
+                plan.planningIssues
+            },
+            error: null
+          });
+        }
+      );
+
+      fastify.post<{
+        Body: InitialRosterImportBody;
+        Reply:
+          | InitialRosterImportSuccessResponse
+          | InvalidRequestResponse
+          | InvalidImportPlanResponse
+          | InvalidResolutionResponse
+          | InitialRosterImportConflictResponse;
+      }>(
+        "/api/player-import/initial-rosters",
+        async (request, reply) => {
+          const body = request.body;
+
+          if (
+            !body ||
+            typeof body.auctionSessionId !==
+              "string" ||
+            !body.auctionSessionId.trim()
+          ) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  'Body field "auctionSessionId" is required'
+              }
+            });
+          }
+
+          if (
+            typeof body.content !== "string" ||
+            !body.content.trim()
+          ) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  'Body field "content" is required'
+              }
+            });
+          }
+
+          if (
+            body.resolutions !== undefined &&
+            !Array.isArray(body.resolutions)
+          ) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_RESOLUTIONS",
+                message:
+                  'Body field "resolutions" must be an array'
+              }
+            });
+          }
+
+          const auctionSessionId =
+            body.auctionSessionId.trim();
+
+          const parseResult = parser.parse({
+            format: "FMS_REVO_ROSTERS_TAB",
+            auctionSessionId,
+            content: body.content
+          });
+
+          const sessionPlayers =
+            await playerRepository
+              .findAllByAuctionSessionId(
+                auctionSessionId
+              );
+
+          const sessionTeams = await db
+            .select({
+              auctionSessionTeamId:
+                auctionSessionTeams.id,
+              teamName: teams.name
+            })
+            .from(auctionSessionTeams)
+            .innerJoin(
+              teams,
+              eq(
+                auctionSessionTeams.teamId,
+                teams.id
+              )
+            )
+            .where(
+              eq(
+                auctionSessionTeams
+                  .auctionSessionId,
+                auctionSessionId
+              )
+            );
+
+          let resolvedParseResult =
+            parseResult;
+
+          try {
+            const resolved =
+              resolveInitialRosterImport(
+                parseResult,
+                body.resolutions ?? []
+              );
+
+            resolvedParseResult =
+              resolved.parseResult;
+          } catch (error) {
+            if (
+              error instanceof
+              InitialRosterResolutionError
+            ) {
+              return reply.code(400).send({
+                data: null,
+                error: {
+                  code: error.code,
+                  message: error.message
+                }
+              });
+            }
+
+            throw error;
+          }
+
+          const plan =
+            buildInitialRosterImportPlan(
+              resolvedParseResult,
+              sessionPlayers.map((player) => ({
+                id: player.id,
+                fmsCode: player.fmsCode,
+                name: player.name,
+                realTeamName:
+                  player.realTeamName,
                 role: player.role
               })),
               sessionTeams

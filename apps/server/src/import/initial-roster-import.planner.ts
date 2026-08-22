@@ -22,6 +22,26 @@ function normalizeTeamName(
     .toLocaleLowerCase("it-IT");
 }
 
+function normalizeRealTeamName(
+  value: string | null
+): string {
+  return normalizeTeamName(
+    value ?? ""
+  );
+}
+
+function buildPlayerIdentityKey(
+  name: string,
+  role: InitialRosterPlayerLookup["role"],
+  realTeamName: string | null
+): string {
+  return [
+    normalizePlayerName(name),
+    role,
+    normalizeRealTeamName(realTeamName)
+  ].join("|");
+}
+
 function hasParserIssueForRow(
   result: InitialRosterImportParseResult,
   rowNumber: number
@@ -39,12 +59,26 @@ export function buildInitialRosterImportPlan(
   const entries: InitialRosterImportPlanEntry[] = [];
   const planningIssues: InitialRosterImportPlanIssue[] = [];
 
+  const playerByIdentity = new Map<
+    string,
+    InitialRosterPlayerLookup
+  >();
+
   const playerByNormalizedName = new Map<
     string,
     InitialRosterPlayerLookup
   >();
 
   for (const player of players) {
+    playerByIdentity.set(
+      buildPlayerIdentityKey(
+        player.name,
+        player.role,
+        player.realTeamName
+      ),
+      player
+    );
+
     playerByNormalizedName.set(
       normalizePlayerName(player.name),
       player
@@ -100,30 +134,81 @@ export function buildInitialRosterImportPlan(
       continue;
     }
 
-    const player = playerByNormalizedName.get(
-      normalizePlayerName(row.playerName)
-    );
+    const playerIdentityKey =
+      buildPlayerIdentityKey(
+        row.playerName,
+        row.role,
+        row.realTeamName
+      );
+
+    const player =
+      playerByIdentity.get(
+        playerIdentityKey
+      );
 
     if (!player) {
+      const playerByName =
+        playerByNormalizedName.get(
+          normalizePlayerName(
+            row.playerName
+          )
+        );
+
+      if (!playerByName) {
+        planningIssues.push({
+          rowNumber: row.rowNumber,
+          code: "PLAYER_NOT_FOUND",
+          message:
+            `Player was not found: ${row.playerName}`,
+          teamName: row.teamName,
+          playerName: row.playerName
+        });
+
+        continue;
+      }
+
+      if (playerByName.role !== row.role) {
+        planningIssues.push({
+          rowNumber: row.rowNumber,
+          code: "PLAYER_ROLE_MISMATCH",
+          message:
+            `Player role mismatch for ${row.playerName}: ` +
+            `archive=${playerByName.role}, roster=${row.role}`,
+          teamName: row.teamName,
+          playerName: row.playerName
+        });
+
+        continue;
+      }
+
+      if (
+        normalizeRealTeamName(
+          playerByName.realTeamName
+        ) !==
+        normalizeRealTeamName(
+          row.realTeamName
+        )
+      ) {
+        planningIssues.push({
+          rowNumber: row.rowNumber,
+          code:
+            "PLAYER_REAL_TEAM_MISMATCH",
+          message:
+            `Player real team mismatch for ${row.playerName}: ` +
+            `archive=${playerByName.realTeamName ?? ""}, ` +
+            `roster=${row.realTeamName}`,
+          teamName: row.teamName,
+          playerName: row.playerName
+        });
+
+        continue;
+      }
+
       planningIssues.push({
         rowNumber: row.rowNumber,
         code: "PLAYER_NOT_FOUND",
         message:
           `Player was not found: ${row.playerName}`,
-        teamName: row.teamName,
-        playerName: row.playerName
-      });
-
-      continue;
-    }
-
-    if (player.role !== row.role) {
-      planningIssues.push({
-        rowNumber: row.rowNumber,
-        code: "PLAYER_ROLE_MISMATCH",
-        message:
-          `Player role mismatch for ${row.playerName}: ` +
-          `archive=${player.role}, roster=${row.role}`,
         teamName: row.teamName,
         playerName: row.playerName
       });
@@ -152,8 +237,10 @@ export function buildInitialRosterImportPlan(
       auctionSessionTeamId:
         team.auctionSessionTeamId,
       playerId: player.id,
-      acquisitionCost: row.acquisitionCost,
-      contractYear: row.contractYear as 1 | 2 | 3,
+      acquisitionCost:
+        row.acquisitionCost,
+      contractYear:
+        row.contractYear as 1 | 2 | 3,
       source: "INITIAL_ROSTER"
     });
   }
@@ -165,8 +252,10 @@ export function buildInitialRosterImportPlan(
     summary: {
       parsedRows: parseResult.rows.length,
       validEntries: entries.length,
-      parserIssueCount: parseResult.issues.length,
-      planningIssueCount: planningIssues.length
+      parserIssueCount:
+        parseResult.issues.length,
+      planningIssueCount:
+        planningIssues.length
     }
   };
 }

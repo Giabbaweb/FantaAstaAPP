@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../db/client.js";
 import {
+  auctionCalls,
   auctionSessions,
   auctionSessionTeams,
   leagues,
@@ -232,6 +233,94 @@ describe(
           storedSessionTeam
             ?.renewalCredits
         ).toBe(17);
+      }
+    );
+
+    it(
+      "rejects reset in SETUP when operational history exists",
+      async () => {
+        await createFixture("SETUP");
+
+        await db.insert(auctionCalls).values({
+          id:
+            "call-setup-data-reset-test",
+          auctionSessionId:
+            sessionId,
+          playerId,
+          callerAuctionSessionTeamId:
+            sessionTeamId,
+          status:
+            "CANCELLED",
+          openingBid: 1,
+          currentBid: 1
+        });
+
+        try {
+          expect(() =>
+            service.execute(sessionId)
+          ).toThrowError(
+            expect.objectContaining({
+              code:
+                "OPERATIONAL_DATA_EXISTS"
+            })
+          );
+
+          const storedPlayers =
+            await db
+              .select()
+              .from(players)
+              .where(
+                eq(
+                  players.auctionSessionId,
+                  sessionId
+                )
+              );
+
+          expect(
+            storedPlayers
+          ).toHaveLength(1);
+
+          const storedRosterEntries =
+            await db
+              .select()
+              .from(rosterEntries)
+              .where(
+                eq(
+                  rosterEntries
+                    .auctionSessionTeamId,
+                  sessionTeamId
+                )
+              );
+
+          expect(
+            storedRosterEntries
+          ).toHaveLength(1);
+
+          const [storedSessionTeam] =
+            await db
+              .select()
+              .from(auctionSessionTeams)
+              .where(
+                eq(
+                  auctionSessionTeams.id,
+                  sessionTeamId
+                )
+              );
+
+          expect(
+            storedSessionTeam
+              ?.remainingCredits
+          ).toBe(265);
+        } finally {
+          await db
+            .delete(auctionCalls)
+            .where(
+              eq(
+                auctionCalls.id,
+                "call-setup-data-reset-test"
+              )
+            );
+        }
       }
     );
 

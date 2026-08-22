@@ -22,6 +22,7 @@ import {
   sqlite
 } from "./db/client.js";
 import {
+  auctionCalls,
   auctionEvents,
   auctionSessions,
   auctionSessionTeams,
@@ -4372,6 +4373,116 @@ describe("GET /api/auction-sessions", () => {
       );
 
       it(
+        "returns 409 when operational history exists in SETUP",
+        async () => {
+          await createResetFixture(
+            "SETUP"
+          );
+
+          const operationalCallId =
+            "call-http-setup-reset";
+
+          await db
+            .insert(auctionCalls)
+            .values({
+              id: operationalCallId,
+              auctionSessionId:
+                resetSessionId,
+              playerId:
+                resetPlayerId,
+              callerAuctionSessionTeamId:
+                resetSessionTeamId,
+              status: "CANCELLED",
+              openingBid: 1,
+              currentBid: 1
+            });
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${resetSessionId}/reset-setup-data`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(
+              response.json()
+            ).toEqual({
+              data: null,
+              error: {
+                code:
+                  "OPERATIONAL_DATA_EXISTS",
+                message:
+                  "Setup data cannot be reset because the auction session contains operational history. Use the complete development session reset instead."
+              }
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    resetSessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(1);
+
+            const storedRosterEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedRosterEntries
+            ).toHaveLength(1);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(247);
+          } finally {
+            await db
+              .delete(auctionCalls)
+              .where(
+                eq(
+                  auctionCalls.id,
+                  operationalCallId
+                )
+              );
+          }
+        }
+      );
+
+      it(
         "returns 409 outside SETUP without changing data",
         async () => {
           await createResetFixture(
@@ -4782,5 +4893,387 @@ describe("GET /api/auction-sessions", () => {
       }
     );
   });
+
+
+  describe(
+    "POST /api/player-import/initial-rosters with resolutions",
+    () => {
+      const leagueId =
+        "league-initial-roster-resolution";
+      const sessionId =
+        "session-initial-roster-resolution";
+      const teamId =
+        "team-initial-roster-resolution";
+      const sessionTeamId =
+        "session-team-initial-roster-resolution";
+
+      const rosterContent = [
+        "Resolution Team",
+        "\tRuolo\tNome\tSquadra\tCon\t$Acq",
+        "\tAttaccante\tLOOKMAN Ademola\tAtalanta\t4\t7",
+        "\tPortiere\tSOMMER Yann\tInter\t1\t18",
+        ""
+      ].join("\n");
+
+      async function createFixture():
+        Promise<void> {
+        await db.insert(leagues).values({
+          id: leagueId,
+          name:
+            "Initial Roster Resolution League",
+          normalizedName:
+            "initial roster resolution league"
+        });
+
+        await db
+          .insert(auctionSessions)
+          .values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 93,
+            status: "SETUP",
+            initialCredits: 300
+          });
+
+        await db.insert(teams).values({
+          id: teamId,
+          leagueId,
+          name: "Resolution Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: sessionTeamId,
+            auctionSessionId: sessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 300
+          });
+
+        await db.insert(players).values([
+          {
+            id:
+              "player-resolution-lookman",
+            auctionSessionId: sessionId,
+            fmsCode: "101814",
+            name: "LOOKMAN Ademola",
+            normalizedName:
+              "lookman ademola",
+            realTeamName: "Atalanta",
+            role: "A",
+            availabilityStatus:
+              "AVAILABLE"
+          },
+          {
+            id:
+              "player-resolution-sommer",
+            auctionSessionId: sessionId,
+            fmsCode: "100001",
+            name: "SOMMER Yann",
+            normalizedName:
+              "sommer yann",
+            realTeamName: "Inter",
+            role: "P",
+            availabilityStatus:
+              "AVAILABLE"
+          }
+        ]);
+      }
+
+      async function cleanupFixture():
+        Promise<void> {
+        await db
+          .delete(rosterEntries)
+          .where(
+            eq(
+              rosterEntries
+                .auctionSessionTeamId,
+              sessionTeamId
+            )
+          );
+
+        await db
+          .delete(players)
+          .where(
+            eq(
+              players.auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams
+                .auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(teams)
+          .where(
+            eq(
+              teams.id,
+              teamId
+            )
+          );
+
+        await db
+          .delete(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(leagues)
+          .where(
+            eq(
+              leagues.id,
+              leagueId
+            )
+          );
+      }
+
+      it(
+        "imports an invalid contract year row after SET_CONTRACT_YEAR resolution",
+        async () => {
+          await createFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  "/api/player-import/initial-rosters",
+                payload: {
+                  auctionSessionId:
+                    sessionId,
+                  content:
+                    rosterContent,
+                  resolutions: [
+                    {
+                      rowNumber: 3,
+                      action:
+                        "SET_CONTRACT_YEAR",
+                      contractYear: 3
+                    }
+                  ]
+                }
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(201);
+
+            const body =
+              response.json<{
+                data: {
+                  importedEntries:
+                    number;
+                  totalCost: number;
+                  summary: {
+                    parsedRows:
+                      number;
+                    validEntries:
+                      number;
+                    parserIssueCount:
+                      number;
+                    planningIssueCount:
+                      number;
+                  };
+                };
+                error: null;
+              }>();
+
+            expect(body.error).toBeNull();
+
+            expect(body.data).toEqual({
+              importedEntries: 2,
+              totalCost: 25,
+              summary: {
+                parsedRows: 2,
+                validEntries: 2,
+                parserIssueCount: 0,
+                planningIssueCount: 0
+              }
+            });
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(2);
+
+            const lookmanEntry =
+              storedEntries.find(
+                (entry) =>
+                  entry.playerId ===
+                  "player-resolution-lookman"
+              );
+
+            expect(
+              lookmanEntry
+                ?.contractYear
+            ).toBe(3);
+
+            expect(
+              lookmanEntry
+                ?.acquisitionCost
+            ).toBe(7);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(275);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "skips an invalid contract year row after SKIP_ROW resolution",
+        async () => {
+          await createFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  "/api/player-import/initial-rosters",
+                payload: {
+                  auctionSessionId:
+                    sessionId,
+                  content:
+                    rosterContent,
+                  resolutions: [
+                    {
+                      rowNumber: 3,
+                      action: "SKIP_ROW"
+                    }
+                  ]
+                }
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(201);
+
+            const body =
+              response.json<{
+                data: {
+                  importedEntries:
+                    number;
+                  totalCost: number;
+                  summary: {
+                    parsedRows:
+                      number;
+                    validEntries:
+                      number;
+                    parserIssueCount:
+                      number;
+                    planningIssueCount:
+                      number;
+                  };
+                };
+                error: null;
+              }>();
+
+            expect(body.error).toBeNull();
+
+            expect(body.data).toEqual({
+              importedEntries: 1,
+              totalCost: 18,
+              summary: {
+                parsedRows: 1,
+                validEntries: 1,
+                parserIssueCount: 0,
+                planningIssueCount: 0
+              }
+            });
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(1);
+
+            expect(
+              storedEntries[0]?.playerId
+            ).toBe(
+              "player-resolution-sommer"
+            );
+
+            expect(
+              storedEntries[0]
+                ?.acquisitionCost
+            ).toBe(18);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(282);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+    }
+  );
 
 });

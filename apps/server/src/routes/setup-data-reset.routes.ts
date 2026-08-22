@@ -75,7 +75,9 @@ export function setupDataResetRoutes(
 
             if (
               error.code ===
-              "INVALID_SESSION_STATUS"
+              "INVALID_SESSION_STATUS" ||
+              error.code ===
+              "OPERATIONAL_DATA_EXISTS"
             ) {
               return reply.code(409).send({
                 data: null,

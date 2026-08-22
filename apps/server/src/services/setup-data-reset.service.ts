@@ -1,4 +1,16 @@
+import {
+  eq,
+  inArray
+} from "drizzle-orm";
+
 import { db } from "../db/client.js";
+import {
+  auctionCalls,
+  auctionEvents,
+  auctionSessionTeams,
+  commandRegistry,
+  fmsExportGoalkeepers
+} from "../db/schema/index.js";
 
 import type {
   AuctionSessionRepository
@@ -16,6 +28,7 @@ import type {
 export type SetupDataResetServiceErrorCode =
   | "AUCTION_SESSION_NOT_FOUND"
   | "INVALID_SESSION_STATUS"
+  | "OPERATIONAL_DATA_EXISTS"
   | "TEAM_CREDITS_RESET_FAILED";
 
 export class SetupDataResetServiceError
@@ -88,6 +101,102 @@ export class SetupDataResetService {
         throw new SetupDataResetServiceError(
           "INVALID_SESSION_STATUS",
           "Setup data can only be reset while the auction session is in SETUP"
+        );
+      }
+
+      const operationalAuctionCalls =
+        tx
+          .select({
+            id: auctionCalls.id
+          })
+          .from(auctionCalls)
+          .where(
+            eq(
+              auctionCalls.auctionSessionId,
+              auctionSessionId
+            )
+          )
+          .limit(1)
+          .all();
+
+      const operationalAuctionEvents =
+        tx
+          .select({
+            id: auctionEvents.id
+          })
+          .from(auctionEvents)
+          .where(
+            eq(
+              auctionEvents.auctionSessionId,
+              auctionSessionId
+            )
+          )
+          .limit(1)
+          .all();
+
+      const operationalCommands =
+        tx
+          .select({
+            id: commandRegistry.id
+          })
+          .from(commandRegistry)
+          .where(
+            eq(
+              commandRegistry.auctionSessionId,
+              auctionSessionId
+            )
+          )
+          .limit(1)
+          .all();
+
+      const sessionTeamIds =
+        tx
+          .select({
+            id: auctionSessionTeams.id
+          })
+          .from(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams.auctionSessionId,
+              auctionSessionId
+            )
+          )
+          .all()
+          .map(
+            (sessionTeam) =>
+              sessionTeam.id
+          );
+
+      const exportGoalkeepers =
+        sessionTeamIds.length === 0
+          ? []
+          : tx
+              .select({
+                id:
+                  fmsExportGoalkeepers.id
+              })
+              .from(
+                fmsExportGoalkeepers
+              )
+              .where(
+                inArray(
+                  fmsExportGoalkeepers
+                    .auctionSessionTeamId,
+                  sessionTeamIds
+                )
+              )
+              .limit(1)
+              .all();
+
+      if (
+        operationalAuctionCalls.length > 0 ||
+        operationalAuctionEvents.length > 0 ||
+        operationalCommands.length > 0 ||
+        exportGoalkeepers.length > 0
+      ) {
+        throw new SetupDataResetServiceError(
+          "OPERATIONAL_DATA_EXISTS",
+          "Setup data cannot be reset because the auction session contains operational history. Use the complete development session reset instead."
         );
       }
 
