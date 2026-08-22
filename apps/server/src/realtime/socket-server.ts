@@ -333,8 +333,8 @@ export function createSocketServer(
     });
   });
 
-  app.addHook("onClose", async () => {
-    await io.close();
+  app.addHook("preClose", async () => {
+    io.engine.close();
   });
 
   return {
