@@ -20,13 +20,16 @@ import {
 
 import {
   createLeague,
+  createManualBackup,
   createOwner,
+  deleteRecoveryPoint,
   createTeamOwner,
   deleteTeamOwner,
   fetchAuctionSessions,
   fetchAuctionSessionTeams,
   fetchOwners,
   fetchPlayers,
+  fetchRecoveryPoints,
   fetchTeamOwners,
   fetchTeamsByLeague,
   importInitialRosters,
@@ -35,6 +38,7 @@ import {
   reorderAuctionSessionTeams,
   resetDevelopmentSession,
   resetInitialRosters,
+  restoreRecoveryPoint,
   resetSetupData,
   updateAuctionSession,
   updateLeague,
@@ -62,6 +66,79 @@ type TeamOwnerMap =
 
 const NEW_OWNER_VALUE =
   "__NEW_OWNER__";
+
+function formatRecoveryPointReason(
+  reason: string
+): string {
+  const labels: Record<string, string> = {
+    CONFIRMED_AWARD:
+      "Aggiudicazione confermata",
+    MANUAL_ASSIGNMENT:
+      "Assegnazione manuale",
+    TECHNICAL_CORRECTION:
+      "Correzione tecnica",
+    SESSION_SUSPENDED:
+      "Sessione sospesa",
+    SESSION_COMPLETED:
+      "Sessione completata",
+    RECOVERY_RESTART:
+      "Ripristino dopo riavvio",
+    MANUAL_BACKUP:
+      "Backup manuale",
+    PRE_RESTORE:
+      "Backup pre-ripristino"
+  };
+
+  return labels[reason] ?? reason;
+}
+
+function formatRecoveryPointIntegrity(
+  status: string
+): string {
+  const labels: Record<string, string> = {
+    VALID: "Valido",
+    INVALID: "Non valido",
+    UNCHECKED: "Non verificato",
+    INCOMPATIBLE: "Incompatibile"
+  };
+
+  return labels[status] ?? status;
+}
+
+function formatBackupSize(
+  sizeBytes: number
+): string {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+
+  const kilobytes =
+    sizeBytes / 1024;
+
+  if (kilobytes < 1024) {
+    return `${kilobytes.toFixed(1)} kB`;
+  }
+
+  return `${(kilobytes / 1024).toFixed(2)} MB`;
+}
+
+function formatBackupDate(
+  value: string
+): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      dateStyle: "short",
+      timeStyle: "medium"
+    }
+  ).format(date);
+}
 
 type SessionEditDraft = {
   season: string;
@@ -136,6 +213,55 @@ export function AdminConfigApp() {
   ] = useState<string | null>(
     null
   );
+
+  const [
+    recoveryPoints,
+    setRecoveryPoints
+  ] = useState<
+    Awaited<
+      ReturnType<typeof fetchRecoveryPoints>
+    >
+  >([]);
+
+  const [
+    recoveryPointsLoading,
+    setRecoveryPointsLoading
+  ] = useState(false);
+
+  const [
+    recoveryPointsError,
+    setRecoveryPointsError
+  ] = useState<string | null>(null);
+
+  const [
+    manualBackupPending,
+    setManualBackupPending
+  ] = useState(false);
+
+  const [
+    manualBackupSuccess,
+    setManualBackupSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    deletingRecoveryPointFileName,
+    setDeletingRecoveryPointFileName
+  ] = useState<string | null>(null);
+
+  const [
+    recoveryPointDeleteSuccess,
+    setRecoveryPointDeleteSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    restoringRecoveryPointFileName,
+    setRestoringRecoveryPointFileName
+  ] = useState<string | null>(null);
+
+  const [
+    recoveryPointRestoreSuccess,
+    setRecoveryPointRestoreSuccess
+  ] = useState<string | null>(null);
 
   const [
     teams,
@@ -602,6 +728,47 @@ export function AdminConfigApp() {
     setSessionEditDraft(null);
     setSessionEditError(null);
   }
+
+  useEffect(() => {
+    if (!session) {
+      setRecoveryPoints([]);
+      setRecoveryPointsError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setRecoveryPointsLoading(true);
+    setRecoveryPointsError(null);
+
+    void fetchRecoveryPoints(
+      session.id
+    )
+      .then((items) => {
+        if (!cancelled) {
+          setRecoveryPoints(items);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setRecoveryPoints([]);
+          setRecoveryPointsError(
+            error instanceof Error
+              ? error.message
+              : "Errore durante il caricamento dei backup."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setRecoveryPointsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
 
   useEffect(() => {
     if (!session) {
@@ -1356,6 +1523,150 @@ export function AdminConfigApp() {
       (player) => player.role === "A"
     ).length
   };
+
+  async function handleRecoveryPointRestore(
+    fileName: string
+  ): Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    if (session.status !== "SUSPENDED") {
+      setRecoveryPointsError(
+        "Il ripristino è consentito solo con la sessione sospesa."
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `ATTENZIONE: stai per ripristinare il database dal recovery point "${fileName}". Lo stato corrente verrà sostituito e l'applicazione dovrà riavviarsi. Prima del ripristino verrà creato automaticamente un backup PRE_RESTORE. Continuare?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRestoringRecoveryPointFileName(
+      fileName
+    );
+    setRecoveryPointsError(null);
+    setRecoveryPointRestoreSuccess(null);
+    setRecoveryPointDeleteSuccess(null);
+    setManualBackupSuccess(null);
+
+    try {
+      const result =
+        await restoreRecoveryPoint(
+          session.id,
+          fileName
+        );
+
+      setRecoveryPointRestoreSuccess(
+        `Ripristino preparato: ${result.fileName}. Riavvio applicazione richiesto.`
+      );
+    } catch (error) {
+      setRecoveryPointsError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la preparazione del ripristino."
+      );
+
+      setRestoringRecoveryPointFileName(
+        null
+      );
+    }
+  }
+
+  async function handleRecoveryPointDelete(
+    fileName: string
+  ): Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Confermi la cancellazione definitiva del recovery point "${fileName}"? Verranno eliminati sia il file SQLite sia il relativo manifest.`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingRecoveryPointFileName(
+      fileName
+    );
+    setRecoveryPointsError(null);
+    setRecoveryPointDeleteSuccess(null);
+    setManualBackupSuccess(null);
+
+    try {
+      const result =
+        await deleteRecoveryPoint(
+          session.id,
+          fileName
+        );
+
+      const refreshed =
+        await fetchRecoveryPoints(
+          session.id
+        );
+
+      setRecoveryPoints(refreshed);
+
+      setRecoveryPointDeleteSuccess(
+        `Recovery point cancellato: ${result.fileName}`
+      );
+    } catch (error) {
+      setRecoveryPointsError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la cancellazione del recovery point."
+      );
+    } finally {
+      setDeletingRecoveryPointFileName(
+        null
+      );
+    }
+  }
+
+  async function handleManualBackup():
+    Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    setManualBackupPending(true);
+    setManualBackupSuccess(null);
+    setRecoveryPointsError(null);
+
+    try {
+      const backup =
+        await createManualBackup(
+          session.id
+        );
+
+      const refreshed =
+        await fetchRecoveryPoints(
+          session.id
+        );
+
+      setRecoveryPoints(refreshed);
+
+      setManualBackupSuccess(
+        `Backup manuale creato: ${backup.database.fileName}`
+      );
+    } catch (error) {
+      setRecoveryPointsError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la creazione del backup manuale."
+      );
+    } finally {
+      setManualBackupPending(false);
+    }
+  }
 
   async function handleDevelopmentSessionReset():
     Promise<void> {
@@ -3518,6 +3829,229 @@ export function AdminConfigApp() {
           <p className="admin-config__player-archive-error">
             {developmentResetError}
           </p>
+        )}
+      </section>
+
+      <section className="admin-config__backup">
+        <div className="admin-config__section-heading">
+          <div>
+            <span>
+              Backup e ripristino
+            </span>
+
+            <strong>
+              Recovery point della sessione
+              {" "}
+              {session.season}
+            </strong>
+          </div>
+
+          <span>
+            {recoveryPoints.length}
+            {" "}
+            backup
+          </span>
+        </div>
+
+        <p>
+          I recovery point vengono creati
+          automaticamente durante le operazioni
+          critiche. Puoi creare anche un backup
+          manuale in qualsiasi momento.
+        </p>
+
+        <div className="admin-config__backup-actions">
+          <button
+            type="button"
+            disabled={
+              manualBackupPending ||
+              recoveryPointsLoading
+            }
+            onClick={() => {
+              void handleManualBackup();
+            }}
+          >
+            {
+              manualBackupPending
+                ? "Backup in corso..."
+                : "CREA BACKUP MANUALE"
+            }
+          </button>
+        </div>
+
+        {manualBackupSuccess && (
+          <p className="admin-config__player-archive-success">
+            {manualBackupSuccess}
+          </p>
+        )}
+
+        {recoveryPointDeleteSuccess && (
+          <p className="admin-config__player-archive-success">
+            {recoveryPointDeleteSuccess}
+          </p>
+        )}
+
+        {recoveryPointRestoreSuccess && (
+          <p className="admin-config__player-archive-success">
+            {recoveryPointRestoreSuccess}
+          </p>
+        )}
+
+        {recoveryPointsError && (
+          <p className="admin-config__player-archive-error">
+            {recoveryPointsError}
+          </p>
+        )}
+
+        {recoveryPointsLoading ? (
+          <p>
+            Caricamento backup...
+          </p>
+        ) : recoveryPoints.length === 0 ? (
+          <p>
+            Nessun recovery point disponibile
+            per questa sessione.
+          </p>
+        ) : (
+          <div className="admin-config__backup-list">
+            {recoveryPoints.map(
+              (recoveryPoint) => (
+                <article
+                  key={
+                    recoveryPoint
+                      .database.fileName
+                  }
+                  className="admin-config__backup-item"
+                >
+                  <div className="admin-config__backup-item-main">
+                    <strong>
+                      {
+                        formatRecoveryPointReason(
+                          recoveryPoint.reason
+                        )
+                      }
+                    </strong>
+
+                    <span>
+                      {
+                        formatBackupDate(
+                          recoveryPoint.createdAt
+                        )
+                      }
+                    </span>
+                  </div>
+
+                  <div className="admin-config__backup-meta">
+                    <span>
+                      Integrità:{" "}
+                      <strong>
+                        {
+                          formatRecoveryPointIntegrity(
+                            recoveryPoint
+                              .integrity.status
+                          )
+                        }
+                      </strong>
+                    </span>
+
+                    <span>
+                      Dimensione:{" "}
+                      {
+                        formatBackupSize(
+                          recoveryPoint
+                            .database.sizeBytes
+                        )
+                      }
+                    </span>
+
+                    <span>
+                      Stato sessione:{" "}
+                      {
+                        recoveryPoint
+                          .auctionSession.status
+                      }
+                    </span>
+
+                    <span>
+                      stateVersion:{" "}
+                      {
+                        recoveryPoint
+                          .auctionSession
+                          .stateVersion
+                      }
+                    </span>
+
+                    <span>
+                      Backup:{" "}
+                      {
+                        recoveryPoint
+                          .timing.backupDurationMs
+                      }
+                      {" ms"}
+                    </span>
+                  </div>
+
+                  <small
+                    className="admin-config__backup-filename"
+                    title={
+                      recoveryPoint
+                        .database.fileName
+                    }
+                  >
+                    {
+                      recoveryPoint
+                        .database.fileName
+                    }
+                  </small>
+
+                  <div className="admin-config__backup-item-actions">
+                    <button
+                      type="button"
+                      disabled={
+                        session.status !== "SUSPENDED" ||
+                        restoringRecoveryPointFileName !== null ||
+                        deletingRecoveryPointFileName !== null ||
+                        manualBackupPending
+                      }
+                      onClick={() => {
+                        void handleRecoveryPointRestore(
+                          recoveryPoint.database.fileName
+                        );
+                      }}
+                    >
+                      {
+                        restoringRecoveryPointFileName ===
+                          recoveryPoint.database.fileName
+                          ? "Ripristino..."
+                          : "Ripristina"
+                      }
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        deletingRecoveryPointFileName !== null ||
+                        restoringRecoveryPointFileName !== null ||
+                        manualBackupPending
+                      }
+                      onClick={() => {
+                        void handleRecoveryPointDelete(
+                          recoveryPoint.database.fileName
+                        );
+                      }}
+                    >
+                      {
+                        deletingRecoveryPointFileName ===
+                          recoveryPoint.database.fileName
+                          ? "Cancellazione..."
+                          : "Cancella"
+                      }
+                    </button>
+                  </div>
+                </article>
+              )
+            )}
+          </div>
         )}
       </section>
 

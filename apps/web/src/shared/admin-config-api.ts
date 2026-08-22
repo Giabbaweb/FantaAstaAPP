@@ -91,6 +91,88 @@ export type InitialRosterResetResult = {
   resetTeams: number;
 };
 
+export type RecoveryPointCatalogEntry = {
+  createdAt: string;
+  reason:
+    | "CONFIRMED_AWARD"
+    | "MANUAL_ASSIGNMENT"
+    | "TECHNICAL_CORRECTION"
+    | "SESSION_SUSPENDED"
+    | "SESSION_COMPLETED"
+    | "RECOVERY_RESTART"
+    | "MANUAL_BACKUP"
+    | "PRE_RESTORE";
+  league: {
+    id: string;
+    name: string;
+  };
+  auctionSession: {
+    id: string;
+    season: string;
+    editionNumber: number;
+    status: string;
+    stateVersion: number;
+  };
+  database: {
+    fileName: string;
+    sizeBytes: number;
+    latestMigration: {
+      hash: string;
+      createdAt: number;
+    };
+  };
+  integrity: {
+    status:
+      | "VALID"
+      | "INVALID"
+      | "UNCHECKED"
+      | "INCOMPATIBLE";
+    messages: string[];
+  };
+  timing: {
+    backupDurationMs: number;
+    totalDurationMs: number;
+  };
+};
+
+export type ManualBackupResult = {
+  actor: {
+    name: string;
+    role:
+      | "ADMINISTRATOR"
+      | "AUCTIONEER";
+  };
+  createdAt: string;
+  reason: "MANUAL_BACKUP";
+  league: {
+    id: string;
+    name: string;
+  };
+  auctionSession: {
+    id: string;
+    season: string;
+    editionNumber: number;
+    status: string;
+    stateVersion: number;
+  };
+  database: {
+    fileName: string;
+    sizeBytes: number;
+  };
+  integrity: {
+    status:
+      | "VALID"
+      | "INVALID"
+      | "UNCHECKED"
+      | "INCOMPATIBLE";
+    messages: string[];
+  };
+  timing: {
+    backupDurationMs: number;
+    totalDurationMs: number;
+  };
+};
+
 export type DevelopmentSessionResetResult = {
   auctionSessionId: string;
   status: "SETUP";
@@ -152,6 +234,93 @@ export async function uploadLeagueLogo(
     {
       method: "POST",
       body: formData
+    }
+  );
+}
+
+export function fetchRecoveryPoints(
+  auctionSessionId: string
+): Promise<RecoveryPointCatalogEntry[]> {
+  return apiRequest<
+    RecoveryPointCatalogEntry[]
+  >(
+    `/api/auction-sessions/${auctionSessionId}/backups`
+  );
+}
+
+export type RestoreRecoveryPointResult = {
+  status: "RESTORE_PREPARED";
+  auctionSessionId: string;
+  fileName: string;
+  restartRequired: boolean;
+};
+
+export function restoreRecoveryPoint(
+  auctionSessionId: string,
+  fileName: string
+): Promise<RestoreRecoveryPointResult> {
+  return apiRequest<RestoreRecoveryPointResult>(
+    `/api/auction-sessions/${auctionSessionId}/backups/${encodeURIComponent(
+      fileName
+    )}/restore`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        actor: {
+          name: "Admin",
+          role: "ADMINISTRATOR"
+        }
+      })
+    }
+  );
+}
+
+export function deleteRecoveryPoint(
+  auctionSessionId: string,
+  fileName: string
+): Promise<{
+  fileName: string;
+}> {
+  return apiRequest<{
+    fileName: string;
+  }>(
+    `/api/auction-sessions/${auctionSessionId}/backups/${encodeURIComponent(
+      fileName
+    )}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        actor: {
+          name: "Admin",
+          role: "ADMINISTRATOR"
+        }
+      })
+    }
+  );
+}
+
+export function createManualBackup(
+  auctionSessionId: string
+): Promise<ManualBackupResult> {
+  return apiRequest<ManualBackupResult>(
+    `/api/auction-sessions/${auctionSessionId}/backups/manual`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        actor: {
+          name: "Admin",
+          role: "ADMINISTRATOR"
+        }
+      })
     }
   );
 }
