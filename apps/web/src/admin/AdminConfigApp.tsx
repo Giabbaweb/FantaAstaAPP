@@ -9,6 +9,7 @@ import type {
   AuctionSessionTeam,
   League,
   Owner,
+  Player,
   Team,
   TeamOwner
 } from "@fantaastaapp/contracts";
@@ -25,9 +26,16 @@ import {
   fetchAuctionSessions,
   fetchAuctionSessionTeams,
   fetchOwners,
+  fetchPlayers,
   fetchTeamOwners,
   fetchTeamsByLeague,
+  importInitialRosters,
+  importPlayerArchive,
+  previewInitialRosters,
   reorderAuctionSessionTeams,
+  resetDevelopmentSession,
+  resetInitialRosters,
+  resetSetupData,
   updateAuctionSession,
   updateLeague,
   updateTeam,
@@ -37,6 +45,12 @@ import {
 } from "../shared/admin-config-api.js";
 
 import "./admin-config.css";
+
+type InitialRosterResolutionChoice =
+  | 1
+  | 2
+  | 3
+  | "SKIP";
 
 type ConfigStatus =
   | "LOADING"
@@ -127,6 +141,118 @@ export function AdminConfigApp() {
     teams,
     setTeams
   ] = useState<Team[]>([]);
+
+  const [
+    players,
+    setPlayers
+  ] = useState<Player[]>([]);
+
+  const [
+    playerArchiveFile,
+    setPlayerArchiveFile
+  ] = useState<File | null>(null);
+
+  const [
+    playerArchivePending,
+    setPlayerArchivePending
+  ] = useState(false);
+
+  const [
+    playerArchiveError,
+    setPlayerArchiveError
+  ] = useState<string | null>(null);
+
+  const [
+    playerArchiveSuccess,
+    setPlayerArchiveSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    initialRostersFile,
+    setInitialRostersFile
+  ] = useState<File | null>(null);
+
+  const [
+    initialRostersContent,
+    setInitialRostersContent
+  ] = useState<string | null>(null);
+
+  const [
+    initialRostersPreview,
+    setInitialRostersPreview
+  ] = useState<Awaited<
+    ReturnType<typeof previewInitialRosters>
+  > | null>(null);
+
+  const [
+    initialRostersPreviewPending,
+    setInitialRostersPreviewPending
+  ] = useState(false);
+
+  const [
+    initialRostersError,
+    setInitialRostersError
+  ] = useState<string | null>(null);
+
+  const [
+    initialRosterResolutions,
+    setInitialRosterResolutions
+  ] = useState<
+    Record<
+      number,
+      InitialRosterResolutionChoice
+    >
+  >({});
+
+  const [
+    initialRostersImportPending,
+    setInitialRostersImportPending
+  ] = useState(false);
+
+  const [
+    initialRostersImportSuccess,
+    setInitialRostersImportSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    initialRostersResetPending,
+    setInitialRostersResetPending
+  ] = useState(false);
+
+  const [
+    initialRostersResetSuccess,
+    setInitialRostersResetSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    setupResetPending,
+    setSetupResetPending
+  ] = useState(false);
+
+  const [
+    setupResetError,
+    setSetupResetError
+  ] = useState<string | null>(null);
+
+  const [
+    developmentResetPending,
+    setDevelopmentResetPending
+  ] = useState(false);
+
+  const [
+    developmentResetError,
+    setDevelopmentResetError
+  ] = useState<string | null>(null);
+
+  const [
+    developmentResetSuccess,
+    setDevelopmentResetSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    setupResetSuccess,
+    setSetupResetSuccess
+  ] = useState<string | null>(null);
 
   const [
     managedLeagueId,
@@ -476,6 +602,33 @@ export function AdminConfigApp() {
     setSessionEditDraft(null);
     setSessionEditError(null);
   }
+
+  useEffect(() => {
+    if (!session) {
+      setPlayers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchPlayers(
+      session.id
+    )
+      .then((loadedPlayers) => {
+        if (!cancelled) {
+          setPlayers(loadedPlayers);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlayers([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
 
   async function saveSessionEdit(): Promise<void> {
     if (
@@ -1186,6 +1339,438 @@ export function AdminConfigApp() {
       );
     } finally {
       setTeamEditPending(false);
+    }
+  }
+
+  const playerRoleCounts = {
+    P: players.filter(
+      (player) => player.role === "P"
+    ).length,
+    D: players.filter(
+      (player) => player.role === "D"
+    ).length,
+    C: players.filter(
+      (player) => player.role === "C"
+    ).length,
+    A: players.filter(
+      (player) => player.role === "A"
+    ).length
+  };
+
+  async function handleDevelopmentSessionReset():
+    Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    if (session.status === "CLOSED") {
+      setDevelopmentResetError(
+        "Una sessione CLOSED non può essere riportata a SETUP."
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "ATTENZIONE: RESET COMPLETO SESSIONE. Verranno cancellati archivio giocatori, rose, chiamate d'asta, eventi, comandi e altri dati operativi. La sessione tornerà a SETUP con stateVersion 0 e i crediti torneranno al valore iniziale. Questa operazione è pensata per sviluppo e prove. Continuare?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDevelopmentResetPending(true);
+    setDevelopmentResetError(null);
+    setDevelopmentResetSuccess(null);
+    setSetupResetError(null);
+    setSetupResetSuccess(null);
+    setPlayerArchiveError(null);
+    setPlayerArchiveSuccess(null);
+
+    try {
+      const result =
+        await resetDevelopmentSession(
+          session.id
+        );
+
+      const [
+        refreshedSessions,
+        refreshedPlayers,
+        refreshedSessionTeams
+      ] = await Promise.all([
+        fetchAuctionSessions(),
+        fetchPlayers(session.id),
+        fetchAuctionSessionTeams(
+          session.id
+        )
+      ]);
+
+      const refreshedSession =
+        refreshedSessions.find(
+          (candidate) =>
+            candidate.id === session.id
+        ) ?? null;
+
+      if (refreshedSession) {
+        setSession(refreshedSession);
+      }
+
+      setPlayers(refreshedPlayers);
+      setSessionTeams(
+        refreshedSessionTeams
+      );
+      setPlayerArchiveFile(null);
+
+      setDevelopmentResetSuccess(
+        `Reset completo eseguito: ${result.deletedPlayers} giocatori, ${result.deletedRosterEntries} elementi rosa, ${result.deletedAuctionCalls} chiamate, ${result.deletedAuctionEvents} eventi e ${result.deletedCommands} comandi eliminati`
+      );
+    } catch (error) {
+      setDevelopmentResetError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il reset completo della sessione"
+      );
+    } finally {
+      setDevelopmentResetPending(false);
+    }
+  }
+
+  async function handleSetupDataReset():
+    Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    if (session.status !== "SETUP") {
+      setSetupResetError(
+        "Il reset archivio e rose è consentito solo in stato SETUP."
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "ATTENZIONE: questa operazione cancellerà l'archivio giocatori e tutte le rose iniziali della sessione. I crediti delle squadre torneranno al valore iniziale. Continuare?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSetupResetPending(true);
+    setSetupResetError(null);
+    setSetupResetSuccess(null);
+    setPlayerArchiveError(null);
+    setPlayerArchiveSuccess(null);
+
+    try {
+      const result =
+        await resetSetupData(
+          session.id
+        );
+
+      const [
+        refreshedPlayers,
+        refreshedSessionTeams
+      ] = await Promise.all([
+        fetchPlayers(session.id),
+        fetchAuctionSessionTeams(
+          session.id
+        )
+      ]);
+
+      setPlayers(refreshedPlayers);
+      setSessionTeams(
+        refreshedSessionTeams
+      );
+      setPlayerArchiveFile(null);
+
+      setSetupResetSuccess(
+        `Reset completato: ${result.deletedPlayers} giocatori e ${result.deletedRosterEntries} elementi rosa eliminati`
+      );
+    } catch (error) {
+      setSetupResetError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il reset di archivio e rose"
+      );
+    } finally {
+      setSetupResetPending(false);
+    }
+  }
+
+  async function handleInitialRostersPreview():
+    Promise<void> {
+    if (
+      !session ||
+      !initialRostersFile
+    ) {
+      return;
+    }
+
+    setInitialRostersPreviewPending(true);
+    setInitialRostersError(null);
+    setInitialRostersPreview(null);
+    setInitialRosterResolutions({});
+    setInitialRostersImportSuccess(null);
+
+    try {
+      const content =
+        await initialRostersFile.text();
+
+      const preview =
+        await previewInitialRosters(
+          session.id,
+          content
+        );
+
+      setInitialRostersContent(content);
+      setInitialRostersPreview(preview);
+    } catch (error) {
+      setInitialRostersContent(null);
+      setInitialRostersPreview(null);
+
+      setInitialRostersError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante l'analisi delle rose iniziali"
+      );
+    } finally {
+      setInitialRostersPreviewPending(false);
+    }
+  }
+
+  async function handleInitialRostersReset():
+    Promise<void> {
+    if (!session) {
+      return;
+    }
+
+    if (session.status !== "SETUP") {
+      setInitialRostersError(
+        "Il reset delle rose iniziali è consentito solo in stato SETUP."
+      );
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "Confermi il RESET delle sole rose iniziali? L'archivio giocatori FMS sarà conservato. Le rose verranno cancellate, i giocatori coinvolti torneranno disponibili e i crediti delle squadre torneranno al valore iniziale."
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setInitialRostersResetPending(true);
+    setInitialRostersError(null);
+    setInitialRostersResetSuccess(null);
+    setInitialRostersImportSuccess(null);
+
+    try {
+      const result =
+        await resetInitialRosters(
+          session.id
+        );
+
+      const [
+        refreshedPlayers,
+        refreshedSessionTeams
+      ] = await Promise.all([
+        fetchPlayers(session.id),
+        fetchAuctionSessionTeams(
+          session.id
+        )
+      ]);
+
+      setPlayers(refreshedPlayers);
+      setSessionTeams(
+        refreshedSessionTeams
+      );
+
+      setInitialRostersPreview(null);
+      setInitialRostersContent(null);
+      setInitialRostersFile(null);
+      setInitialRosterResolutions({});
+
+      setInitialRostersResetSuccess(
+        `Reset completato: ${result.deletedRosterEntries} elementi rosa eliminati, ${result.resetPlayers} giocatori resi disponibili, ${result.resetTeams} squadre riportate ai crediti iniziali`
+      );
+    } catch (error) {
+      setInitialRostersError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il reset delle rose iniziali"
+      );
+    } finally {
+      setInitialRostersResetPending(false);
+    }
+  }
+
+  async function handleInitialRostersImport():
+    Promise<void> {
+    if (
+      !session ||
+      !initialRostersContent ||
+      !initialRostersPreview
+    ) {
+      return;
+    }
+
+    const unresolvedParserIssues =
+      initialRostersPreview.parserIssues.filter(
+        (issue) => {
+          if (
+            issue.code !==
+            "INVALID_CONTRACT_YEAR"
+          ) {
+            return true;
+          }
+
+          return (
+            initialRosterResolutions[
+              issue.rowNumber
+            ] === undefined
+          );
+        }
+      );
+
+    if (
+      unresolvedParserIssues.length > 0 ||
+      initialRostersPreview
+        .planningIssues.length > 0
+    ) {
+      setInitialRostersError(
+        "Risolvi tutte le anomalie prima di importare le rose."
+      );
+      return;
+    }
+
+    const resolutions =
+      initialRostersPreview.parserIssues
+        .filter(
+          (issue) =>
+            issue.code ===
+            "INVALID_CONTRACT_YEAR"
+        )
+        .map((issue) => {
+          const choice =
+            initialRosterResolutions[
+              issue.rowNumber
+            ];
+
+          if (choice === "SKIP") {
+            return {
+              rowNumber:
+                issue.rowNumber,
+              action:
+                "SKIP_ROW" as const
+            };
+          }
+
+          return {
+            rowNumber:
+              issue.rowNumber,
+            action:
+              "SET_CONTRACT_YEAR" as const,
+            contractYear:
+              choice as 1 | 2 | 3
+          };
+        });
+
+    const confirmed =
+      window.confirm(
+        "Confermi l'importazione definitiva delle rose iniziali? Verranno create le rose dei confermati e aggiornati i crediti disponibili delle squadre."
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setInitialRostersImportPending(true);
+    setInitialRostersError(null);
+    setInitialRostersImportSuccess(null);
+    setInitialRostersResetSuccess(null);
+
+    try {
+      const result =
+        await importInitialRosters(
+          session.id,
+          initialRostersContent,
+          resolutions
+        );
+
+      const [
+        refreshedPlayers,
+        refreshedSessionTeams
+      ] = await Promise.all([
+        fetchPlayers(session.id),
+        fetchAuctionSessionTeams(
+          session.id
+        )
+      ]);
+
+      setPlayers(refreshedPlayers);
+      setSessionTeams(
+        refreshedSessionTeams
+      );
+
+      setInitialRostersImportSuccess(
+        `Import completato: ${result.importedEntries} confermati, costo totale ${result.totalCost} crediti`
+      );
+    } catch (error) {
+      setInitialRostersError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante l'importazione delle rose iniziali"
+      );
+    } finally {
+      setInitialRostersImportPending(false);
+    }
+  }
+
+  async function handlePlayerArchiveImport():
+    Promise<void> {
+    if (
+      !session ||
+      !playerArchiveFile
+    ) {
+      return;
+    }
+
+    setPlayerArchivePending(true);
+    setPlayerArchiveError(null);
+    setPlayerArchiveSuccess(null);
+
+    try {
+      const content =
+        await playerArchiveFile.text();
+
+      const result =
+        await importPlayerArchive(
+          session.id,
+          content
+        );
+
+      const refreshedPlayers =
+        await fetchPlayers(
+          session.id
+        );
+
+      setPlayers(refreshedPlayers);
+      setPlayerArchiveFile(null);
+
+      setPlayerArchiveSuccess(
+        `Import completato: ${result.summary.importedPlayers} giocatori`
+      );
+    } catch (error) {
+      setPlayerArchiveError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante l'importazione dell'archivio"
+      );
+    } finally {
+      setPlayerArchivePending(false);
     }
   }
 
@@ -2456,6 +3041,484 @@ export function AdminConfigApp() {
             }
           )}
         </div>
+      </section>
+
+      <section className="admin-config__initial-rosters">
+        <div className="admin-config__section-heading">
+          <div>
+            <span>
+              Rose iniziali FMS
+            </span>
+
+            <strong>
+              Confermati della sessione
+              {" "}
+              {session.season}
+            </strong>
+          </div>
+        </div>
+
+        <p>
+          Seleziona il file rose prodotto da FMS ReVo.
+          L'analisi non modifica il database.
+        </p>
+
+        <div className="admin-config__player-archive-actions">
+          <button
+            type="button"
+            disabled={
+              initialRostersResetPending ||
+              session.status !== "SETUP"
+            }
+            onClick={() => {
+              void handleInitialRostersReset();
+            }}
+          >
+            {
+              initialRostersResetPending
+                ? "Reset rose in corso..."
+                : "RESET ROSE INIZIALI"
+            }
+          </button>
+
+          <input
+            type="file"
+            accept=".tab,.txt,text/plain"
+            disabled={
+              initialRostersPreviewPending
+            }
+            onChange={(event) => {
+              setInitialRostersFile(
+                event.target.files?.[0] ??
+                null
+              );
+              setInitialRostersContent(null);
+              setInitialRostersPreview(null);
+              setInitialRostersError(null);
+              setInitialRosterResolutions({});
+              setInitialRostersImportSuccess(null);
+            }}
+          />
+
+          <button
+            type="button"
+            disabled={
+              !initialRostersFile ||
+              initialRostersPreviewPending
+            }
+            onClick={() => {
+              void handleInitialRostersPreview();
+            }}
+          >
+            {
+              initialRostersPreviewPending
+                ? "Analisi in corso..."
+                : "Analizza rose"
+            }
+          </button>
+        </div>
+
+        {initialRostersFile && (
+          <small>
+            File selezionato:{" "}
+            {initialRostersFile.name}
+          </small>
+        )}
+
+        {initialRostersError && (
+          <p className="admin-config__player-archive-error">
+            {initialRostersError}
+          </p>
+        )}
+
+        {initialRostersPreview && (
+          <div className="admin-config__initial-rosters-preview">
+            <div className="admin-config__player-role-counts">
+              <span>
+                Righe{" "}
+                {initialRostersPreview.summary.parsedRows}
+              </span>
+
+              <span>
+                Valide{" "}
+                {initialRostersPreview.summary.validEntries}
+              </span>
+
+              <span>
+                Errori parser{" "}
+                {initialRostersPreview.summary.parserIssueCount}
+              </span>
+
+              <span>
+                Errori matching{" "}
+                {initialRostersPreview.summary.planningIssueCount}
+              </span>
+            </div>
+
+            {
+              initialRostersPreview.parserIssues.length === 0 &&
+              initialRostersPreview.planningIssues.length === 0
+            ? (
+              <p className="admin-config__player-archive-success">
+                Analisi completata: nessuna anomalia rilevata.
+              </p>
+            )
+            : (
+              <div className="admin-config__initial-rosters-issues">
+                {initialRostersPreview.parserIssues.map(
+                  (issue) => (
+                    <div
+                      key={
+                        `parser-${issue.rowNumber}-${issue.code}`
+                      }
+                      className="admin-config__initial-rosters-issue"
+                    >
+                      <strong>
+                        Riga {issue.rowNumber}:{" "}
+                        {issue.code}
+                      </strong>
+
+                      {issue.playerName && (
+                        <span>
+                          <strong>
+                            {issue.playerName}
+                          </strong>
+
+                          {issue.teamName && (
+                            <>
+                              {" — "}
+                              {issue.teamName}
+                            </>
+                          )}
+
+                          {issue.role && (
+                            <>
+                              {" — "}
+                              ruolo {issue.role}
+                            </>
+                          )}
+
+                          {issue.realTeamName && (
+                            <>
+                              {" — "}
+                              {issue.realTeamName}
+                            </>
+                          )}
+                        </span>
+                      )}
+
+                      <span>
+                        <em>
+                          {issue.code ===
+                          "INVALID_CONTRACT_YEAR"
+                            ? "L'anno di contratto può essere solo 1, 2 oppure 3"
+                            : issue.message}
+                        </em>
+                      </span>
+
+                      {issue.rawValue && (
+                        <small>
+                          Valore nel file FMS:{" "}
+                          {issue.rawValue}
+                        </small>
+                      )}
+
+                      {
+                        issue.code ===
+                        "INVALID_CONTRACT_YEAR"
+                      && (
+                        <div className="admin-config__initial-rosters-resolution">
+                          <span>
+                            Correggi anno:
+                          </span>
+
+                          {([1, 2, 3] as const).map(
+                            (contractYear) => (
+                              <button
+                                key={
+                                  contractYear
+                                }
+                                type="button"
+                                className={
+                                  initialRosterResolutions[
+                                    issue.rowNumber
+                                  ] ===
+                                  contractYear
+                                    ? "is-selected"
+                                    : undefined
+                                }
+                                onClick={() => {
+                                  setInitialRosterResolutions(
+                                    (current) => ({
+                                      ...current,
+                                      [issue.rowNumber]:
+                                        contractYear
+                                    })
+                                  );
+                                  setInitialRostersError(
+                                    null
+                                  );
+                                }}
+                              >
+                                {contractYear}
+                              </button>
+                            )
+                          )}
+
+                          <button
+                            type="button"
+                            className={
+                              initialRosterResolutions[
+                                issue.rowNumber
+                              ] === "SKIP"
+                                ? "is-selected"
+                                : undefined
+                            }
+                            onClick={() => {
+                              setInitialRosterResolutions(
+                                (current) => ({
+                                  ...current,
+                                  [issue.rowNumber]:
+                                    "SKIP"
+                                })
+                              );
+                              setInitialRostersError(
+                                null
+                              );
+                            }}
+                          >
+                            Scarta giocatore
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {initialRostersPreview.planningIssues.map(
+                  (issue) => (
+                    <div
+                      key={
+                        `planning-${issue.rowNumber}-${issue.code}`
+                      }
+                      className="admin-config__initial-rosters-issue"
+                    >
+                      <strong>
+                        Riga {issue.rowNumber}:{" "}
+                        {issue.code}
+                      </strong>
+
+                      <span>
+                        {issue.playerName}
+                        {" — "}
+                        {issue.teamName}
+                      </span>
+
+                      <small>
+                        {issue.message}
+                      </small>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {initialRostersPreview && (
+          <div className="admin-config__initial-rosters-import-actions">
+            <button
+              type="button"
+              disabled={
+                initialRostersImportPending ||
+                initialRostersPreview
+                  .planningIssues.length > 0 ||
+                initialRostersPreview
+                  .parserIssues.some(
+                    (issue) =>
+                      issue.code !==
+                        "INVALID_CONTRACT_YEAR" ||
+                      initialRosterResolutions[
+                        issue.rowNumber
+                      ] === undefined
+                  )
+              }
+              onClick={() => {
+                void handleInitialRostersImport();
+              }}
+            >
+              {
+                initialRostersImportPending
+                  ? "Importazione in corso..."
+                  : "IMPORTA ROSE INIZIALI"
+              }
+            </button>
+          </div>
+        )}
+
+        {initialRostersImportSuccess && (
+          <p className="admin-config__player-archive-success">
+            {initialRostersImportSuccess}
+          </p>
+        )}
+
+        {initialRostersResetSuccess && (
+          <p className="admin-config__player-archive-success">
+            {initialRostersResetSuccess}
+          </p>
+        )}
+      </section>
+
+      <section className="admin-config__player-archive">
+        <div className="admin-config__section-heading">
+          <div>
+            <span>
+              Archivio giocatori FMS
+            </span>
+
+            <strong>
+              Archivio della sessione
+              {" "}
+              {session.season}
+            </strong>
+          </div>
+        </div>
+
+        <div className="admin-config__player-archive-summary">
+          <strong>
+            {players.length} giocatori caricati
+          </strong>
+
+          <div className="admin-config__player-role-counts">
+            <span>
+              P {playerRoleCounts.P}
+            </span>
+
+            <span>
+              D {playerRoleCounts.D}
+            </span>
+
+            <span>
+              C {playerRoleCounts.C}
+            </span>
+
+            <span>
+              A {playerRoleCounts.A}
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-config__player-archive-actions">
+          <button
+            type="button"
+            disabled={
+              setupResetPending ||
+              session.status !== "SETUP"
+            }
+            onClick={() => {
+              void handleSetupDataReset();
+            }}
+          >
+            {
+              setupResetPending
+                ? "Reset in corso..."
+                : "RESET archivio + rose"
+            }
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              developmentResetPending ||
+              session.status === "CLOSED"
+            }
+            onClick={() => {
+              void handleDevelopmentSessionReset();
+            }}
+          >
+            {
+              developmentResetPending
+                ? "Reset completo in corso..."
+                : "RESET COMPLETO SESSIONE"
+            }
+          </button>
+
+          <input
+            type="file"
+            accept=".tab,.txt,text/plain"
+            disabled={
+              playerArchivePending
+            }
+            onChange={(event) => {
+              setPlayerArchiveFile(
+                event.target.files?.[0] ??
+                null
+              );
+              setPlayerArchiveError(null);
+              setPlayerArchiveSuccess(null);
+            }}
+          />
+
+          <button
+            type="button"
+            disabled={
+              !playerArchiveFile ||
+              playerArchivePending
+            }
+            onClick={() => {
+              void handlePlayerArchiveImport();
+            }}
+          >
+            {
+              playerArchivePending
+                ? "Importazione..."
+                : "Importa archivio"
+            }
+          </button>
+        </div>
+
+        {playerArchiveFile && (
+          <small>
+            File selezionato:{" "}
+            {playerArchiveFile.name}
+          </small>
+        )}
+
+        {playerArchiveSuccess && (
+          <p className="admin-config__player-archive-success">
+            {playerArchiveSuccess}
+          </p>
+        )}
+
+        {playerArchiveError && (
+          <p className="admin-config__player-archive-error">
+            {playerArchiveError}
+          </p>
+        )}
+
+        {setupResetSuccess && (
+          <p className="admin-config__player-archive-success">
+            {setupResetSuccess}
+          </p>
+        )}
+
+        {setupResetError && (
+          <p className="admin-config__player-archive-error">
+            {setupResetError}
+          </p>
+        )}
+
+        {developmentResetSuccess && (
+          <p className="admin-config__player-archive-success">
+            {developmentResetSuccess}
+          </p>
+        )}
+
+        {developmentResetError && (
+          <p className="admin-config__player-archive-error">
+            {developmentResetError}
+          </p>
+        )}
       </section>
 
       <section className="admin-config__next">

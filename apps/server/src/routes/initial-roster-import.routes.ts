@@ -37,6 +37,14 @@ type InitialRosterImportBody = {
   resolutions?: InitialRosterImportResolution[];
 };
 
+type InitialRosterPreviewIssue =
+  InitialRosterImportIssue & {
+    teamName?: string;
+    playerName?: string;
+    role?: string | null;
+    realTeamName?: string;
+  };
+
 type InitialRosterImportSuccessResponse = {
   data: {
     importedEntries: number;
@@ -123,7 +131,7 @@ export const initialRosterImportRoutes:
                   planningIssueCount: number;
                 };
                 parserIssues:
-                  InitialRosterImportIssue[];
+                  InitialRosterPreviewIssue[];
                 planningIssues:
                   InitialRosterImportPlanIssue[];
               };
@@ -215,11 +223,39 @@ export const initialRosterImportRoutes:
               sessionTeams
             );
 
+          const previewParserIssues =
+            plan.parserIssues.map(
+              (issue) => {
+                const row =
+                  parseResult.rows.find(
+                    (candidate) =>
+                      candidate.rowNumber ===
+                      issue.rowNumber
+                  );
+
+                return {
+                  ...issue,
+                  ...(row
+                    ? {
+                        teamName:
+                          row.teamName,
+                        playerName:
+                          row.playerName,
+                        role:
+                          row.role,
+                        realTeamName:
+                          row.realTeamName
+                      }
+                    : {})
+                };
+              }
+            );
+
           return reply.code(200).send({
             data: {
               summary: plan.summary,
               parserIssues:
-                plan.parserIssues,
+                previewParserIssues,
               planningIssues:
                 plan.planningIssues
             },

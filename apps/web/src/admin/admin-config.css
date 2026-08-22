@@ -710,3 +710,84 @@
   font-size: 0.76rem;
   font-weight: 700;
 }
+
+.admin-config__player-archive {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.admin-config__player-archive-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.admin-config__player-role-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-config__player-role-counts span {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.admin-config__player-archive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-config__player-archive-success,
+.admin-config__player-archive-error {
+  margin: 0;
+  font-weight: 700;
+}
+
+
+.admin-config__initial-rosters-preview {
+  margin-top: 1rem;
+}
+
+.admin-config__initial-rosters-issues {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.admin-config__initial-rosters-issue {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+
+.admin-config__initial-rosters-resolution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.admin-config__initial-rosters-resolution button.is-selected {
+  font-weight: 700;
+  outline: 2px solid currentColor;
+}
+
+.admin-config__initial-rosters-import-actions {
+  margin-top: 1rem;
+}

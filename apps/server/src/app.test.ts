@@ -5276,4 +5276,288 @@ describe("GET /api/auction-sessions", () => {
     }
   );
 
+
+  describe(
+    "POST /api/auction-sessions/:id/reset-initial-rosters",
+    () => {
+      const leagueId =
+        "league-http-initial-roster-reset";
+      const sessionId =
+        "session-http-initial-roster-reset";
+      const teamId =
+        "team-http-initial-roster-reset";
+      const sessionTeamId =
+        "session-team-http-initial-roster-reset";
+
+      async function cleanupFixture():
+        Promise<void> {
+        await db.delete(rosterEntries);
+        await db.delete(players);
+        await db.delete(auctionSessionTeams);
+        await db.delete(teams);
+        await db.delete(auctionSessions);
+        await db.delete(leagues);
+      }
+
+      async function createFixture(
+        status:
+          | "SETUP"
+          | "READY" = "SETUP"
+      ): Promise<void> {
+        await cleanupFixture();
+
+        await db.insert(leagues).values({
+          id: leagueId,
+          name:
+            "HTTP Initial Roster Reset League",
+          normalizedName:
+            "http initial roster reset league"
+        });
+
+        await db
+          .insert(auctionSessions)
+          .values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 95,
+            status,
+            initialCredits: 300
+          });
+
+        await db.insert(teams).values({
+          id: teamId,
+          leagueId,
+          name:
+            "HTTP Initial Roster Reset Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: sessionTeamId,
+            auctionSessionId:
+              sessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 250
+          });
+
+        await db.insert(players).values([
+          {
+            id:
+              "http-initial-reset-rostered",
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "HTTP-INITIAL-RESET-001",
+            name:
+              "HTTP Rostered Player",
+            normalizedName:
+              "http rostered player",
+            realTeamName:
+              "Inter",
+            role: "A",
+            availabilityStatus:
+              "ROSTERED"
+          },
+          {
+            id:
+              "http-initial-reset-available",
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "HTTP-INITIAL-RESET-002",
+            name:
+              "HTTP Available Player",
+            normalizedName:
+              "http available player",
+            realTeamName:
+              "Milan",
+            role: "D",
+            availabilityStatus:
+              "AVAILABLE"
+          }
+        ]);
+
+        await db
+          .insert(rosterEntries)
+          .values({
+            id:
+              "http-initial-reset-entry",
+            auctionSessionTeamId:
+              sessionTeamId,
+            playerId:
+              "http-initial-reset-rostered",
+            acquisitionCost: 50,
+            contractYear: 2,
+            source: "INITIAL_ROSTER"
+          });
+      }
+
+      it(
+        "resets initial rosters while preserving the player archive",
+        async () => {
+          await createFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-initial-rosters`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(200);
+
+            expect(response.json()).toEqual({
+              data: {
+                deletedRosterEntries: 1,
+                resetPlayers: 1,
+                resetTeams: 1
+              },
+              error: null
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(2);
+
+            expect(
+              storedPlayers.find(
+                (player) =>
+                  player.id ===
+                  "http-initial-reset-rostered"
+              )?.availabilityStatus
+            ).toBe("AVAILABLE");
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(0);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(300);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 409 outside SETUP without changing data",
+        async () => {
+          await createFixture("READY");
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-initial-rosters`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(response.json()).toEqual({
+              data: null,
+              error: {
+                code:
+                  "INVALID_SESSION_STATUS",
+                message:
+                  "Initial rosters can only be reset while the auction session is in SETUP"
+              }
+            });
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(1);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 404 for a missing auction session",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/missing-initial-roster-reset/reset-initial-rosters"
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(404);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                'Auction session "missing-initial-roster-reset" was not found'
+            }
+          });
+        }
+      );
+    }
+  );
+
 });

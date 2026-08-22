@@ -110,6 +110,9 @@ import {
   setupDataResetRoutes
 } from "./routes/setup-data-reset.routes.js";
 import {
+  initialRosterResetRoutes
+} from "./routes/initial-roster-reset.routes.js";
+import {
   developmentSessionResetRoutes
 } from "./routes/development-session-reset.routes.js";
 import {
@@ -220,6 +223,9 @@ import {
 import {
   SetupDataResetService
 } from "./services/setup-data-reset.service.js";
+import {
+  InitialRosterResetService
+} from "./services/initial-roster-reset.service.js";
 import {
   DevelopmentSessionResetService
 } from "./services/development-session-reset.service.js";
@@ -358,6 +364,14 @@ export async function buildApp(
 
   const developmentSessionResetService =
     new DevelopmentSessionResetService();
+
+  const initialRosterResetService =
+    new InitialRosterResetService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
 
   const setupDataResetService =
     new SetupDataResetService(
@@ -682,6 +696,12 @@ export async function buildApp(
       restoreRuntimeCoordinator
     )
   );
+  await app.register(
+    initialRosterResetRoutes(
+      initialRosterResetService
+    )
+  );
+
   await app.register(
     setupDataResetRoutes(
       setupDataResetService
