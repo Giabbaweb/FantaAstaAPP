@@ -40,6 +40,7 @@ export type RegisteredAuctionCommandType =
   | "CANCEL";
 
 export type RegisteredAuctionSessionCommandType =
+  | "START_SESSION"
   | "SUSPEND_SESSION"
   | "RESUME_SESSION"
   | "REOPEN_SESSION";
@@ -498,6 +499,7 @@ export class SqliteCommandRegistryRepository
     if (
       mapped.commandScope !== "AUCTION_SESSION" ||
       (
+        mapped.commandType !== "START_SESSION" &&
         mapped.commandType !== "SUSPEND_SESSION" &&
         mapped.commandType !== "RESUME_SESSION" &&
         mapped.commandType !== "REOPEN_SESSION"
@@ -771,6 +773,7 @@ export class SqliteCommandRegistryRepository
       }
 
       if (
+        record.commandType === "START_SESSION" ||
         record.commandType === "SUSPEND_SESSION" ||
         record.commandType === "RESUME_SESSION" ||
         record.commandType === "REOPEN_SESSION"

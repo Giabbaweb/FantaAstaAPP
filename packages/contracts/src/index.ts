@@ -894,6 +894,7 @@ export type RealtimeAuctionCallEventType = z.infer<
 >;
 
 export const realtimeAuctionSessionEventTypeSchema = z.enum([
+  "SESSION_STARTED",
   "SESSION_SUSPENDED",
   "SESSION_RESUMED",
   "SESSION_REOPENED"
@@ -931,6 +932,12 @@ export type RealtimeAuctionCallEvent = z.infer<
   typeof realtimeAuctionCallEventSchema
 >;
 
+export const realtimeAuctionSessionStartedEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: z.literal("SESSION_STARTED"),
+    auctionCallId: z.null()
+  });
+
 export const realtimeAuctionSessionSuspendedEventSchema =
   realtimeAuctionEventCommonSchema.extend({
     type: z.literal("SESSION_SUSPENDED"),
@@ -950,6 +957,7 @@ export const realtimeAuctionSessionReopenedEventSchema =
   });
 
 export const realtimeAuctionSessionEventSchema = z.union([
+  realtimeAuctionSessionStartedEventSchema,
   realtimeAuctionSessionSuspendedEventSchema,
   realtimeAuctionSessionResumedEventSchema,
   realtimeAuctionSessionReopenedEventSchema
@@ -961,6 +969,7 @@ export type RealtimeAuctionSessionEvent = z.infer<
 
 export const realtimeAuctionEventSchema = z.union([
   realtimeAuctionCallEventSchema,
+  realtimeAuctionSessionStartedEventSchema,
   realtimeAuctionSessionSuspendedEventSchema,
   realtimeAuctionSessionResumedEventSchema,
   realtimeAuctionSessionReopenedEventSchema
@@ -1208,6 +1217,7 @@ export const adminActivityEventTypeSchema = z.enum([
   "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
   "MANUAL_ROSTER_ASSIGNMENT_ADDED",
   "TECHNICAL_ROSTER_CORRECTION",
+  "SESSION_STARTED",
   "SESSION_SUSPENDED",
   "SESSION_RESUMED",
   "SESSION_REOPENED"

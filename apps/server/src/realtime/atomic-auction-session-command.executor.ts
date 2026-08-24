@@ -111,6 +111,8 @@ export class AtomicAuctionSessionCommandExecutor {
 
         if (
           existingCommand.commandType !==
+            "START_SESSION" &&
+          existingCommand.commandType !==
             "SUSPEND_SESSION" &&
           existingCommand.commandType !==
             "RESUME_SESSION" &&

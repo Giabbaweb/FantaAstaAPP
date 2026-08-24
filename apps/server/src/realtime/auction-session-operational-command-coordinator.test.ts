@@ -16,6 +16,21 @@ import {
 describe(
   "AuctionSessionOperationalCommandCoordinator",
   () => {
+    const readySession: AuctionSession = {
+      id: "session-1",
+      leagueId: "league-1",
+      season: "2026/2027",
+      editionNumber: 35,
+      status: "READY",
+      suspensionReason: null,
+      initialCredits: 330,
+      maximumInitialRosterEntries: 11,
+      createdAt:
+        "2026-08-13T18:00:00.000Z",
+      updatedAt:
+        "2026-08-13T18:30:00.000Z"
+    };
+
     const suspendedSession: AuctionSession = {
       id: "session-1",
       leagueId: "league-1",
@@ -37,6 +52,17 @@ describe(
       suspensionReason: null,
       updatedAt:
         "2026-08-13T19:30:00.000Z"
+    };
+
+    const startResult = {
+      session: {
+        ...readySession,
+        status: "RUNNING" as const,
+        updatedAt:
+          "2026-08-13T18:45:00.000Z"
+      },
+      stateVersion: 4,
+      idempotentReplay: false
     };
 
     const suspendResult = {
@@ -65,6 +91,12 @@ describe(
       idempotentReplay: false
     };
 
+    const startInput = {
+      auctionSessionId: "session-1",
+      commandId: "start-command-1",
+      expectedStateVersion: 3
+    };
+
     const suspendInput = {
       auctionSessionId: "session-1",
       commandId: "suspend-command-1",
@@ -86,6 +118,11 @@ describe(
 
     function createFixture() {
       const service = {
+        start:
+          vi.fn()
+            .mockResolvedValue(
+              startResult
+            ),
         suspend:
           vi.fn()
             .mockResolvedValue(
@@ -148,6 +185,81 @@ describe(
         coordinator
       };
     }
+
+    it(
+      "dispatches start event and snapshot after start",
+      async () => {
+        const {
+          service,
+          dispatcher,
+          snapshotDispatcher,
+          coordinator
+        } = createFixture();
+
+        await expect(
+          coordinator.start(
+            startInput
+          )
+        ).resolves.toEqual(
+          startResult
+        );
+
+        expect(
+          service.start
+        ).toHaveBeenCalledWith(
+          startInput
+        );
+
+        expect(
+          dispatcher.dispatch
+        ).toHaveBeenCalledWith({
+          type:
+            "SESSION_STARTED",
+          auctionSessionId:
+            "session-1"
+        });
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).toHaveBeenCalledWith(
+          "session-1"
+        );
+      }
+    );
+
+    it(
+      "does not dispatch an idempotent start replay",
+      async () => {
+        const {
+          service,
+          dispatcher,
+          snapshotDispatcher,
+          coordinator
+        } = createFixture();
+
+        service.start
+          .mockResolvedValueOnce({
+            ...startResult,
+            idempotentReplay: true
+          });
+
+        await expect(
+          coordinator.start(
+            startInput
+          )
+        ).resolves.toMatchObject({
+          idempotentReplay: true
+        });
+
+        expect(
+          dispatcher.dispatch
+        ).not.toHaveBeenCalled();
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).not.toHaveBeenCalled();
+      }
+    );
 
     it(
       "dispatches suspension event and snapshot after suspend",

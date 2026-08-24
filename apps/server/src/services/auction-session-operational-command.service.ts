@@ -12,6 +12,12 @@ import type {
   ExecuteAtomicAuctionSessionCommandResult
 } from "../realtime/atomic-auction-session-command.executor.js";
 
+export type StartAuctionSessionCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  expectedStateVersion: number;
+};
+
 export type SuspendAuctionSessionCommandInput = {
   auctionSessionId: string;
   commandId: string;
@@ -36,6 +42,39 @@ export class AuctionSessionOperationalCommandService {
     private readonly executor:
       AtomicAuctionSessionCommandExecutor
   ) {}
+
+  async start(
+    input: StartAuctionSessionCommandInput
+  ): Promise<ExecuteAtomicAuctionSessionCommandResult> {
+    return this.executor.execute({
+      auctionSessionId:
+        input.auctionSessionId,
+      commandId:
+        input.commandId,
+      commandType:
+        "START_SESSION",
+      expectedStateVersion:
+        input.expectedStateVersion,
+      requestFingerprint:
+        "START_SESSION",
+      update: {
+        status: "RUNNING",
+        suspensionReason: null
+      },
+      auditEvent: {
+        auctionSessionId:
+          input.auctionSessionId,
+        eventType:
+          "SESSION_STARTED"
+      },
+      validate: (session) => {
+        transitionAuctionSessionStatus(
+          session.status,
+          "start"
+        );
+      }
+    });
+  }
 
   async suspend(
     input: SuspendAuctionSessionCommandInput

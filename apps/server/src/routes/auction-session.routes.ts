@@ -3,6 +3,7 @@ import {
   addManualRosterAssignmentCommandSchema,
   technicalRosterCorrectionCommandSchema,
   createAuctionSessionSchema,
+  realtimeCommandMetadataSchema,
   reopenAuctionSessionCommandSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
@@ -217,7 +218,7 @@ const readinessService =
 
 type AuctionSessionOperationalCommandPort = Pick<
   AuctionSessionOperationalCommandCoordinator,
-  "suspend" | "resume" | "reopen"
+  "start" | "suspend" | "resume" | "reopen"
 >;
 
 type ManualInitialRosterCommandPort = Pick<
@@ -510,6 +511,102 @@ fastify.get<{
           request.params;
 
         const body = request.body ?? {};
+
+        if (command === "start") {
+          const validation =
+            realtimeCommandMetadataSchema
+              .safeParse({
+                commandId: body.commandId,
+                stateVersion:
+                  body.stateVersion
+              });
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  '"commandId" and "stateVersion" are required and must be valid'
+              }
+            });
+          }
+
+          const readiness =
+            await readinessService
+              .getReadiness(id);
+
+          if (!readiness) {
+            return reply.code(404).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_FOUND",
+                message:
+                  `Auction session "${id}" was not found`
+              }
+            });
+          }
+
+          if (!readiness.ready) {
+            return reply.code(409).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_READY",
+                message:
+                  "Auction session is no longer ready to start",
+                readiness
+              }
+            });
+          }
+
+          try {
+            const result =
+              await operationalCommandService.start({
+                auctionSessionId: id,
+                commandId:
+                  validation.data.commandId,
+                expectedStateVersion:
+                  validation.data.stateVersion
+              });
+
+            return reply.code(200).send({
+              data: result.session,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const operationalMapped =
+              mapAuctionSessionOperationalCommandError(
+                error
+              );
+
+            if (operationalMapped) {
+              return reply
+                .code(
+                  operationalMapped.statusCode
+                )
+                .send(
+                  operationalMapped.body
+                );
+            }
+
+            const mapped =
+              mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
 
         if (command === "suspend") {
           const validation =

@@ -171,6 +171,9 @@ function getActivityLabel(
     case "TECHNICAL_ROSTER_CORRECTION":
       return "Correzione";
 
+    case "SESSION_STARTED":
+      return "Avvio asta";
+
     case "SESSION_SUSPENDED":
       return "Sospensione";
 
@@ -237,6 +240,9 @@ function getActivityDescription(
 
       return `${before} → ${after}`;
     }
+
+    case "SESSION_STARTED":
+      return "Sessione avviata";
 
     case "SESSION_SUSPENDED":
       return item.suspensionReason ??

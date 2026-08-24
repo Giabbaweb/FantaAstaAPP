@@ -22,6 +22,7 @@ export type AuctionEventType =
   | "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY"
   | "MANUAL_ROSTER_ASSIGNMENT_ADDED"
   | "TECHNICAL_ROSTER_CORRECTION"
+  | "SESSION_STARTED"
   | "SESSION_SUSPENDED"
   | "SESSION_RESUMED"
   | "SESSION_REOPENED";
@@ -123,6 +124,25 @@ export type TechnicalRosterCorrectionEvent = {
   createdAt: string;
 };
 
+export type AuctionSessionStartedEvent = {
+  id: string;
+  auctionSessionId: string;
+  auctionCallId: null;
+  eventType: "SESSION_STARTED";
+  auctionSessionTeamId: null;
+  playerId: null;
+  amount: null;
+  creditsBefore: null;
+  creditsAfter: null;
+  contractYear: null;
+  actorName: null;
+  actorRole: null;
+  comment: null;
+  manualAssignmentReason: null;
+  suspensionReason: null;
+  createdAt: string;
+};
+
 export type AuctionSessionSuspendedEvent = {
   id: string;
   auctionSessionId: string;
@@ -191,6 +211,7 @@ export type AuctionEvent =
   | ManualInitialRosterEntryAddedEvent
   | ManualRosterAssignmentAddedEvent
   | TechnicalRosterCorrectionEvent
+  | AuctionSessionStartedEvent
   | AuctionSessionSuspendedEvent
   | AuctionSessionResumedEvent
   | AuctionSessionReopenedEvent;
@@ -263,6 +284,11 @@ export type CreateTechnicalRosterCorrectionEventInput = {
   afterContractYear: 1 | 2 | 3;
 };
 
+export type CreateAuctionSessionStartedEventInput = {
+  auctionSessionId: string;
+  eventType: "SESSION_STARTED";
+};
+
 export type CreateAuctionSessionSuspendedEventInput = {
   auctionSessionId: string;
   eventType: "SESSION_SUSPENDED";
@@ -285,6 +311,7 @@ export type CreateAuctionEventInput =
   | CreateManualInitialRosterEntryAddedEventInput
   | CreateManualRosterAssignmentAddedEventInput
   | CreateTechnicalRosterCorrectionEventInput
+  | CreateAuctionSessionStartedEventInput
   | CreateAuctionSessionSuspendedEventInput
   | CreateAuctionSessionResumedEventInput
   | CreateAuctionSessionReopenedEventInput;
@@ -526,6 +553,44 @@ function mapAuctionEvent(
         afterAmount: record.afterAmount,
         afterContractYear:
           record.afterContractYear,
+        suspensionReason: null
+      };
+    }
+
+    case "SESSION_STARTED": {
+      if (
+        record.auctionCallId !== null ||
+        record.auctionSessionTeamId !== null ||
+        record.playerId !== null ||
+        record.amount !== null ||
+        record.creditsBefore !== null ||
+        record.creditsAfter !== null ||
+        record.contractYear !== null ||
+        record.actorName !== null ||
+        record.actorRole !== null ||
+        record.comment !== null ||
+        record.manualAssignmentReason !== null ||
+        record.suspensionReason !== null
+      ) {
+        throw new Error(
+          `Invalid SESSION_STARTED event "${record.id}"`
+        );
+      }
+
+      return {
+        ...record,
+        eventType: "SESSION_STARTED",
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+        actorName: null,
+        actorRole: null,
+        comment: null,
+        manualAssignmentReason: null,
         suspensionReason: null
       };
     }

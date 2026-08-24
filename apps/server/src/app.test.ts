@@ -1458,6 +1458,120 @@ describe("GET /api/auction-sessions", () => {
   describe(
     "POST /api/auction-sessions/:id/commands/:command",
     () => {
+      async function seedReadySessionForStart(
+        suffix: string,
+        stateVersion = 0
+      ): Promise<{
+        leagueId: string;
+        sessionId: string;
+      }> {
+        const leagueId =
+          `league-start-${suffix}`;
+        const sessionId =
+          `session-start-${suffix}`;
+
+        await db.insert(leagues).values({
+          id: leagueId,
+          name:
+            `Start ${suffix} League`,
+          normalizedName:
+            `start ${suffix} league`
+        });
+
+        await db.insert(auctionSessions).values({
+          id: sessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 300,
+          maximumInitialRosterEntries: 11,
+          status: "READY",
+          stateVersion
+        });
+
+        const readyTeams =
+          Array.from(
+            { length: 8 },
+            (_, index) => ({
+              id:
+                `team-start-${suffix}-${index + 1}`,
+              leagueId,
+              name:
+                `Start ${suffix} Team ${index + 1}`
+            })
+          );
+
+        await db
+          .insert(teams)
+          .values(readyTeams);
+
+        const readyOwners =
+          Array.from(
+            { length: 8 },
+            (_, index) => ({
+              id:
+                `owner-start-${suffix}-${index + 1}`,
+              name:
+                `Start ${suffix} Owner ${index + 1}`
+            })
+          );
+
+        await db
+          .insert(owners)
+          .values(readyOwners);
+
+        await db
+          .insert(teamOwners)
+          .values(
+            readyTeams.map(
+              (team, index) => ({
+                teamId: team.id,
+                ownerId:
+                  readyOwners[index]!.id
+              })
+            )
+          );
+
+        await db
+          .insert(auctionSessionTeams)
+          .values(
+            readyTeams.map(
+              (team, index) => ({
+                id:
+                  `session-team-start-${suffix}-${index + 1}`,
+                auctionSessionId:
+                  sessionId,
+                teamId: team.id,
+                tableOrder:
+                  index + 1,
+                renewalCredits: 0,
+                remainingCredits: 300
+              })
+            )
+          );
+
+        await db.insert(players).values({
+          id:
+            `player-start-${suffix}`,
+          auctionSessionId:
+            sessionId,
+          fmsCode:
+            `START-${suffix.toUpperCase()}-001`,
+          name:
+            `Start ${suffix} Player`,
+          normalizedName:
+            `start ${suffix} player`,
+          role: "P",
+          availabilityStatus:
+            "AVAILABLE"
+        });
+
+        return {
+          leagueId,
+          sessionId
+        };
+      }
+
       it(
         "returns auction session readiness through HTTP",
         async () => {
@@ -1781,7 +1895,14 @@ describe("GET /api/auction-sessions", () => {
           });
 
           const startResponse =
-            await executeCommand("start");
+            await executeCommand(
+              "start",
+              {
+                commandId:
+                  "session-lifecycle-start",
+                stateVersion: 0
+              }
+            );
 
           expect(startResponse.statusCode).toBe(200);
           expect(startResponse.json()).toEqual({
@@ -1789,6 +1910,8 @@ describe("GET /api/auction-sessions", () => {
               id: "session-command-lifecycle",
               status: "RUNNING"
             }),
+            stateVersion: 1,
+            idempotentReplay: false,
             error: null
           });
 
@@ -1798,7 +1921,7 @@ describe("GET /api/auction-sessions", () => {
               {
                 commandId:
                   "session-lifecycle-suspend",
-                stateVersion: 0,
+                stateVersion: 1,
                 reason: "PIZZA_BREAK"
               }
             );
@@ -1811,7 +1934,7 @@ describe("GET /api/auction-sessions", () => {
               suspensionReason:
                 "PIZZA_BREAK"
             }),
-            stateVersion: 1,
+            stateVersion: 2,
             idempotentReplay: false,
             error: null
           });
@@ -1822,7 +1945,7 @@ describe("GET /api/auction-sessions", () => {
               {
                 commandId:
                   "session-lifecycle-resume",
-                stateVersion: 1
+                stateVersion: 2
               }
             );
 
@@ -1833,7 +1956,7 @@ describe("GET /api/auction-sessions", () => {
               status: "RUNNING",
               suspensionReason: null
             }),
-            stateVersion: 2,
+            stateVersion: 3,
             idempotentReplay: false,
             error: null
           });
@@ -1860,6 +1983,195 @@ describe("GET /api/auction-sessions", () => {
               status: "CLOSED"
             }),
             error: null
+          });
+        }
+      );
+
+      it(
+        "returns 400 for an invalid start payload",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-invalid-start-payload/" +
+                "commands/start",
+              payload: {
+                commandId:
+                  "invalid-start-command"
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(400);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+      );
+
+      it(
+        "returns an idempotent replay for an identical start command",
+        async () => {
+          const {
+            sessionId
+          } =
+            await seedReadySessionForStart(
+              "replay"
+            );
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/start",
+            payload: {
+              commandId:
+                "start-replay-command",
+              stateVersion: 0
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            firstResponse.json()
+          ).toEqual({
+            data:
+              expect.objectContaining({
+                id: sessionId,
+                status: "RUNNING",
+                suspensionReason: null
+              }),
+            stateVersion: 1,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(
+            retryResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            retryResponse.json()
+          ).toEqual({
+            data:
+              expect.objectContaining({
+                id: sessionId,
+                status: "RUNNING",
+                suspensionReason: null
+              }),
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "SESSION_STARTED"
+            );
+
+          expect(
+            matchingEvents
+          ).toHaveLength(1);
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "start-replay-command"
+            );
+
+          expect(
+            matchingCommands
+          ).toHaveLength(1);
+
+          expect(
+            matchingCommands[0]
+          ).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "START_SESSION",
+              expectedStateVersion: 0,
+              resultStateVersion: 1
+            })
+          );
+        }
+      );
+
+      it(
+        "returns 409 for a stale start state version",
+        async () => {
+          const {
+            sessionId
+          } =
+            await seedReadySessionForStart(
+              "stale",
+              3
+            );
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                sessionId +
+                "/commands/start",
+              payload: {
+                commandId:
+                  "start-stale-command",
+                stateVersion: 2
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code: "STALE_STATE"
+              })
           });
         }
       );
@@ -2365,12 +2677,93 @@ describe("GET /api/auction-sessions", () => {
             status: "SETUP"
           });
 
+          const invalidTransitionTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-command-invalid-transition-${index + 1}`,
+                leagueId:
+                  "league-command-invalid-transition",
+                name:
+                  `Invalid Transition Team ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(invalidTransitionTeams);
+
+          const invalidTransitionOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-command-invalid-transition-${index + 1}`,
+                name:
+                  `Invalid Transition Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(owners)
+            .values(invalidTransitionOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              invalidTransitionTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    invalidTransitionOwners[index]!.id
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              invalidTransitionTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-command-invalid-transition-${index + 1}`,
+                  auctionSessionId:
+                    "session-command-invalid-transition",
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  renewalCredits: 0,
+                  remainingCredits: 330
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id:
+              "player-command-invalid-transition",
+            auctionSessionId:
+              "session-command-invalid-transition",
+            fmsCode:
+              "INVALID-TRANSITION-001",
+            name:
+              "Invalid Transition Player",
+            normalizedName:
+              "invalid transition player",
+            role: "P",
+            availabilityStatus: "AVAILABLE"
+          });
+
           const response = await app.inject({
             method: "POST",
             url:
               "/api/auction-sessions/" +
               "session-command-invalid-transition/" +
-              "commands/start"
+              "commands/start",
+            payload: {
+              commandId:
+                "invalid-start-transition-command",
+              stateVersion: 0
+            }
           });
 
           expect(response.statusCode).toBe(409);
