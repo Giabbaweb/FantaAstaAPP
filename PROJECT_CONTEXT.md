@@ -348,6 +348,68 @@ Versione 0.10 — Sospensione e resilienza:
 - nessuna ripresa automatica;
 - resilienza dello stato `SUSPENDED` verificata dopo ricostruzione del runtime.
 
+## Runtime di sviluppo Replit e restart backend
+
+Nel workspace Replit il workflow `Project` esegue automaticamente `pnpm dev`.
+
+Il runtime di sviluppo è composto da due processi principali:
+
+```text
+Vite :5173
+→ frontend React
+→ proxy /api, /assets e /socket.io verso Fastify
+
+Fastify :3001
+→ API HTTP
+→ Socket.IO
+→ SQLite
+```
+
+Vite applica HMR alle modifiche frontend. Il backend invece viene avviato dal `dev-server-supervisor.mjs` tramite `tsx src/index.ts`, che non è un watcher generale dei sorgenti.
+
+Regola operativa consolidata durante il completamento della Fase B di v0.14:
+
+```text
+modifica solo frontend
+→ HMR Vite
+→ verifica browser
+```
+
+```text
+modifica backend
+→ test / typecheck
+→ commit
+→ restart controllato del runtime server
+→ verifica browser
+```
+
+Test e typecheck verdi verificano il codice presente su disco, ma non garantiscono che un processo Fastify già in esecuzione abbia ricaricato quel codice.
+
+Il restart del backend non è neutro quando una sessione è `RUNNING`: all'avvio viene eseguito `StartupRecoveryService`, che tratta una sessione `RUNNING` come un'asta interrotta e attiva il flusso di recovery/sospensione di sicurezza.
+
+Durante il collaudo del nuovo START autorevole è stato osservato e risolto un mismatch runtime:
+
+```text
+frontend nuovo + backend vecchio
+→ RUNNING #0
+→ nessun SESSION_STARTED
+→ nessun START_SESSION
+```
+
+Dopo restart completo del runtime con sessione riportata controllatamente a `READY #0`, il percorso corretto è stato verificato end-to-end:
+
+```text
+/admin → Avvia asta
+→ READY #0
+→ START_SESSION
+→ RUNNING #1
+→ SESSION_STARTED
+→ realtime
+→ /admin e /public sincronizzati su Stato #1
+```
+
+Per il deployment LAN definitivo della serata d'asta resta da chiudere il modello production: un solo avvio controllato dell'applicazione host, senza dipendenza dal Vite development server, con verifica del serving del frontend compilato e documentazione della procedura operativa.
+
 ## Prossimo obiettivo
 
 Versione 0.14 — Collaudo operativo:
