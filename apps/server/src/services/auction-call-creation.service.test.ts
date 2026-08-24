@@ -178,8 +178,6 @@ describe(
             auctionSessionId,
             auctionCallId:
               "service-call-1",
-            callerAuctionSessionTeamId:
-              "service-session-team-1",
             playerFmsCode: "100002",
             commandId:
               "service-create-command",
@@ -255,8 +253,6 @@ describe(
           auctionSessionId,
           auctionCallId:
             "service-call-replay",
-          callerAuctionSessionTeamId:
-            "service-session-team-1",
           playerFmsCode: "100002",
           commandId:
             "service-create-replay",
@@ -283,6 +279,128 @@ describe(
     );
 
     it(
+      "rotates the caller after the latest CONFIRMED call",
+      async () => {
+        await db.insert(auctionCalls).values({
+          id:
+            "service-call-previous-confirmed",
+          auctionSessionId,
+          playerId:
+            "service-roster-a-1",
+          callerAuctionSessionTeamId:
+            "service-session-team-1",
+          status: "CONFIRMED"
+        });
+
+        const result =
+          await service.createDraft({
+            auctionSessionId,
+            auctionCallId:
+              "service-call-after-confirmed",
+            playerFmsCode: "100002",
+            commandId:
+              "service-create-after-confirmed",
+            expectedStateVersion: 0
+          });
+
+        expect(
+          result.aggregate.call
+            .callerAuctionSessionTeamId
+        ).toBe(
+          "service-session-team-2"
+        );
+      }
+    );
+
+    it(
+      "wraps caller rotation after the last table position",
+      async () => {
+        await db.insert(auctionCalls).values({
+          id:
+            "service-call-previous-last",
+          auctionSessionId,
+          playerId:
+            "service-roster-a-1",
+          callerAuctionSessionTeamId:
+            "service-session-team-3",
+          status: "CONFIRMED"
+        });
+
+        const result =
+          await service.createDraft({
+            auctionSessionId,
+            auctionCallId:
+              "service-call-after-last",
+            playerFmsCode: "100002",
+            commandId:
+              "service-create-after-last",
+            expectedStateVersion: 0
+          });
+
+        expect(
+          result.aggregate.call
+            .callerAuctionSessionTeamId
+        ).toBe(
+          "service-session-team-1"
+        );
+      }
+    );
+
+    it(
+      "does not consume caller rotation for a CANCELLED call",
+      async () => {
+        await db.insert(auctionCalls).values([
+          {
+            id:
+              "service-call-confirmed-before-cancel",
+            auctionSessionId,
+            playerId:
+              "service-roster-a-1",
+            callerAuctionSessionTeamId:
+              "service-session-team-1",
+            status: "CONFIRMED",
+            createdAt:
+              "2026-09-16T19:00:00.000Z",
+            updatedAt:
+              "2026-09-16T19:00:00.000Z"
+          },
+          {
+            id:
+              "service-call-cancelled",
+            auctionSessionId,
+            playerId:
+              "service-roster-c-1",
+            callerAuctionSessionTeamId:
+              "service-session-team-2",
+            status: "CANCELLED",
+            createdAt:
+              "2026-09-16T19:01:00.000Z",
+            updatedAt:
+              "2026-09-16T19:01:00.000Z"
+          }
+        ]);
+
+        const result =
+          await service.createDraft({
+            auctionSessionId,
+            auctionCallId:
+              "service-call-after-cancel",
+            playerFmsCode: "100002",
+            commandId:
+              "service-create-after-cancel",
+            expectedStateVersion: 0
+          });
+
+        expect(
+          result.aggregate.call
+            .callerAuctionSessionTeamId
+        ).toBe(
+          "service-session-team-2"
+        );
+      }
+    );
+
+    it(
       "rejects a missing FMS player",
       async () => {
         await expect(
@@ -290,8 +408,6 @@ describe(
             auctionSessionId,
             auctionCallId:
               "service-call-missing-player",
-            callerAuctionSessionTeamId:
-              "service-session-team-1",
             playerFmsCode:
               "DOES-NOT-EXIST",
             commandId:
@@ -327,8 +443,6 @@ describe(
             auctionSessionId,
             auctionCallId:
               "service-call-assigned",
-            callerAuctionSessionTeamId:
-              "service-session-team-1",
             playerFmsCode: "100002",
             commandId:
               "service-create-assigned",
@@ -340,25 +454,5 @@ describe(
       }
     );
 
-    it(
-      "rejects a caller outside the session",
-      async () => {
-        await expect(
-          service.createDraft({
-            auctionSessionId,
-            auctionCallId:
-              "service-call-bad-caller",
-            callerAuctionSessionTeamId:
-              "missing-session-team",
-            playerFmsCode: "100002",
-            commandId:
-              "service-create-bad-caller",
-            expectedStateVersion: 0
-          })
-        ).rejects.toMatchObject({
-          code: "CALLER_NOT_FOUND"
-        });
-      }
-    );
   }
 );

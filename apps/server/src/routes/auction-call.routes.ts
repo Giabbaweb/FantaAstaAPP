@@ -59,7 +59,6 @@ type CreateAuctionCallBody = {
   commandId?: unknown;
   stateVersion?: unknown;
   playerFmsCode?: unknown;
-  callerAuctionSessionTeamId?: unknown;
 };
 
 type AuctionCallDetailResponse = {
@@ -144,21 +143,6 @@ export function auctionCallRoutes(
           });
         }
 
-        if (
-          typeof body.callerAuctionSessionTeamId !==
-            "string" ||
-          body.callerAuctionSessionTeamId.trim().length === 0
-        ) {
-          return reply.code(400).send({
-            data: null,
-            error: {
-              code: "INVALID_REQUEST",
-              message:
-                '"callerAuctionSessionTeamId" must be a non-empty string'
-            }
-          });
-        }
-
         try {
           const result =
             await creationService.createDraft({
@@ -166,8 +150,6 @@ export function auctionCallRoutes(
                 request.params.auctionSessionId,
               auctionCallId:
                 body.auctionCallId,
-              callerAuctionSessionTeamId:
-                body.callerAuctionSessionTeamId,
               playerFmsCode:
                 body.playerFmsCode,
               commandId:

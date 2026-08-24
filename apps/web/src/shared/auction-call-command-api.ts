@@ -112,3 +112,65 @@ export async function cancelAuctionCall(
   };
 }
 
+type RawCreateAuctionCallDraftResponse = {
+  data: unknown;
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
+export type CreateAuctionCallDraftResult = {
+  stateVersion: number;
+  idempotentReplay: boolean;
+};
+
+export async function createAuctionCallDraft(
+  auctionSessionId: string,
+  playerFmsCode: string,
+  stateVersion: number
+): Promise<CreateAuctionCallDraftResult> {
+  const response = await fetch(
+    `/api/auction-sessions/${auctionSessionId}/auction-calls`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        auctionCallId:
+          crypto.randomUUID(),
+        playerFmsCode,
+        commandId:
+          crypto.randomUUID(),
+        stateVersion
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const payload =
+      await response.json().catch(
+        () => null
+      ) as {
+        error?: {
+          message?: string;
+        };
+      } | null;
+
+    throw new Error(
+      payload?.error?.message ??
+        `Creazione chiamata fallita (${response.status})`
+    );
+  }
+
+  const payload =
+    await response.json() as
+      RawCreateAuctionCallDraftResponse;
+
+  return {
+    stateVersion:
+      payload.stateVersion,
+    idempotentReplay:
+      payload.idempotentReplay
+  };
+}

@@ -50,6 +50,11 @@ export interface AuctionCallRepository
     auctionSessionId: string
   ): AuctionCallAggregate | null;
 
+  findLatestConfirmedByAuctionSessionIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionSessionId: string
+  ): AuctionCallAggregate | null;
+
   updateCurrentTurnStartedAtWithExecutor(
     executor: AuctionCallWriteExecutor,
     auctionCallId: string,
@@ -149,6 +154,49 @@ export class SqliteAuctionCallRepository
         )
       )
       .orderBy(
+        desc(auctionCalls.createdAt),
+        desc(auctionCalls.id)
+      )
+      .limit(1)
+      .all();
+
+    if (!call) {
+      return null;
+    }
+
+    const teams =
+      this.findTeamsByAuctionCallIdWithExecutor(
+        executor,
+        call.id
+      );
+
+    return {
+      call,
+      teams
+    };
+  }
+
+  findLatestConfirmedByAuctionSessionIdWithExecutor(
+    executor: AuctionCallWriteExecutor,
+    auctionSessionId: string
+  ): AuctionCallAggregate | null {
+    const [call] = executor
+      .select()
+      .from(auctionCalls)
+      .where(
+        and(
+          eq(
+            auctionCalls.auctionSessionId,
+            auctionSessionId
+          ),
+          eq(
+            auctionCalls.status,
+            "CONFIRMED"
+          )
+        )
+      )
+      .orderBy(
+        desc(auctionCalls.updatedAt),
         desc(auctionCalls.createdAt),
         desc(auctionCalls.id)
       )

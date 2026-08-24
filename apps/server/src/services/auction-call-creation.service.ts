@@ -46,7 +46,6 @@ export class AuctionCallCreationServiceError
 export type CreateAuctionCallInput = {
   auctionSessionId: string;
   auctionCallId: string;
-  callerAuctionSessionTeamId: string;
   playerFmsCode: string;
   commandId: string;
   expectedStateVersion: number;
@@ -72,8 +71,7 @@ export class AuctionCallCreationService {
   ): Promise<ExecuteAtomicAuctionCallCreationResult> {
     const requestFingerprint = [
       "create",
-      input.playerFmsCode,
-      input.callerAuctionSessionTeamId
+      input.playerFmsCode
     ].join(":");
 
     return this.executor.execute({
@@ -140,17 +138,52 @@ export class AuctionCallCreationService {
           );
         }
 
-        const callerExists =
-          sessionTeams.some(
-            (team) =>
-              team.id ===
-              input.callerAuctionSessionTeamId
+        const orderedSessionTeams =
+          [...sessionTeams].sort(
+            (left, right) =>
+              left.tableOrder -
+              right.tableOrder
           );
 
-        if (!callerExists) {
+        const latestConfirmedCall =
+          this.executor
+            .findLatestConfirmedCallWithExecutor(
+              transactionExecutor,
+              input.auctionSessionId
+            );
+
+        let callerAuctionSessionTeamId =
+          orderedSessionTeams[0]?.id;
+
+        if (latestConfirmedCall) {
+          const previousCallerIndex =
+            orderedSessionTeams.findIndex(
+              (team) =>
+                team.id ===
+                latestConfirmedCall.call
+                  .callerAuctionSessionTeamId
+            );
+
+          if (previousCallerIndex < 0) {
+            throw new AuctionCallCreationServiceError(
+              "CALLER_NOT_FOUND",
+              `Previous confirmed caller does not belong to auction session "${input.auctionSessionId}"`
+            );
+          }
+
+          callerAuctionSessionTeamId =
+            orderedSessionTeams[
+              (
+                previousCallerIndex + 1
+              ) %
+              orderedSessionTeams.length
+            ]?.id;
+        }
+
+        if (!callerAuctionSessionTeamId) {
           throw new AuctionCallCreationServiceError(
-            "CALLER_NOT_FOUND",
-            `Caller "${input.callerAuctionSessionTeamId}" does not belong to auction session "${input.auctionSessionId}"`
+            "NO_SESSION_TEAMS",
+            `Auction session "${input.auctionSessionId}" has no participating teams`
           );
         }
 
@@ -201,8 +234,7 @@ export class AuctionCallCreationService {
             player.id,
           playerRole:
             player.role,
-          callerAuctionSessionTeamId:
-            input.callerAuctionSessionTeamId,
+          callerAuctionSessionTeamId,
           teams:
             draftTeams,
           now: this.now()

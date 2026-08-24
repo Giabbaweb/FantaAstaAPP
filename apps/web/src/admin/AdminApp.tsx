@@ -10,6 +10,7 @@ import type {
   AuctionSession,
   AuctionSessionSuspensionReason,
   League,
+  Player,
   PublicDisplayControlState,
   PublicDisplayMode,
   RealtimeAuctionSnapshot,
@@ -23,7 +24,8 @@ import {
 } from "../shared/app-api.js";
 
 import {
-  fetchAuctionSessions
+  fetchAuctionSessions,
+  fetchPlayers
 } from "../shared/admin-config-api.js";
 
 import {
@@ -39,7 +41,8 @@ import {
 
 import {
   cancelAuctionCall,
-  confirmAuctionCall
+  confirmAuctionCall,
+  createAuctionCallDraft
 } from "../shared/auction-call-command-api.js";
 
 import {
@@ -382,6 +385,26 @@ export function AdminApp() {
     setCancelCallError
   ] = useState<string | null>(null);
 
+  const [
+    players,
+    setPlayers
+  ] = useState<Player[]>([]);
+
+  const [
+    selectedPlayerFmsCode,
+    setSelectedPlayerFmsCode
+  ] = useState("");
+
+  const [
+    createCallPending,
+    setCreateCallPending
+  ] = useState(false);
+
+  const [
+    createCallError,
+    setCreateCallError
+  ] = useState<string | null>(null);
+
   useEffect(() => {
     const timer =
       window.setInterval(
@@ -436,6 +459,25 @@ export function AdminApp() {
         setLeagues(availableLeagues);
 
         if (activeSession) {
+          try {
+            const sessionPlayers =
+              await fetchPlayers(
+                activeSession.id
+              );
+
+            if (!cancelled) {
+              setPlayers(
+                sessionPlayers
+              );
+            }
+          } catch {
+            /*
+             * Il caricamento dell'archivio
+             * giocatori non deve impedire
+             * l'apertura della Console Admin.
+             */
+          }
+
           try {
             const displayControl =
               await fetchPublicDisplayControl(
@@ -1319,6 +1361,45 @@ export function AdminApp() {
       }
     };
 
+  const createDraftAuctionCall =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        !snapshot ||
+        session.status !== "RUNNING" ||
+        snapshot.operationalAuctionCall ||
+        !selectedPlayerFmsCode
+      ) {
+        return;
+      }
+
+      setCreateCallPending(true);
+      setCreateCallError(null);
+
+      try {
+        await createAuctionCallDraft(
+          session.id,
+          selectedPlayerFmsCode,
+          snapshot.stateVersion
+        );
+
+        /*
+         * La DRAFT e il nuovo stateVersion
+         * arriveranno dallo snapshot realtime
+         * autorevole.
+         */
+        setSelectedPlayerFmsCode("");
+      } catch (error) {
+        setCreateCallError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante la creazione della chiamata."
+        );
+      } finally {
+        setCreateCallPending(false);
+      }
+    };
+
   const changePublicDisplay =
     async (
       next:
@@ -1789,7 +1870,6 @@ export function AdminApp() {
           <small className="admin-controls__note">
             Gli altri comandi verranno collegati nei prossimi checkpoint.
           </small>
-
 
           <div className="admin-public-display-controls">
             <p className="admin-public-display-controls__title">

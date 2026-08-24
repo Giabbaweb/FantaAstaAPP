@@ -25,6 +25,8 @@ describe("realtime auction snapshot contracts", () => {
       "auction-session-team-2",
     currentTurnAuctionSessionTeamId:
       "auction-session-team-3",
+    currentTurnStartedAt:
+      "2026-08-02T20:01:00.000Z",
     provisionalWinnerAuctionSessionTeamId: null,
     createdAt: "2026-08-02T20:00:00.000Z",
     updatedAt: "2026-08-02T20:01:00.000Z"
@@ -92,7 +94,8 @@ describe("realtime auction snapshot contracts", () => {
       publicDisplay: {
         league: {
           id: "league-1",
-          name: "SFL'92"
+          name: "SFL'92",
+          logoPath: null
         },
         teams: [],
         currentPlayer: null,
@@ -132,7 +135,8 @@ describe("realtime auction snapshot contracts", () => {
         publicDisplay: {
           league: {
             id: "league-1",
-            name: "SFL'92"
+            name: "SFL'92",
+            logoPath: null
           },
           teams: [],
           currentPlayer: null,
@@ -168,7 +172,8 @@ describe("realtime auction snapshot contracts", () => {
         publicDisplay: {
           league: {
             id: "league-1",
-            name: "SFL'92"
+            name: "SFL'92",
+            logoPath: null
           },
           teams: [],
           currentPlayer: null,

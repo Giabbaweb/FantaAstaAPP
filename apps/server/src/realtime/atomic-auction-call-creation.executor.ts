@@ -68,6 +68,17 @@ export class AtomicAuctionCallCreationExecutor {
       CommandRegistryRepository
   ) {}
 
+  findLatestConfirmedCallWithExecutor(
+    executor: DatabaseWriteExecutor,
+    auctionSessionId: string
+  ): AuctionCallAggregate | null {
+    return this.auctionCallRepository
+      .findLatestConfirmedByAuctionSessionIdWithExecutor(
+        executor,
+        auctionSessionId
+      );
+  }
+
   async execute(
     input: ExecuteAtomicAuctionCallCreationInput
   ): Promise<ExecuteAtomicAuctionCallCreationResult> {

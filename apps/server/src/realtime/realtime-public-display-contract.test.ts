@@ -49,11 +49,13 @@ describe("realtime public display contracts", () => {
     const projection = {
       league: {
         id: "league-1",
-        name: "SFL'92"
+        name: "SFL'92",
+        logoPath: null
       },
       teams: [team],
       currentPlayer: {
         id: "player-1",
+        fmsCode: "100001",
         name: "Player One",
         realTeamName: "Inter",
         role: "A"
@@ -72,7 +74,8 @@ describe("realtime public display contracts", () => {
     const projection = {
       league: {
         id: "league-1",
-        name: "SFL'92"
+        name: "SFL'92",
+        logoPath: null
       },
       teams: [team],
       currentPlayer: null,
