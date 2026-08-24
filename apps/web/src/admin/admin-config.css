@@ -711,6 +711,85 @@
   font-weight: 700;
 }
 
+
+.admin-config-readiness {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.admin-config-readiness__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-config-readiness__summary span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-config-readiness__checks {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.admin-config-readiness__checks article {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #c7d2dc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.admin-config-readiness__checks article.is-ok {
+  border-color: #8ab99a;
+}
+
+.admin-config-readiness__checks article.is-blocking {
+  border-color: #e2a19c;
+}
+
+.admin-config-readiness__indicator {
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.admin-config-readiness__checks .is-ok
+.admin-config-readiness__indicator {
+  background: #e6f4ea;
+  color: #22633a;
+}
+
+.admin-config-readiness__checks .is-blocking
+.admin-config-readiness__indicator {
+  background: #fdecea;
+  color: #b42318;
+}
+
+.admin-config-readiness__checks article strong {
+  display: block;
+  font-size: 0.86rem;
+}
+
+.admin-config-readiness__checks article p {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .admin-config__player-archive {
   display: grid;
   gap: 1rem;

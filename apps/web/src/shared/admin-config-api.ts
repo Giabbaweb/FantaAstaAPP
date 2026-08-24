@@ -460,6 +460,50 @@ export function fetchAuctionSessions():
   );
 }
 
+export type AuctionSessionReadinessCheck = {
+  code: string;
+  ok: boolean;
+  label: string;
+  message: string;
+};
+
+export type AuctionSessionReadiness = {
+  auctionSessionId: string;
+  ready: boolean;
+  checks: AuctionSessionReadinessCheck[];
+  summary: {
+    teamCount: number;
+    minimumTeamCount: number;
+    teamsWithOwnerCount: number;
+    playerCount: number;
+    rosterEntryCount: number;
+    maximumInitialRosterEntries: number;
+  };
+};
+
+export function fetchAuctionSessionReadiness(
+  auctionSessionId: string
+): Promise<AuctionSessionReadiness> {
+  return apiRequest<AuctionSessionReadiness>(
+    `/api/auction-sessions/${auctionSessionId}/readiness`
+  );
+}
+
+export function markAuctionSessionReady(
+  auctionSessionId: string
+): Promise<AuctionSession> {
+  return apiRequest<AuctionSession>(
+    `/api/auction-sessions/${auctionSessionId}/commands/ready`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({})
+    }
+  );
+}
+
 export function updateAuctionSession(
   auctionSessionId: string,
   input: UpdateAuctionSessionInput

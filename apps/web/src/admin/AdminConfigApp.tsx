@@ -26,10 +26,12 @@ import {
   createTeamOwner,
   deleteTeamOwner,
   fetchAuctionSessions,
+  fetchAuctionSessionReadiness,
   fetchAuctionSessionTeams,
   fetchOwners,
   fetchPlayers,
   fetchRecoveryPoints,
+  markAuctionSessionReady,
   fetchTeamOwners,
   fetchTeamsByLeague,
   importInitialRosters,
@@ -213,6 +215,38 @@ export function AdminConfigApp() {
   ] = useState<string | null>(
     null
   );
+
+  const [
+    sessionReadiness,
+    setSessionReadiness
+  ] = useState<
+    Awaited<
+      ReturnType<
+        typeof fetchAuctionSessionReadiness
+      >
+    > | null
+  >(null);
+
+  const [
+    sessionReadinessLoading,
+    setSessionReadinessLoading
+  ] = useState(false);
+
+  const [
+    sessionReadinessError,
+    setSessionReadinessError
+  ] = useState<string | null>(null);
+
+  const [
+    sessionReadyPending,
+    setSessionReadyPending
+  ] = useState(false);
+
+  const [
+    sessionReadyError,
+    setSessionReadyError
+  ] = useState<string | null>(null);
+
 
   const [
     recoveryPoints,
@@ -731,6 +765,57 @@ export function AdminConfigApp() {
 
   useEffect(() => {
     if (!session) {
+      setSessionReadiness(null);
+      setSessionReadinessError(null);
+      setSessionReadinessLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    setSessionReadinessLoading(true);
+    setSessionReadinessError(null);
+
+    void fetchAuctionSessionReadiness(
+      session.id
+    )
+      .then((readiness) => {
+        if (!cancelled) {
+          setSessionReadiness(readiness);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setSessionReadiness(null);
+          setSessionReadinessError(
+            error instanceof Error
+              ? error.message
+              : "Errore durante il controllo della prontezza della sessione."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSessionReadinessLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.id,
+    session?.status,
+    session?.initialCredits,
+    session?.maximumInitialRosterEntries,
+    sessionTeams,
+    teams,
+    teamOwners,
+    players
+  ]);
+
+  useEffect(() => {
+    if (!session) {
       setRecoveryPoints([]);
       setRecoveryPointsError(null);
       return;
@@ -890,6 +975,56 @@ export function AdminConfigApp() {
       );
     } finally {
       setSessionEditPending(false);
+    }
+  }
+
+  async function handleMarkSessionReady():
+    Promise<void> {
+    if (
+      !session ||
+      session.status !== "SETUP" ||
+      !sessionReadiness?.ready ||
+      sessionReadyPending
+    ) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "Confermi il completamento della configurazione? La sessione passerà da SETUP a READY."
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSessionReadyPending(true);
+    setSessionReadyError(null);
+
+    try {
+      const updatedSession =
+        await markAuctionSessionReady(
+          session.id
+        );
+
+      setSession(updatedSession);
+
+      const refreshedReadiness =
+        await fetchAuctionSessionReadiness(
+          updatedSession.id
+        );
+
+      setSessionReadiness(
+        refreshedReadiness
+      );
+    } catch (error) {
+      setSessionReadyError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il passaggio della sessione a READY."
+      );
+    } finally {
+      setSessionReadyPending(false);
     }
   }
 
@@ -4055,14 +4190,133 @@ export function AdminConfigApp() {
         )}
       </section>
 
-      <section className="admin-config__next">
-        <span>
-          Prossimo checkpoint
-        </span>
+      <section className="admin-config__panel">
+        <div className="admin-config__section-heading">
+          <div>
+            <p className="admin-config__eyebrow">
+              Chiusura configurazione
+            </p>
 
-        <strong>
-          Modifica squadre, Presidenti e ordine del girotavolo
-        </strong>
+            <h2>
+              Prontezza sessione
+            </h2>
+          </div>
+
+          <strong>
+            {session.status}
+          </strong>
+        </div>
+
+        {session.status === "SETUP" ? (
+          <>
+            <p>
+              Quando la configurazione è completa,
+              porta la sessione a READY per
+              consegnarla al cockpit dell'asta.
+            </p>
+
+            {sessionReadinessLoading ? (
+              <p>
+                Verifica della configurazione...
+              </p>
+            ) : sessionReadinessError ? (
+              <p className="admin-config-session__error">
+                {sessionReadinessError}
+              </p>
+            ) : sessionReadiness ? (
+              <div className="admin-config-readiness">
+                <div className="admin-config-readiness__summary">
+                  <strong>
+                    {
+                      sessionReadiness.ready
+                        ? "Configurazione pronta"
+                        : "Configurazione incompleta"
+                    }
+                  </strong>
+
+                  <span>
+                    {
+                      sessionReadiness.checks.filter(
+                        (check) => check.ok
+                      ).length
+                    }
+                    /
+                    {
+                      sessionReadiness.checks.length
+                    }
+                    {" controlli superati"}
+                  </span>
+                </div>
+
+                <div className="admin-config-readiness__checks">
+                  {sessionReadiness.checks.map(
+                    (check) => (
+                      <article
+                        key={check.code}
+                        className={
+                          check.ok
+                            ? "is-ok"
+                            : "is-blocking"
+                        }
+                      >
+                        <span
+                          className="admin-config-readiness__indicator"
+                          aria-hidden="true"
+                        >
+                          {check.ok ? "✓" : "!"}
+                        </span>
+
+                        <div>
+                          <strong>
+                            {check.label}
+                          </strong>
+
+                          <p>
+                            {check.message}
+                          </p>
+                        </div>
+                      </article>
+                    )
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {sessionReadyError && (
+              <p className="admin-config-session__error">
+                {sessionReadyError}
+              </p>
+            )}
+
+            <div className="admin-config-session__actions">
+              <button
+                type="button"
+                disabled={
+                  sessionReadyPending ||
+                  sessionReadinessLoading ||
+                  !sessionReadiness?.ready
+                }
+                onClick={() => {
+                  void handleMarkSessionReady();
+                }}
+              >
+                {
+                  sessionReadyPending
+                    ? "Passaggio a READY..."
+                    : "PORTA SESSIONE A READY"
+                }
+              </button>
+            </div>
+          </>
+        ) : (
+          <p>
+            La configurazione della sessione è
+            conclusa. Stato corrente:{" "}
+            <strong>
+              {session.status}
+            </strong>.
+          </p>
+        )}
       </section>
     </main>
   );
