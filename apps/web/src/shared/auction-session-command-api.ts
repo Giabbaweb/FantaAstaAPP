@@ -17,7 +17,7 @@ type RawAuctionSessionCommandResponse = {
 
 async function executeSessionCommand(
   auctionSessionId: string,
-  command: "suspend" | "resume",
+  command: "start" | "suspend" | "resume",
   body: Record<string, unknown>
 ): Promise<AuctionSessionCommandResult> {
   const response = await fetch(
@@ -57,6 +57,21 @@ async function executeSessionCommand(
     stateVersion:
       payload.stateVersion
   };
+}
+
+export function startAuctionSession(
+  auctionSessionId: string,
+  stateVersion: number
+): Promise<AuctionSessionCommandResult> {
+  return executeSessionCommand(
+    auctionSessionId,
+    "start",
+    {
+      commandId:
+        crypto.randomUUID(),
+      stateVersion
+    }
+  );
 }
 
 export function suspendAuctionSession(

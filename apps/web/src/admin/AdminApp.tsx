@@ -33,6 +33,7 @@ import {
 
 import {
   resumeAuctionSession,
+  startAuctionSession,
   suspendAuctionSession
 } from "../shared/auction-session-command-api.js";
 
@@ -1259,6 +1260,7 @@ export function AdminApp() {
       }
 
       if (
+        session.status !== "READY" &&
         session.status !== "RUNNING" &&
         session.status !== "SUSPENDED"
       ) {
@@ -1270,16 +1272,21 @@ export function AdminApp() {
 
       try {
         const result =
-          session.status === "RUNNING"
-            ? await suspendAuctionSession(
-                session.id,
-                snapshot.stateVersion,
-                suspensionReason
-              )
-            : await resumeAuctionSession(
+          session.status === "READY"
+            ? await startAuctionSession(
                 session.id,
                 snapshot.stateVersion
-              );
+              )
+            : session.status === "RUNNING"
+              ? await suspendAuctionSession(
+                  session.id,
+                  snapshot.stateVersion,
+                  suspensionReason
+                )
+              : await resumeAuctionSession(
+                  session.id,
+                  snapshot.stateVersion
+                );
 
         /*
          * Il realtime invierà comunque lo snapshot
@@ -1740,14 +1747,17 @@ export function AdminApp() {
                 disabled={
                   sessionCommandPending ||
                   (
+                    session.status !== "READY" &&
                     session.status !== "RUNNING" &&
                     session.status !== "SUSPENDED"
                   )
                 }
                 data-action={
-                  session.status === "SUSPENDED"
-                    ? "resume"
-                    : "suspend"
+                  session.status === "READY"
+                    ? "start"
+                    : session.status === "SUSPENDED"
+                      ? "resume"
+                      : "suspend"
                 }
                 onClick={() => {
                   void executeSessionOperationalCommand();
@@ -1756,9 +1766,11 @@ export function AdminApp() {
                 {
                   sessionCommandPending
                     ? "Operazione..."
-                    : session.status === "SUSPENDED"
-                      ? "Riprendi sessione"
-                      : "Sospendi sessione"
+                    : session.status === "READY"
+                      ? "Avvia asta"
+                      : session.status === "SUSPENDED"
+                        ? "Riprendi sessione"
+                        : "Sospendi sessione"
                 }
               </button>
             </div>
