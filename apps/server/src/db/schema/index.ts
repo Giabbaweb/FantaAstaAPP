@@ -555,6 +555,7 @@ export const commandRegistry = sqliteTable(
 
     commandType: text("command_type", {
       enum: [
+        "CREATE",
         "OPEN",
         "BID",
         "PASS",

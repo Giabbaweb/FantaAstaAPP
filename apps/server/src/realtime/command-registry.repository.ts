@@ -31,6 +31,7 @@ import type {
 } from "../repositories/auction-call.repository.js";
 
 export type RegisteredAuctionCommandType =
+  | "CREATE"
   | "OPEN"
   | "BID"
   | "PASS"
@@ -724,6 +725,7 @@ export class SqliteCommandRegistryRepository
       }
 
       if (
+        record.commandType !== "CREATE" &&
         record.commandType !== "OPEN" &&
         record.commandType !== "BID" &&
         record.commandType !== "PASS" &&
