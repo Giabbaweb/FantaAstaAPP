@@ -56,6 +56,9 @@ import type {
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
+import {
+  SqliteAuctionSessionReadinessRepository
+} from "../repositories/auction-session-readiness.repository.js";
 import type {
   AuctionSessionOperationalCommandCoordinator
 } from "../realtime/auction-session-operational-command-coordinator.js";
@@ -72,6 +75,12 @@ import type {
   AuctionBackupRequester
 } from "../services/auction-backup-requester.js";
 import {
+  AuctionSessionReadinessService
+} from "../services/auction-session-readiness.service.js";
+import type {
+  AuctionSessionReadinessResult
+} from "../services/auction-session-readiness.service.js";
+import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
 
@@ -84,6 +93,22 @@ type AuctionSessionDetailResponse = {
   data: AuctionSession;
   error: null;
 };
+
+type AuctionSessionReadinessResponse = {
+  data: AuctionSessionReadinessResult;
+  error: null;
+};
+
+type AuctionSessionNotReadyResponse = {
+  data: null;
+  error: {
+    code: "AUCTION_SESSION_NOT_READY";
+    message: string;
+    readiness:
+      AuctionSessionReadinessResult;
+  };
+};
+
 
 type ActiveAuctionSessionResponse = {
   data: AuctionSession | null;
@@ -185,6 +210,11 @@ const repository =
 const service =
   new AuctionSessionService(repository);
 
+const readinessService =
+  new AuctionSessionReadinessService(
+    new SqliteAuctionSessionReadinessRepository()
+  );
+
 type AuctionSessionOperationalCommandPort = Pick<
   AuctionSessionOperationalCommandCoordinator,
   "suspend" | "resume" | "reopen"
@@ -252,6 +282,39 @@ export function auctionSessionRoutes(
     });
   }
 );
+
+    fastify.get<{
+      Params: AuctionSessionParams;
+      Reply:
+        | AuctionSessionReadinessResponse
+        | AuctionSessionNotFoundResponse;
+    }>(
+      "/api/auction-sessions/:id/readiness",
+      async (request, reply) => {
+        const readiness =
+          await readinessService
+            .getReadiness(
+              request.params.id
+            );
+
+        if (!readiness) {
+          return reply.code(404).send({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                `Auction session "${request.params.id}" was not found`
+            }
+          });
+        }
+
+        return reply.code(200).send({
+          data: readiness,
+          error: null
+        });
+      }
+    );
 
 fastify.get<{
       Params: AuctionSessionParams;
@@ -432,6 +495,7 @@ fastify.get<{
         | InvalidRequestResponse
         | AuctionSessionNotFoundResponse
         | AuctionSessionConflictResponse
+        | AuctionSessionNotReadyResponse
         | AuctionSessionOperationalCommandErrorResponse
         | ExecuteManualInitialRosterCommandResponse
         | ManualInitialRosterErrorMapping["body"]
@@ -859,6 +923,37 @@ fastify.get<{
                 `Unknown auction session command "${command}"`
             }
           });
+        }
+
+        if (command === "ready") {
+          const readiness =
+            await readinessService
+              .getReadiness(id);
+
+          if (!readiness) {
+            return reply.code(404).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_FOUND",
+                message:
+                  `Auction session "${id}" was not found`
+              }
+            });
+          }
+
+          if (!readiness.ready) {
+            return reply.code(409).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_READY",
+                message:
+                  "Auction session setup is incomplete",
+                readiness
+              }
+            });
+          }
         }
 
         try {

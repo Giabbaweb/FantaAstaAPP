@@ -28,8 +28,10 @@ import {
   auctionSessionTeams,
   commandRegistry,
   leagues,
+  owners,
   players,
   rosterEntries,
+  teamOwners,
   teams
 } from "./db/schema/index.js";
 
@@ -1457,6 +1459,208 @@ describe("GET /api/auction-sessions", () => {
     "POST /api/auction-sessions/:id/commands/:command",
     () => {
       it(
+        "returns auction session readiness through HTTP",
+        async () => {
+          const leagueId =
+            "league-readiness-http";
+          const sessionId =
+            "session-readiness-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name: "Readiness HTTP League",
+            normalizedName:
+              "readiness http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 135,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 11,
+            status: "SETUP"
+          });
+
+          const readinessTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-readiness-http-${index + 1}`,
+                leagueId,
+                name:
+                  `Readiness Team ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(readinessTeams);
+
+          const readinessOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-readiness-http-${index + 1}`,
+                name:
+                  `Readiness Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(owners)
+            .values(readinessOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              readinessTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    readinessOwners[index]!.id
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              readinessTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-readiness-http-${index + 1}`,
+                  auctionSessionId:
+                    sessionId,
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  renewalCredits: 0,
+                  remainingCredits: 300
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id: "player-readiness-http",
+            auctionSessionId: sessionId,
+            fmsCode: "READINESS-HTTP-001",
+            name: "Readiness HTTP Player",
+            normalizedName:
+              "readiness http player",
+            role: "P",
+            availabilityStatus: "AVAILABLE"
+          });
+
+          const response =
+            await app.inject({
+              method: "GET",
+              url:
+                `/api/auction-sessions/${sessionId}/readiness`
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(200);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: expect.objectContaining({
+              auctionSessionId:
+                sessionId,
+              ready: true,
+              summary:
+                expect.objectContaining({
+                  teamCount: 8,
+                  minimumTeamCount: 8,
+                  teamsWithOwnerCount: 8,
+                  playerCount: 1,
+                  maximumInitialRosterEntries:
+                    11
+                })
+            }),
+            error: null
+          });
+        }
+      );
+
+      it(
+        "rejects READY when setup is incomplete",
+        async () => {
+          const leagueId =
+            "league-not-ready-http";
+          const sessionId =
+            "session-not-ready-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Not Ready HTTP League",
+            normalizedName:
+              "not ready http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 136,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 11,
+            status: "SETUP"
+          });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                `/api/auction-sessions/${sessionId}/commands/ready`
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code:
+                "AUCTION_SESSION_NOT_READY",
+              readiness:
+                expect.objectContaining({
+                  auctionSessionId:
+                    sessionId,
+                  ready: false
+                })
+            })
+          });
+
+          const [storedSession] =
+            await db
+              .select({
+                status:
+                  auctionSessions.status
+              })
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.id,
+                  sessionId
+                )
+              );
+
+          expect(
+            storedSession?.status
+          ).toBe("SETUP");
+        }
+      );
+
+      it(
         "executes the complete auction session lifecycle",
         async () => {
           await db.insert(leagues).values({
@@ -1474,6 +1678,79 @@ describe("GET /api/auction-sessions", () => {
             initialCredits: 330,
             maximumInitialRosterEntries: 11,
             status: "SETUP"
+          });
+
+          const lifecycleTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-command-lifecycle-${index + 1}`,
+                leagueId:
+                  "league-command-lifecycle",
+                name:
+                  `Lifecycle Team ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(lifecycleTeams);
+
+          const lifecycleOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-command-lifecycle-${index + 1}`,
+                name:
+                  `Lifecycle Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(owners)
+            .values(lifecycleOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              lifecycleTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    lifecycleOwners[index]!.id
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              lifecycleTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-command-lifecycle-${index + 1}`,
+                  auctionSessionId:
+                    "session-command-lifecycle",
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  renewalCredits: 0,
+                  remainingCredits: 330
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id: "player-command-lifecycle",
+            auctionSessionId:
+              "session-command-lifecycle",
+            fmsCode: "LIFECYCLE-001",
+            name: "Lifecycle Player",
+            normalizedName:
+              "lifecycle player",
+            role: "P",
+            availabilityStatus: "AVAILABLE"
           });
 
           const executeCommand = async (
@@ -2139,6 +2416,83 @@ describe("GET /api/auction-sessions", () => {
               status: "SETUP"
             }
           ]);
+
+          const conflictingTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-command-conflicting-${index + 1}`,
+                leagueId:
+                  "league-command-active-conflict",
+                name:
+                  `Conflicting Team ${index + 1}`
+              })
+            );
+
+          const conflictingOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-command-conflicting-${index + 1}`,
+                name:
+                  `Conflicting Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(conflictingTeams);
+
+          await db
+            .insert(owners)
+            .values(conflictingOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              conflictingTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    `owner-command-conflicting-${index + 1}`
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              conflictingTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-command-conflicting-${index + 1}`,
+                  auctionSessionId:
+                    "session-command-conflicting",
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  remainingCredits: 330,
+                  renewalCredits: 0
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id:
+              "player-command-conflicting",
+            auctionSessionId:
+              "session-command-conflicting",
+            fmsCode:
+              "command-conflicting-001",
+            name:
+              "Conflicting Player",
+            normalizedName:
+              "conflicting player",
+            role: "P",
+            availabilityStatus:
+              "AVAILABLE"
+          });
 
           const response = await app.inject({
             method: "POST",
