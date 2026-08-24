@@ -1,6 +1,7 @@
 import {
   AuctionCallDomainError,
   ConfirmAuctionCallDomainError,
+  CreateAuctionCallDraftDomainError,
   MaximumBidDomainError,
   OpenAuctionCallDomainError,
   PassTurnDomainError,
@@ -12,6 +13,12 @@ import {
 import {
   AtomicAuctionCommandExecutorError
 } from "../realtime/atomic-auction-command.executor.js";
+import {
+  AtomicAuctionCallCreationError
+} from "../realtime/atomic-auction-call-creation.executor.js";
+import {
+  AuctionCallCreationServiceError
+} from "../services/auction-call-creation.service.js";
 import {
   AuctionCallServiceError
 } from "../services/auction-call.service.js";
@@ -63,6 +70,54 @@ function createMapping(
 export function mapAuctionCallError(
   error: unknown
 ): AuctionCallErrorMapping | null {
+  if (
+    error instanceof
+      AtomicAuctionCallCreationError
+  ) {
+    switch (error.code) {
+      case "AUCTION_SESSION_STATE_NOT_FOUND":
+        return createMapping(404, error);
+
+      case "AUCTION_SESSION_NOT_RUNNING":
+      case "OPERATIONAL_AUCTION_CALL_ALREADY_EXISTS":
+      case "STALE_STATE":
+      case "COMMAND_ID_CONFLICT":
+        return createMapping(409, error);
+
+      case "AUCTION_CALL_SAVE_FAILED":
+        return createMapping(500, error);
+
+      default:
+        return null;
+    }
+  }
+
+  if (
+    error instanceof
+      AuctionCallCreationServiceError
+  ) {
+    switch (error.code) {
+      case "PLAYER_NOT_FOUND":
+        return createMapping(404, error);
+
+      case "PLAYER_NOT_AVAILABLE":
+      case "PLAYER_ALREADY_ROSTERED":
+      case "NO_SESSION_TEAMS":
+      case "CALLER_NOT_FOUND":
+        return createMapping(409, error);
+
+      default:
+        return null;
+    }
+  }
+
+  if (
+    error instanceof
+      CreateAuctionCallDraftDomainError
+  ) {
+    return createMapping(409, error);
+  }
+
   if (
     error instanceof
       AtomicAuctionCommandExecutorError

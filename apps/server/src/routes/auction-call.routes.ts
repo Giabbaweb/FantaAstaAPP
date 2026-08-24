@@ -16,6 +16,9 @@ import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import {
+  AuctionCallCreationService
+} from "../services/auction-call-creation.service.js";
+import {
   AuctionCallService
 } from "../services/auction-call.service.js";
 import {
@@ -51,6 +54,14 @@ type AuctionSessionParams = {
   auctionSessionId: string;
 };
 
+type CreateAuctionCallBody = {
+  auctionCallId?: unknown;
+  commandId?: unknown;
+  stateVersion?: unknown;
+  playerFmsCode?: unknown;
+  callerAuctionSessionTeamId?: unknown;
+};
+
 type AuctionCallDetailResponse = {
   data: AuctionCallAggregate;
   error: null;
@@ -71,9 +82,129 @@ type AuctionCallCommandResponse = {
 export function auctionCallRoutes(
   service: AuctionCallService,
   commandCoordinator:
-    AuctionCallCommandCoordinator
+    AuctionCallCommandCoordinator,
+  creationService:
+    AuctionCallCreationService
 ): FastifyPluginAsync {
   return async (fastify) => {
+    fastify.post<{
+      Params: AuctionSessionParams;
+      Body: CreateAuctionCallBody;
+      Reply:
+        | AuctionCallCommandResponse
+        | InvalidRequestResponse
+        | AuctionCallNotFoundResponse;
+    }>(
+      "/api/auction-sessions/:auctionSessionId/auction-calls",
+      async (request, reply) => {
+        const body = request.body ?? {};
+
+        const metadataResult =
+          realtimeCommandMetadataSchema.safeParse({
+            commandId: body.commandId,
+            stateVersion: body.stateVersion
+          });
+
+        if (!metadataResult.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+
+        if (
+          typeof body.auctionCallId !== "string" ||
+          body.auctionCallId.trim().length === 0
+        ) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"auctionCallId" must be a non-empty string'
+            }
+          });
+        }
+
+        if (
+          typeof body.playerFmsCode !== "string" ||
+          body.playerFmsCode.trim().length === 0
+        ) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"playerFmsCode" must be a non-empty string'
+            }
+          });
+        }
+
+        if (
+          typeof body.callerAuctionSessionTeamId !==
+            "string" ||
+          body.callerAuctionSessionTeamId.trim().length === 0
+        ) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                '"callerAuctionSessionTeamId" must be a non-empty string'
+            }
+          });
+        }
+
+        try {
+          const result =
+            await creationService.createDraft({
+              auctionSessionId:
+                request.params.auctionSessionId,
+              auctionCallId:
+                body.auctionCallId,
+              callerAuctionSessionTeamId:
+                body.callerAuctionSessionTeamId,
+              playerFmsCode:
+                body.playerFmsCode,
+              commandId:
+                metadataResult.data.commandId,
+              expectedStateVersion:
+                metadataResult.data.stateVersion
+            });
+
+          return reply
+            .code(
+              result.idempotentReplay
+                ? 200
+                : 201
+            )
+            .send({
+              data: result.aggregate,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+        } catch (error) {
+          const mapped =
+            mapAuctionCallError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
     fastify.get<{
       Params: AuctionCallParams;
       Reply:

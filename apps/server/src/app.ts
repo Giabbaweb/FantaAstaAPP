@@ -125,6 +125,9 @@ import {
   AtomicAuctionCallCommandService
 } from "./realtime/atomic-auction-call-command.service.js";
 import {
+  AtomicAuctionCallCreationExecutor
+} from "./realtime/atomic-auction-call-creation.executor.js";
+import {
   AtomicAuctionCommandExecutor
 } from "./realtime/atomic-auction-command.executor.js";
 import {
@@ -208,6 +211,9 @@ import {
 import type {
   BackupRecoveryTechnicalLogger
 } from "./services/backup-recovery-technical-logger.js";
+import {
+  AuctionCallCreationService
+} from "./services/auction-call-creation.service.js";
 import {
   AuctionCallService
 } from "./services/auction-call.service.js";
@@ -336,6 +342,21 @@ export async function buildApp(
     new AuctionCallService(
       auctionCallRepository,
       auctionCallCommandHandler
+    );
+
+  const atomicAuctionCallCreationExecutor =
+    new AtomicAuctionCallCreationExecutor(
+      auctionCallRepository,
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository()
+    );
+
+  const auctionCallCreationService =
+    new AuctionCallCreationService(
+      atomicAuctionCallCreationExecutor,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqlitePlayerRepository(),
+      new SqliteRosterEntryRepository()
     );
 
   const atomicAuctionCommandExecutor =
@@ -726,7 +747,8 @@ export async function buildApp(
   await app.register(
     auctionCallRoutes(
       auctionCallService,
-      auctionCallCommandCoordinator
+      auctionCallCommandCoordinator,
+      auctionCallCreationService
     )
   );
   await app.register(multipart, {
