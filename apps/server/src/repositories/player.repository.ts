@@ -55,6 +55,12 @@ export interface PlayerRepository {
     ids: string[]
   ): Player[];
 
+  findByFmsCodeWithExecutor(
+    executor: PlayerWriteExecutor,
+    auctionSessionId: string,
+    fmsCode: string
+  ): Player | null;
+
   findByFmsCode(
     auctionSessionId: string,
     fmsCode: string
@@ -156,11 +162,12 @@ export class SqlitePlayerRepository
       .all();
   }
 
-  async findByFmsCode(
+  findByFmsCodeWithExecutor(
+    executor: PlayerWriteExecutor,
     auctionSessionId: string,
     fmsCode: string
-  ): Promise<Player | null> {
-    const [player] = await db
+  ): Player | null {
+    const [player] = executor
       .select()
       .from(players)
       .where(
@@ -172,9 +179,21 @@ export class SqlitePlayerRepository
           eq(players.fmsCode, fmsCode)
         )
       )
-      .limit(1);
+      .limit(1)
+      .all();
 
     return player ?? null;
+  }
+
+  async findByFmsCode(
+    auctionSessionId: string,
+    fmsCode: string
+  ): Promise<Player | null> {
+    return this.findByFmsCodeWithExecutor(
+      db,
+      auctionSessionId,
+      fmsCode
+    );
   }
 
   async findByNormalizedName(
