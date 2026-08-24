@@ -18,8 +18,12 @@ import {
 } from "../http/auction-session-team-errors.js";
 import type {
   AuctionSessionTeamInvalidReorderResponse,
-  AuctionSessionTeamNotFoundResponse
+  AuctionSessionTeamNotFoundResponse,
+  AuctionSessionTeamReorderNotAllowedResponse
 } from "../http/auction-session-team-errors.js";
+import {
+  SqliteAuctionSessionRepository
+} from "../repositories/auction-session.repository.js";
 import {
   SqliteAuctionSessionTeamRepository
 } from "../repositories/auction-session-team.repository.js";
@@ -77,8 +81,14 @@ function formatValidationError(
 const repository =
   new SqliteAuctionSessionTeamRepository();
 
+const auctionSessionRepository =
+  new SqliteAuctionSessionRepository();
+
 const service =
-  new AuctionSessionTeamService(repository);
+  new AuctionSessionTeamService(
+    repository,
+    auctionSessionRepository
+  );
 
 export const auctionSessionTeamRoutes:
   FastifyPluginAsync =
@@ -107,7 +117,8 @@ export const auctionSessionTeamRoutes:
         Reply:
           | AuctionSessionTeamListResponse
           | InvalidRequestResponse
-          | AuctionSessionTeamInvalidReorderResponse;
+          | AuctionSessionTeamInvalidReorderResponse
+          | AuctionSessionTeamReorderNotAllowedResponse;
       }>(
         "/api/auction-sessions/:auctionSessionId/teams/reorder",
         async (request, reply) => {
@@ -155,6 +166,15 @@ export const auctionSessionTeamRoutes:
             ) {
               return reply
                 .code(400)
+                .send(mapped.body);
+            }
+
+            if (
+              mapped &&
+              mapped.statusCode === 409
+            ) {
+              return reply
+                .code(409)
                 .send(mapped.body);
             }
 

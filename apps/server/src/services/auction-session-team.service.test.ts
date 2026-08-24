@@ -171,13 +171,50 @@ class InMemoryAuctionSessionTeamRepository
   }
 }
 
+class InMemoryAuctionSessionRepository {
+  constructor(
+    private readonly status:
+      "SETUP" |
+      "READY" |
+      "RUNNING" |
+      "SUSPENDED" |
+      "COMPLETED" |
+      "CLOSED"
+  ) {}
+
+  async findById(id: string) {
+    return {
+      id,
+      leagueId: "league-reorder",
+      season: "2026/2027",
+      editionNumber: 35,
+      status: this.status,
+      suspensionReason: null,
+      initialCredits: 300,
+      maximumInitialRosterEntries: 11,
+      createdAt: "2026-08-24T00:00:00.000Z",
+      updatedAt: "2026-08-24T00:00:00.000Z"
+    };
+  }
+}
+
 function createService(
   records:
-    AuctionSessionTeam[]
+    AuctionSessionTeam[],
+  status:
+    "SETUP" |
+    "READY" |
+    "RUNNING" |
+    "SUSPENDED" |
+    "COMPLETED" |
+    "CLOSED" = "SETUP"
 ): AuctionSessionTeamService {
   return new AuctionSessionTeamService(
     new InMemoryAuctionSessionTeamRepository(
       records
+    ),
+    new InMemoryAuctionSessionRepository(
+      status
     )
   );
 }
@@ -336,6 +373,76 @@ describe(
         ).rejects.toMatchObject({
           code:
             "AUCTION_SESSION_TEAM_REORDER_INVALID"
+        });
+      }
+    );
+
+    it.each([
+      "SETUP",
+      "READY",
+      "SUSPENDED"
+    ] as const)(
+      "allows reorder while session is %s",
+      async (status) => {
+        const service =
+          createService(
+            structuredClone(
+              initialRecords
+            ),
+            status
+          );
+
+        const result =
+          await service
+            .reorderSessionTeams(
+              sessionId,
+              [
+                "team-b",
+                "team-c",
+                "team-a"
+              ]
+            );
+
+        expect(
+          result.map(
+            (record) =>
+              record.teamId
+          )
+        ).toEqual([
+          "team-b",
+          "team-c",
+          "team-a"
+        ]);
+      }
+    );
+
+    it.each([
+      "RUNNING",
+      "COMPLETED",
+      "CLOSED"
+    ] as const)(
+      "rejects reorder while session is %s",
+      async (status) => {
+        const service =
+          createService(
+            structuredClone(
+              initialRecords
+            ),
+            status
+          );
+
+        await expect(
+          service.reorderSessionTeams(
+            sessionId,
+            [
+              "team-b",
+              "team-c",
+              "team-a"
+            ]
+          )
+        ).rejects.toMatchObject({
+          code:
+            "AUCTION_SESSION_TEAM_REORDER_NOT_ALLOWED"
         });
       }
     );

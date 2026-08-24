@@ -8,6 +8,10 @@ import {
 } from "vitest";
 
 import {
+  eq
+} from "drizzle-orm";
+
+import {
   buildApp
 } from "../app.js";
 import {
@@ -201,6 +205,51 @@ describe(
           error: {
             code:
               "AUCTION_SESSION_TEAM_REORDER_INVALID"
+          }
+        });
+      }
+    );
+
+    it(
+      "rejects reorder with 409 while session is RUNNING",
+      async () => {
+        await db
+          .update(auctionSessions)
+          .set({
+            status: "RUNNING"
+          })
+          .where(
+            eq(
+              auctionSessions.id,
+              sessionId
+            )
+          );
+
+        const response =
+          await app.inject({
+            method: "PUT",
+            url:
+              `/api/auction-sessions/${sessionId}/teams/reorder`,
+            payload: {
+              teamIds: [
+                "team-route-b",
+                "team-route-a",
+                "team-route-c"
+              ]
+            }
+          });
+
+        expect(
+          response.statusCode
+        ).toBe(409);
+
+        expect(
+          response.json()
+        ).toMatchObject({
+          data: null,
+          error: {
+            code:
+              "AUCTION_SESSION_TEAM_REORDER_NOT_ALLOWED"
           }
         });
       }

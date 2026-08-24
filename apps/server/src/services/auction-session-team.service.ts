@@ -5,6 +5,9 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import type {
+  AuctionSessionRepository
+} from "../repositories/auction-session.repository.js";
+import type {
   AuctionSessionTeamRepository
 } from "../repositories/auction-session-team.repository.js";
 
@@ -12,7 +15,8 @@ export type AuctionSessionTeamServiceErrorCode =
   | "AUCTION_SESSION_TEAM_NOT_FOUND"
   | "AUCTION_SESSION_TEAM_UPDATE_FAILED"
   | "AUCTION_SESSION_TEAM_DELETE_FAILED"
-  | "AUCTION_SESSION_TEAM_REORDER_INVALID";
+  | "AUCTION_SESSION_TEAM_REORDER_INVALID"
+  | "AUCTION_SESSION_TEAM_REORDER_NOT_ALLOWED";
 
 export class AuctionSessionTeamServiceError
   extends Error
@@ -33,7 +37,12 @@ export class AuctionSessionTeamServiceError
 export class AuctionSessionTeamService {
   constructor(
     private readonly repository:
-      AuctionSessionTeamRepository
+      AuctionSessionTeamRepository,
+    private readonly auctionSessionRepository:
+      Pick<
+        AuctionSessionRepository,
+        "findById"
+      >
   ) {}
 
   async listSessionTeams(
@@ -95,6 +104,36 @@ export class AuctionSessionTeamService {
     auctionSessionId: string,
     teamIds: string[]
   ): Promise<AuctionSessionTeam[]> {
+    const auctionSession =
+      await this.auctionSessionRepository.findById(
+        auctionSessionId
+      );
+
+    if (!auctionSession) {
+      throw new AuctionSessionTeamServiceError(
+        "AUCTION_SESSION_TEAM_REORDER_INVALID",
+        `Auction session "${auctionSessionId}" does not exist`
+      );
+    }
+
+    const reorderAllowedStatuses =
+      new Set([
+        "SETUP",
+        "READY",
+        "SUSPENDED"
+      ]);
+
+    if (
+      !reorderAllowedStatuses.has(
+        auctionSession.status
+      )
+    ) {
+      throw new AuctionSessionTeamServiceError(
+        "AUCTION_SESSION_TEAM_REORDER_NOT_ALLOWED",
+        `Table order cannot be changed while auction session "${auctionSessionId}" is ${auctionSession.status}`
+      );
+    }
+
     const current =
       await this.repository
         .findByAuctionSessionId(
