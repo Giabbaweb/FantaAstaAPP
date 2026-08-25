@@ -181,6 +181,7 @@ export type SetTeamAccessPinInput = z.infer<
 >;
 
 export const auctionSessionTeamSchema = z.object({
+  id: z.string().min(1),
   auctionSessionId: z.string().min(1),
   teamId: z.string().min(1),
   tableOrder:

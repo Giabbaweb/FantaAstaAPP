@@ -17,6 +17,7 @@ import {
 } from "../db/schema/index.js";
 
 const auctionSessionTeamPublicSelection = {
+  id: auctionSessionTeams.id,
   auctionSessionId:
     auctionSessionTeams.auctionSessionId,
   teamId: auctionSessionTeams.teamId,
@@ -28,7 +29,6 @@ const auctionSessionTeamPublicSelection = {
 };
 
 const auctionSessionTeamPersistenceSelection = {
-  id: auctionSessionTeams.id,
   ...auctionSessionTeamPublicSelection
 };
 

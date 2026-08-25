@@ -60,6 +60,7 @@ class InMemoryAuctionSessionTeamRepository
     input: CreateAuctionSessionTeamInput
   ): Promise<AuctionSessionTeam> {
     const record: AuctionSessionTeam = {
+      id: `session-team-${input.teamId}`,
       auctionSessionId,
       teamId: input.teamId,
       tableOrder: input.tableOrder,
@@ -225,6 +226,7 @@ const sessionId =
 const initialRecords:
   AuctionSessionTeam[] = [
     {
+      id: "session-team-a",
       auctionSessionId:
         sessionId,
       teamId: "team-a",
@@ -233,6 +235,7 @@ const initialRecords:
       remainingCredits: 300
     },
     {
+      id: "session-team-b",
       auctionSessionId:
         sessionId,
       teamId: "team-b",
@@ -241,6 +244,7 @@ const initialRecords:
       remainingCredits: 300
     },
     {
+      id: "session-team-c",
       auctionSessionId:
         sessionId,
       teamId: "team-c",

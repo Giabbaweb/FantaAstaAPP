@@ -146,6 +146,8 @@ describe(
         ).toEqual({
           data: [
             {
+              id:
+                "session-team-route-b",
               auctionSessionId:
                 sessionId,
               teamId:
@@ -155,6 +157,8 @@ describe(
               remainingCredits: 300
             },
             {
+              id:
+                "session-team-route-a",
               auctionSessionId:
                 sessionId,
               teamId:
@@ -164,6 +168,8 @@ describe(
               remainingCredits: 300
             },
             {
+              id:
+                "session-team-route-c",
               auctionSessionId:
                 sessionId,
               teamId:
