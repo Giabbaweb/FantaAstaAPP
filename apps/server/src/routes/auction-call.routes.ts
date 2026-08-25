@@ -16,8 +16,8 @@ import type {
   AuctionCallAggregate
 } from "../repositories/auction-call.repository.js";
 import {
-  AuctionCallCreationService
-} from "../services/auction-call-creation.service.js";
+  AuctionCallCreationCoordinator
+} from "../realtime/auction-call-creation-coordinator.js";
 import {
   AuctionCallService
 } from "../services/auction-call.service.js";
@@ -82,8 +82,8 @@ export function auctionCallRoutes(
   service: AuctionCallService,
   commandCoordinator:
     AuctionCallCommandCoordinator,
-  creationService:
-    AuctionCallCreationService
+  creationCoordinator:
+    AuctionCallCreationCoordinator
 ): FastifyPluginAsync {
   return async (fastify) => {
     fastify.post<{
@@ -145,7 +145,7 @@ export function auctionCallRoutes(
 
         try {
           const result =
-            await creationService.createDraft({
+            await creationCoordinator.createDraft({
               auctionSessionId:
                 request.params.auctionSessionId,
               auctionCallId:

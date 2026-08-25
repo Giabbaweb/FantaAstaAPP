@@ -164,6 +164,9 @@ import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
 import {
+  AuctionCallCreationCoordinator
+} from "./realtime/auction-call-creation-coordinator.js";
+import {
   AuctionCommandSocketHandler
 } from "./realtime/auction-command-socket.handler.js";
 import {
@@ -357,6 +360,27 @@ export async function buildApp(
       new SqliteAuctionSessionTeamRepository(),
       new SqlitePlayerRepository(),
       new SqliteRosterEntryRepository()
+    );
+
+  const auctionCallCreationCoordinator =
+    new AuctionCallCreationCoordinator(
+      auctionCallCreationService,
+      auctionSnapshotDispatcher,
+      ({
+        stage,
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: stage,
+            error
+          },
+          "Failed to publish auction call creation snapshot"
+        );
+      }
     );
 
   const atomicAuctionCommandExecutor =
@@ -748,7 +772,7 @@ export async function buildApp(
     auctionCallRoutes(
       auctionCallService,
       auctionCallCommandCoordinator,
-      auctionCallCreationService
+      auctionCallCreationCoordinator
     )
   );
   await app.register(multipart, {
