@@ -41,6 +41,7 @@ import {
 
 import {
   cancelAuctionCall,
+  openAuctionCall,
   confirmAuctionCall,
   createAuctionCallDraft
 } from "../shared/auction-call-command-api.js";
@@ -59,6 +60,17 @@ type AdminStatus =
   | "CONNECTING"
   | "READY"
   | "ERROR";
+
+function parseServerTime(
+  value: string
+): number {
+  const normalized =
+    value.includes("T")
+      ? value
+      : `${value.replace(" ", "T")}Z`;
+
+  return new Date(normalized).getTime();
+}
 
 function formatCurrentTime(
   now: number
@@ -82,7 +94,7 @@ function formatTurnElapsed(
   }
 
   const started =
-    new Date(startedAt).getTime();
+    parseServerTime(startedAt);
 
   if (Number.isNaN(started)) {
     return "--:--";
@@ -376,6 +388,21 @@ export function AdminApp() {
   ] = useState<string | null>(null);
 
   const [
+    openCallPending,
+    setOpenCallPending
+  ] = useState(false);
+
+  const [
+    openCallError,
+    setOpenCallError
+  ] = useState<string | null>(null);
+
+  const [
+    openingBid,
+    setOpeningBid
+  ] = useState(1);
+
+  const [
     cancelCallPending,
     setCancelCallPending
   ] = useState(false);
@@ -394,6 +421,11 @@ export function AdminApp() {
     selectedPlayerFmsCode,
     setSelectedPlayerFmsCode
   ] = useState("");
+
+  const [
+    includeNonAvailablePlayers,
+    setIncludeNonAvailablePlayers
+  ] = useState(false);
 
   const [
     createCallPending,
@@ -1280,10 +1312,31 @@ export function AdminApp() {
         );
 
         /*
-         * La proiezione definitiva di rosa,
-         * crediti, recent awards e chiamata
-         * arriverà dallo snapshot realtime.
+         * Rosa, crediti, recent awards e chiamata
+         * arriveranno dallo snapshot realtime.
+         *
+         * L'archivio players, invece, non fa parte
+         * dello snapshot: dopo una conferma dobbiamo
+         * ricaricarlo per recepire il passaggio del
+         * giocatore da AVAILABLE a ROSTERED.
          */
+        try {
+          const refreshedPlayers =
+            await fetchPlayers(
+              snapshot.session.id
+            );
+
+          setPlayers(
+            refreshedPlayers
+          );
+        } catch {
+          /*
+           * L'aggiudicazione è già stata confermata
+           * dal server: un eventuale errore nel refresh
+           * dell'archivio non deve trasformarla in un
+           * falso errore di conferma.
+           */
+        }
       } catch (error) {
         setConfirmAwardError(
           error instanceof Error
@@ -1358,6 +1411,41 @@ export function AdminApp() {
         );
       } finally {
         setSessionCommandPending(false);
+      }
+    };
+
+  const executeOpenCall =
+    async (): Promise<void> => {
+      const operationalCall =
+        snapshot?.operationalAuctionCall;
+
+      if (
+        !snapshot ||
+        !operationalCall ||
+        operationalCall.call.status !== "DRAFT" ||
+        !Number.isInteger(openingBid) ||
+        openingBid < 1
+      ) {
+        return;
+      }
+
+      setOpenCallPending(true);
+      setOpenCallError(null);
+
+      try {
+        await openAuctionCall(
+          operationalCall.call.id,
+          snapshot.stateVersion,
+          openingBid
+        );
+      } catch (error) {
+        setOpenCallError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante l'apertura della chiamata."
+        );
+      } finally {
+        setOpenCallPending(false);
       }
     };
 
@@ -1672,6 +1760,16 @@ export function AdminApp() {
                       }
                     </>
                   )}
+
+                  {cockpit.currentCallerName && (
+                    <>
+                      {" · "}
+                      Chiamante:{" "}
+                      <strong>
+                        {cockpit.currentCallerName}
+                      </strong>
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -1679,6 +1777,53 @@ export function AdminApp() {
             <p className="admin-empty">
               Nessun giocatore in chiamata.
             </p>
+          )}
+
+          {snapshot
+            ?.operationalAuctionCall
+            ?.call.status === "DRAFT" && (
+            <div className="admin-open-call">
+              <label>
+                Prezzo iniziale
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={openingBid}
+                  disabled={openCallPending}
+                  onChange={(event) => {
+                    setOpeningBid(
+                      Number(event.target.value)
+                    );
+                    setOpenCallError(null);
+                  }}
+                />
+              </label>
+
+              <button
+                type="button"
+                disabled={
+                  openCallPending ||
+                  !Number.isInteger(openingBid) ||
+                  openingBid < 1
+                }
+                onClick={() => {
+                  void executeOpenCall();
+                }}
+              >
+                {
+                  openCallPending
+                    ? "Apertura..."
+                    : "Apri chiamata"
+                }
+              </button>
+
+              {openCallError && (
+                <small className="admin-open-call__error">
+                  {openCallError}
+                </small>
+              )}
+            </div>
           )}
 
           <div className="admin-call-metrics">
@@ -1766,7 +1911,11 @@ export function AdminApp() {
                     {formatTurnElapsed(
                       cockpit?.currentTurnStartedAt ??
                         null,
-                      now
+                      session.status === "SUSPENDED"
+                        ? parseServerTime(
+                            session.updatedAt
+                          )
+                        : now
                     )}
                   </strong>
 
@@ -2092,12 +2241,92 @@ export function AdminApp() {
         <div className="admin-new-call">
           <input
             type="search"
+            list="admin-available-players"
             placeholder="Cerca giocatore..."
-            disabled
+            value={selectedPlayerFmsCode}
+            disabled={
+              session?.status !== "RUNNING" ||
+              Boolean(
+                snapshot?.operationalAuctionCall
+              ) ||
+              createCallPending
+            }
+            onChange={(event) => {
+              setSelectedPlayerFmsCode(
+                event.target.value
+              );
+              setCreateCallError(null);
+            }}
           />
 
-          <button disabled>
-            Apri chiamata
+          <datalist id="admin-available-players">
+            {players
+              .filter(
+                (player) =>
+                  includeNonAvailablePlayers ||
+                  player.availabilityStatus ===
+                    "AVAILABLE"
+              )
+              .map((player) => (
+                <option
+                  key={player.id}
+                  value={player.fmsCode}
+                >
+                  {player.name} · {player.role} ·{" "}
+                  {player.realTeamName ?? "-"} ·{" "}
+                  {player.availabilityStatus}
+                </option>
+              ))}
+          </datalist>
+
+          <label
+            className="admin-new-call__availability-toggle"
+          >
+            <input
+              type="checkbox"
+              checked={includeNonAvailablePlayers}
+              disabled={
+                createCallPending ||
+                Boolean(
+                  snapshot?.operationalAuctionCall
+                )
+              }
+              onChange={(event) => {
+                setIncludeNonAvailablePlayers(
+                  event.target.checked
+                );
+                setSelectedPlayerFmsCode("");
+                setCreateCallError(null);
+              }}
+            />
+            Includi giocatori non disponibili
+          </label>
+
+          <button
+            type="button"
+            disabled={
+              createCallPending ||
+              session?.status !== "RUNNING" ||
+              Boolean(
+                snapshot?.operationalAuctionCall
+              ) ||
+              !players.some(
+                (player) =>
+                  player.availabilityStatus ===
+                    "AVAILABLE" &&
+                  player.fmsCode ===
+                    selectedPlayerFmsCode.trim()
+              )
+            }
+            onClick={() => {
+              void createDraftAuctionCall();
+            }}
+          >
+            {
+              createCallPending
+                ? "Preparazione..."
+                : "Prepara chiamata"
+            }
           </button>
 
           <button

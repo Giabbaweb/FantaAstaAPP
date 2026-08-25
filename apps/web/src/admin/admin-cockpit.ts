@@ -49,6 +49,7 @@ export type AdminCockpitProjection = {
     ]["currentPlayer"];
 
   currentBid: number | null;
+  currentCallerName: string | null;
   currentLeaderName: string | null;
   currentTurnName: string | null;
   currentTurnStartedAt: string | null;
@@ -79,6 +80,11 @@ export function createAdminCockpitProjection(
     ) ?? []
   );
 
+  const currentCallerId =
+    operationalCall?.call
+      .callerAuctionSessionTeamId ??
+    null;
+
   const currentLeaderId =
     operationalCall?.call
       .currentLeaderAuctionSessionTeamId ??
@@ -96,6 +102,13 @@ export function createAdminCockpitProjection(
     currentBid:
       operationalCall?.call.currentBid ??
       null,
+
+    currentCallerName:
+      currentCallerId
+        ? teamNameById.get(
+            currentCallerId
+          ) ?? null
+        : null,
 
     currentLeaderName:
       currentLeaderId
