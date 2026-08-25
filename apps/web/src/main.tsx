@@ -23,8 +23,13 @@ if (!rootElement) {
   );
 }
 
-const pathname =
+const rawPathname =
   window.location.pathname;
+
+const pathname =
+  rawPathname.length > 1
+    ? rawPathname.replace(/\/+$/, "")
+    : rawPathname;
 
 const app =
   pathname === "/public"
