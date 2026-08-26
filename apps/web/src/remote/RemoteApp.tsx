@@ -8,13 +8,17 @@ import {
 import type {
   AuctionSession,
   AuctionSessionTeam,
+  Owner,
   RealtimeAuctionSnapshot,
-  Team
+  Team,
+  TeamOwner
 } from "@fantaastaapp/contracts";
 
 import {
   fetchRemoteActiveSession,
+  fetchRemoteOwners,
   fetchRemoteSessionTeams,
+  fetchRemoteTeamOwners,
   fetchRemoteTeams
 } from "./remote-api.js";
 
@@ -22,6 +26,8 @@ import {
   createRemoteRealtimeClient,
   type RemoteRealtimeClient
 } from "./remote-realtime.js";
+
+import "./remote.css";
 
 type RemoteStatus =
   | "LOADING"
@@ -42,6 +48,21 @@ type StoredRemoteAccess = {
   teamId: string;
   pin: string;
 };
+
+function getPlayerRoleLabel(
+  role: "P" | "D" | "C" | "A"
+): string {
+  switch (role) {
+    case "P":
+      return "PORTIERE";
+    case "D":
+      return "DIFENSORE";
+    case "C":
+      return "CENTROCAMPISTA";
+    case "A":
+      return "ATTACCANTE";
+  }
+}
 
 function getDeviceId(): string {
   const existing =
@@ -141,6 +162,16 @@ export function RemoteApp() {
   ] = useState<Team[]>([]);
 
   const [
+    owners,
+    setOwners
+  ] = useState<Owner[]>([]);
+
+  const [
+    teamOwners,
+    setTeamOwners
+  ] = useState<TeamOwner[]>([]);
+
+  const [
     selectedTeamId,
     setSelectedTeamId
   ] = useState("");
@@ -213,14 +244,16 @@ export function RemoteApp() {
 
         const [
           loadedSessionTeams,
-          loadedTeams
+          loadedTeams,
+          loadedOwners
         ] = await Promise.all([
           fetchRemoteSessionTeams(
             activeSession.id
           ),
           fetchRemoteTeams(
             activeSession.leagueId
-          )
+          ),
+          fetchRemoteOwners()
         ]);
 
         if (cancelled) {
@@ -232,6 +265,7 @@ export function RemoteApp() {
           loadedSessionTeams
         );
         setTeams(loadedTeams);
+        setOwners(loadedOwners);
 
         const storedAccess =
           readStoredRemoteAccess();
@@ -320,6 +354,55 @@ export function RemoteApp() {
         selectedTeamId
     ) ?? null;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTeamOwners() {
+      if (!selectedTeamId) {
+        setTeamOwners([]);
+        return;
+      }
+
+      try {
+        const loadedTeamOwners =
+          await fetchRemoteTeamOwners(
+            selectedTeamId
+          );
+
+        if (!cancelled) {
+          setTeamOwners(
+            loadedTeamOwners
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setTeamOwners([]);
+        }
+      }
+    }
+
+    void loadTeamOwners();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTeamId]);
+
+  const primaryTeamOwner =
+    teamOwners.find(
+      (teamOwner) =>
+        teamOwner.isPrimary
+    ) ?? null;
+
+  const primaryOwner =
+    primaryTeamOwner
+      ? owners.find(
+          (owner) =>
+            owner.id ===
+            primaryTeamOwner.ownerId
+        ) ?? null
+      : null;
+
   const realtimeSessionTeam =
     snapshot?.sessionTeams.find(
       (team) =>
@@ -379,22 +462,119 @@ export function RemoteApp() {
       : null;
 
   useEffect(() => {
-    if (
-      !isMyTurn ||
-      minimumBid === null
-    ) {
+    if (!isMyTurn) {
       return;
     }
 
-    setBidValue(
-      String(minimumBid)
-    );
-
+    setBidValue("");
     setCommandError(null);
   }, [
     isMyTurn,
     minimumBid
   ]);
+
+  function getQuickBidValue(
+    increment: number
+  ): number | null {
+    const currentBid =
+      operationalCall?.call.currentBid;
+
+    if (
+      typeof currentBid !== "number" ||
+      !Number.isInteger(currentBid)
+    ) {
+      return null;
+    }
+
+    return currentBid + increment;
+  }
+
+  function canUseQuickBid(
+    increment: number
+  ): boolean {
+    const quickBid =
+      getQuickBidValue(increment);
+
+    if (
+      !canAct ||
+      quickBid === null ||
+      effectiveMaximumBid === null
+    ) {
+      return false;
+    }
+
+    return (
+      quickBid <=
+      effectiveMaximumBid
+    );
+  }
+
+  async function executeQuickBid(
+    increment: number
+  ): Promise<void> {
+    const quickBid =
+      getQuickBidValue(increment);
+
+    if (
+      quickBid === null ||
+      !canUseQuickBid(increment)
+    ) {
+      return;
+    }
+
+    setCommandPending(true);
+    setCommandError(null);
+
+    try {
+      const operationalCall =
+        snapshot?.operationalAuctionCall;
+
+      if (
+        !snapshot ||
+        !operationalCall ||
+        !realtimeSessionTeam
+      ) {
+        return;
+      }
+
+      const result =
+        await realtimeRef.current
+          ?.sendCommand({
+            command: "BID",
+            auctionCallId:
+              operationalCall.call.id,
+            auctionSessionTeamId:
+              realtimeSessionTeam.id,
+            bid: quickBid,
+            metadata: {
+              commandId:
+                crypto.randomUUID(),
+              stateVersion:
+                snapshot.stateVersion
+            }
+          });
+
+      if (!result) {
+        throw new Error(
+          "Connessione realtime non disponibile."
+        );
+      }
+
+      if (!result.success) {
+        throw new Error(
+          result.error.message
+        );
+      }
+    } catch (error) {
+      setCommandError(
+        error instanceof Error
+          ? error.message
+          : "Rilancio non riuscito."
+      );
+    } finally {
+      setCommandPending(false);
+    }
+  }
 
   async function executeBid():
     Promise<void> {
@@ -786,149 +966,300 @@ export function RemoteApp() {
     );
   }
 
+  const teamPrimaryColor =
+    selected?.team.primaryColor ??
+    "#123B67";
+
+  const teamSecondaryColor =
+    selected?.team.secondaryColor ??
+    "#FFFFFF";
+
+  const currentBid =
+    operationalCall?.call.currentBid;
+
+  const effectiveMaximumBid =
+    callTeam?.maximumBid ??
+    publicTeam?.maximumBid ??
+    null;
+
   return (
-    <main>
-      <h1>FantaAstaAPP</h1>
-      <h2>
-        {selected?.team.name ??
-          "Telecomando squadra"}
-      </h2>
+    <main
+      className="remote-app"
+      style={
+        {
+          "--remote-team-primary":
+            teamPrimaryColor,
+          "--remote-team-secondary":
+            teamSecondaryColor
+        } as React.CSSProperties
+      }
+    >
+      <header className="remote-header">
+        <div className="remote-header__brand">
+          <span className="remote-header__app">
+            FantaAstaAPP
+          </span>
+          <span className="remote-header__role">
+            Telecomando asta
+          </span>
+        </div>
 
-      <p>
-        {status === "RECONNECTING"
-          ? "Riconnessione in corso..."
-          : "Connesso come OPERATOR"}
-      </p>
+        <div className="remote-header__status">
+          <span
+            className={
+              status === "RECONNECTING"
+                ? "remote-connection remote-connection--reconnecting"
+                : "remote-connection remote-connection--live"
+            }
+          >
+            {status === "RECONNECTING"
+              ? "Riconnessione..."
+              : "ONLINE"}
+          </span>
+        </div>
+      </header>
 
-      <button
-        type="button"
-        onClick={
-          disconnectAndReturnToLogin
+      <section className="remote-team-banner">
+        <div className="remote-team-banner__identity">
+          {selected?.team.logoPath ? (
+            <img
+              className="remote-team-logo"
+              src={selected.team.logoPath}
+              alt={`Logo ${selected.team.name}`}
+            />
+          ) : (
+            <div className="remote-team-logo remote-team-logo--fallback">
+              {selected?.team.shortName?.slice(
+                0,
+                3
+              ) ??
+                selected?.team.name
+                  .slice(0, 3)
+                  .toUpperCase()}
+            </div>
+          )}
+
+          <div>
+            <h1>
+              {selected?.team.name ??
+                "Telecomando squadra"}
+            </h1>
+
+            <p>
+              {liveSessionStatus ===
+              "SUSPENDED"
+                ? "Asta sospesa"
+                : "Connesso come OPERATOR"}
+            </p>
+          </div>
+        </div>
+
+        <button
+          className="remote-logout"
+          type="button"
+          onClick={
+            disconnectAndReturnToLogin
+          }
+        >
+          Esci
+        </button>
+      </section>
+
+      <section
+        className={
+          isMyTurn
+            ? "remote-turn remote-turn--active"
+            : "remote-turn remote-turn--waiting"
         }
       >
-        Esci / Cambia squadra
-      </button>
+        <span className="remote-turn__owner">
+          {primaryOwner?.name ??
+            selected?.team.name ??
+            "Squadra"}
+        </span>
 
-      <p>
-        Sessione:{" "}
-        <strong>
-          {liveSessionStatus ?? "-"}
-        </strong>
-      </p>
-
-      <p>
-        Crediti:{" "}
-        <strong>
-          {publicTeam?.remainingCredits ??
-            realtimeSessionTeam
-              ?.remainingCredits ??
-            "-"}
-        </strong>
-      </p>
-
-      <p>
-        Max offerta:{" "}
-        <strong>
-          {publicTeam?.maximumBid ?? "-"}
-        </strong>
-      </p>
-
-      <p>
-        Turno:{" "}
-        <strong>
+        <strong className="remote-turn__message">
           {isMyTurn
             ? "TOCCA A TE"
             : "Attendi"}
         </strong>
-      </p>
+      </section>
 
-      <p>
-        Giocatore in chiamata:{" "}
-        <strong>
-          {currentPlayer?.name ?? "-"}
-        </strong>
-        {currentPlayer && (
-          <>
-            {" · "}
-            {currentPlayer.role}
-            {currentPlayer.realTeamName
-              ? ` · ${currentPlayer.realTeamName}`
-              : ""}
-          </>
+      <section className="remote-player-card">
+        <div className="remote-section-label">
+          GIOCATORE IN CHIAMATA
+        </div>
+
+        {currentPlayer ? (
+          <div className="remote-player">
+            <div className="remote-player__identity">
+              <img
+                className="remote-player__photo"
+                src={`/player-photos/${currentPlayer.fmsCode}.png`}
+                alt=""
+                aria-hidden="true"
+                onError={(event) => {
+                  event.currentTarget.style.display =
+                    "none";
+                }}
+              />
+
+              <div className="remote-player__main">
+                <strong className="remote-player__name">
+                  {currentPlayer.name}
+                </strong>
+
+                <div className="remote-player__meta">
+                <span
+                  className={`remote-player-role remote-player-role--${currentPlayer.role.toLowerCase()}`}
+                >
+                  {getPlayerRoleLabel(
+                    currentPlayer.role
+                  )}
+                </span>
+
+                  {currentPlayer.realTeamName && (
+                    <span>
+                      {currentPlayer.realTeamName}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="remote-player__bid">
+              <span>
+                Offerta
+              </span>
+              <strong>
+                {currentBid ?? "-"}
+              </strong>
+            </div>
+          </div>
+        ) : (
+          <p className="remote-empty">
+            Nessun giocatore in chiamata
+          </p>
         )}
-      </p>
+      </section>
 
-      <p>
-        Offerta corrente:{" "}
-        <strong>
-          {operationalCall?.call
-            .currentBid ??
-            "-"}
-        </strong>
-      </p>
+      <section className="remote-stats">
+        <div className="remote-stat">
+          <span>Crediti</span>
+          <strong>
+            {publicTeam?.remainingCredits ??
+              realtimeSessionTeam
+                ?.remainingCredits ??
+              "-"}
+          </strong>
+        </div>
 
-      <p>
-        Stato chiamata:{" "}
-        <strong>
-          {operationalCall?.call.status ??
-            "Nessuna chiamata"}
-        </strong>
-      </p>
+        <div className="remote-stat">
+          <span>Max offerta</span>
+          <strong>
+            {publicTeam?.maximumBid ?? "-"}
+          </strong>
+        </div>
 
-      <p>
-        Stato squadra nella chiamata:{" "}
-        <strong>
-          {callTeam?.status ?? "-"}
-        </strong>
-      </p>
-
-      <p>
-        Max rilancio chiamata:{" "}
-        <strong>
-          {callTeam?.maximumBid ?? "-"}
-        </strong>
-      </p>
+        <div className="remote-stat">
+          <span>Max rilancio</span>
+          <strong>
+            {effectiveMaximumBid ?? "-"}
+          </strong>
+        </div>
+      </section>
 
       <fieldset
+        className="remote-actions"
         disabled={!canAct}
       >
         <legend>
-          Azioni
+          La tua offerta
         </legend>
 
-        <label>
-          Nuova offerta
-          <input
-            type="number"
-            inputMode="numeric"
-            min={minimumBid ?? undefined}
-            max={
-              callTeam?.maximumBid ??
-              undefined
-            }
-            step={1}
-            value={bidValue}
-            onChange={(event) => {
-              setBidValue(
-                event.target.value
+        <p className="remote-bid-help">
+          Rilancio rapido — invio immediato
+        </p>
+
+        <div className="remote-quick-bids">
+          {[1, 2, 5].map(
+            (increment) => {
+              const quickBid =
+                getQuickBidValue(
+                  increment
+                );
+
+              return (
+                <button
+                  key={increment}
+                  type="button"
+                  disabled={
+                    !canUseQuickBid(
+                      increment
+                    ) ||
+                    commandPending
+                  }
+                  onClick={() => {
+                    void executeQuickBid(
+                      increment
+                    );
+                  }}
+                >
+                  <strong>
+                    +{increment}
+                  </strong>
+
+                  <span>
+                    {quickBid ?? "-"}
+                  </span>
+                </button>
               );
-              setCommandError(null);
+            }
+          )}
+        </div>
+
+        <p className="remote-bid-help remote-bid-help--free">
+          Oppure inserisci un importo e premi RILANCIA
+        </p>
+
+        <div className="remote-free-bid">
+          <label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={
+                minimumBid ?? undefined
+              }
+              max={
+                callTeam?.maximumBid ??
+                undefined
+              }
+              step={1}
+              value={bidValue}
+              onChange={(event) => {
+                setBidValue(
+                  event.target.value
+                );
+                setCommandError(null);
+              }}
+            />
+          </label>
+
+          <button
+            className="remote-bid-submit"
+            type="button"
+            onClick={() => {
+              void executeBid();
             }}
-          />
-        </label>
+          >
+            {commandPending
+              ? "Invio..."
+              : "RILANCIA"}
+          </button>
+        </div>
 
         <button
-          type="button"
-          onClick={() => {
-            void executeBid();
-          }}
-        >
-          {commandPending
-            ? "Invio..."
-            : "Rilancia"}
-        </button>
-
-        <button
+          className="remote-pass"
           type="button"
           onClick={() => {
             void executePass();
@@ -940,22 +1271,34 @@ export function RemoteApp() {
 
       {liveSessionStatus ===
         "SUSPENDED" && (
-        <p>
-          Asta sospesa — telecomando in
-          sola lettura.
-        </p>
+        <div className="remote-notice">
+          Asta temporaneamente sospesa —
+          telecomando in sola lettura.
+        </div>
       )}
 
       {commandError && (
-        <p role="alert">
+        <div
+          className="remote-error"
+          role="alert"
+        >
           {commandError}
-        </p>
+        </div>
       )}
 
-      <p>
-        Aggiornamento #{" "}
-        {snapshot?.stateVersion ?? "-"}
-      </p>
+      <footer className="remote-footer">
+        <span>
+          Sessione{" "}
+          <strong>
+            {liveSessionStatus ?? "-"}
+          </strong>
+        </span>
+
+        <span>
+          Aggiornamento{" "}
+          {snapshot?.stateVersion ?? "-"}
+        </span>
+      </footer>
     </main>
   );
 }

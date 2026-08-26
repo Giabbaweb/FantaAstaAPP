@@ -1,7 +1,9 @@
 import type {
   AuctionSession,
   AuctionSessionTeam,
-  Team
+  Owner,
+  Team,
+  TeamOwner
 } from "@fantaastaapp/contracts";
 
 import {
@@ -30,5 +32,22 @@ export function fetchRemoteTeams(
     `/api/teams?leagueId=${encodeURIComponent(
       leagueId
     )}`
+  );
+}
+
+export function fetchRemoteOwners():
+  Promise<Owner[]> {
+  return apiRequest<Owner[]>(
+    "/api/owners"
+  );
+}
+
+export function fetchRemoteTeamOwners(
+  teamId: string
+): Promise<TeamOwner[]> {
+  return apiRequest<TeamOwner[]>(
+    `/api/teams/${encodeURIComponent(
+      teamId
+    )}/owners`
   );
 }

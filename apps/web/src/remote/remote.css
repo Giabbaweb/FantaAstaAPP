@@ -1,0 +1,584 @@
+/* ==========================================================
+   FantaAstaAPP — Operator Remote
+   ========================================================== */
+
+.remote-app {
+  --remote-team-primary: #123b67;
+  --remote-team-secondary: #ffffff;
+
+  min-height: 100dvh;
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 0 28px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(
+        in srgb,
+        var(--remote-team-primary) 12%,
+        #f4f7fb
+      ),
+      #f4f7fb 340px
+    );
+  color: #10233d;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.remote-app *,
+.remote-app *::before,
+.remote-app *::after {
+  box-sizing: border-box;
+}
+
+.remote-header {
+  min-height: 58px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.remote-header__brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.remote-header__app {
+  font-size: 17px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.remote-header__role {
+  margin-top: 3px;
+  color: #6c7b8d;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.remote-connection {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.remote-connection--live {
+  color: #137333;
+  background: #e9f7ed;
+  border: 1px solid #b8dfc2;
+}
+
+.remote-connection--reconnecting {
+  color: #8a5200;
+  background: #fff3d7;
+  border: 1px solid #f1cd7a;
+}
+
+.remote-team-banner {
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--remote-team-secondary);
+  background:
+    linear-gradient(
+      135deg,
+      var(--remote-team-primary),
+      color-mix(
+        in srgb,
+        var(--remote-team-primary) 72%,
+        #000000
+      )
+    );
+}
+
+.remote-team-banner__identity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.remote-team-banner h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(21px, 6vw, 29px);
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote-team-banner p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.84;
+}
+
+.remote-team-logo {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  object-fit: contain;
+  border-radius: 14px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 5px 16px rgba(0, 0, 0, 0.18);
+}
+
+.remote-team-logo--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--remote-team-primary);
+  font-weight: 900;
+}
+
+.remote-logout {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 12px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid
+    rgba(255, 255, 255, 0.42);
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.remote-turn {
+  margin: 14px 14px 0;
+  min-height: 112px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  text-align: center;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.remote-turn__owner {
+  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.remote-turn__message {
+  font-size: clamp(34px, 11vw, 52px);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.remote-turn--waiting {
+  color: #5b6878;
+  background: #e6ebf0;
+  border: 1px solid #d0d8e1;
+  opacity: 0.78;
+}
+
+.remote-turn--waiting
+.remote-turn__message {
+  font-size: clamp(27px, 9vw, 40px);
+}
+
+.remote-turn--active {
+  color: #10233d;
+  background:
+    linear-gradient(
+      135deg,
+      #ffe45e,
+      #ffbd24
+    );
+  border: 2px solid #f4a900;
+  animation:
+    remote-turn-pulse 1.05s
+    ease-in-out infinite;
+}
+
+@keyframes remote-turn-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 6px 18px
+      rgba(197, 129, 0, 0.18);
+  }
+
+  50% {
+    transform: scale(1.018);
+    box-shadow:
+      0 8px 30px
+      rgba(255, 180, 0, 0.55);
+  }
+}
+
+.remote-player-card {
+  margin: 12px 14px 0;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  box-shadow:
+    0 4px 13px
+    rgba(32, 51, 73, 0.07);
+}
+
+.remote-section-label {
+  margin-bottom: 10px;
+  color: #6b7a8d;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+}
+
+.remote-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.remote-player__identity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.remote-player__photo {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+.remote-player__main {
+  min-width: 0;
+}
+
+.remote-player__name {
+  display: block;
+  font-size: clamp(24px, 7vw, 34px);
+  line-height: 1.05;
+}
+
+.remote-player__meta {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.remote-player-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.remote-player-role--p {
+  background: #1565c0;
+}
+
+.remote-player-role--d {
+  background: #218838;
+}
+
+.remote-player-role--c {
+  background: #795548;
+}
+
+.remote-player-role--a {
+  background: #d32f2f;
+}
+
+.remote-player__bid {
+  min-width: 76px;
+  padding: 10px;
+  flex: 0 0 auto;
+  text-align: center;
+  background: #f2f6fa;
+  border-radius: 12px;
+}
+
+.remote-player__bid span {
+  display: block;
+  color: #69798b;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.remote-player__bid strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 27px;
+}
+
+.remote-empty {
+  margin: 0;
+  color: #718096;
+}
+
+.remote-stats {
+  margin: 12px 14px 0;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.remote-stat {
+  min-width: 0;
+  padding: 12px 6px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 13px;
+}
+
+.remote-stat span {
+  display: block;
+  overflow: hidden;
+  color: #68788a;
+  font-size: 10px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.remote-stat strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 24px;
+}
+
+.remote-actions {
+  margin: 14px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #d5dee8;
+  border-radius: 16px;
+}
+
+.remote-actions legend {
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.remote-bid-help {
+  margin: 0 0 7px;
+  color: #536579;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.remote-bid-help--free {
+  margin-top: 12px;
+}
+
+.remote-quick-bids {
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.remote-quick-bids button {
+  min-height: 66px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #116d3d;
+  background: #eef9f2;
+  border: 2px solid #b9dfc7;
+  border-radius: 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.remote-quick-bids button strong {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.remote-quick-bids button span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.remote-quick-bids button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.remote-free-bid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.remote-free-bid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.remote-free-bid label > span {
+  color: #68788a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.remote-free-bid input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 12px;
+  border: 2px solid #cbd6e2;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.remote-bid-submit,
+.remote-pass {
+  min-height: 54px;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 950;
+}
+
+.remote-bid-submit {
+  padding: 0 16px;
+  color: #ffffff;
+  background: #18864b;
+  border: 0;
+}
+
+.remote-pass {
+  width: 100%;
+  margin-top: 10px;
+  color: #a02020;
+  background: #fff1f1;
+  border: 2px solid #e9bcbc;
+  font-size: 19px;
+}
+
+.remote-actions:disabled {
+  opacity: 0.52;
+}
+
+.remote-notice,
+.remote-error {
+  margin: 12px 14px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.remote-notice {
+  color: #7a4a00;
+  background: #fff3d7;
+  border: 1px solid #efc76e;
+}
+
+.remote-error {
+  color: #8d1d1d;
+  background: #fff0f0;
+  border: 1px solid #e8b5b5;
+}
+
+.remote-footer {
+  margin: 18px 14px 0;
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #788697;
+  border-top: 1px solid #d7dfe8;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 360px) {
+  .remote-team-banner {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .remote-team-logo {
+    width: 50px;
+    height: 50px;
+    flex-basis: 50px;
+  }
+
+  .remote-player {
+    align-items: flex-start;
+  }
+
+  .remote-free-bid {
+    grid-template-columns: 1fr;
+  }
+
+  .remote-bid-submit {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remote-turn--active {
+    animation: none;
+  }
+}
