@@ -35,6 +35,10 @@ export type RemoteRealtimeClientOptions = {
   onError?: (
     error: RealtimeError
   ) => void;
+
+  onDisconnected?: () => void;
+
+  onConnectError?: () => void;
 };
 
 export type RemoteRealtimeClient = {
@@ -97,6 +101,20 @@ export function createRemoteRealtimeClient(
       ? {
           onError:
             options.onError
+        }
+      : {}),
+
+    ...(options.onDisconnected
+      ? {
+          onDisconnected:
+            options.onDisconnected
+        }
+      : {}),
+
+    ...(options.onConnectError
+      ? {
+          onConnectError:
+            options.onConnectError
         }
       : {})
     });

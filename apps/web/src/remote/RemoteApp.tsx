@@ -27,6 +27,7 @@ type RemoteStatus =
   | "LOADING"
   | "LOGIN"
   | "CONNECTING"
+  | "RECONNECTING"
   | "LIVE"
   | "ERROR";
 
@@ -361,6 +362,7 @@ export function RemoteApp() {
     null;
 
   const canAct =
+    status === "LIVE" &&
     liveSessionStatus === "RUNNING" &&
     operationalCall?.call.status ===
       "OPEN" &&
@@ -584,6 +586,26 @@ export function RemoteApp() {
           );
         },
 
+        onDisconnected: () => {
+          setStatus(
+            (current) =>
+              current === "LIVE" ||
+              current === "RECONNECTING"
+                ? "RECONNECTING"
+                : current
+          );
+        },
+
+        onConnectError: () => {
+          setStatus(
+            (current) =>
+              current === "LIVE" ||
+              current === "RECONNECTING"
+                ? "RECONNECTING"
+                : current
+          );
+        },
+
         onError: (error) => {
           setErrorMessage(
             error.message
@@ -773,7 +795,9 @@ export function RemoteApp() {
       </h2>
 
       <p>
-        Connesso come OPERATOR
+        {status === "RECONNECTING"
+          ? "Riconnessione in corso..."
+          : "Connesso come OPERATOR"}
       </p>
 
       <button

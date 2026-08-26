@@ -31,6 +31,10 @@ export type RealtimeClientOptions = {
   onError?: (
     error: RealtimeError
   ) => void;
+
+  onDisconnected?: () => void;
+
+  onConnectError?: () => void;
 };
 
 export type RealtimeClient = {
@@ -44,6 +48,20 @@ export function createRealtimeClient(
   const socket = io({
     autoConnect: false
   });
+
+  socket.on(
+    "disconnect",
+    () => {
+      options.onDisconnected?.();
+    }
+  );
+
+  socket.on(
+    "connect_error",
+    () => {
+      options.onConnectError?.();
+    }
+  );
 
   socket.on(
     "realtime:connected",
