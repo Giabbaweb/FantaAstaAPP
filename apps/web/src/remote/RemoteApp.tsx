@@ -335,6 +335,10 @@ export function RemoteApp() {
     snapshot?.operationalAuctionCall ??
     null;
 
+  const currentPlayer =
+    snapshot?.publicDisplay.currentPlayer ??
+    null;
+
   const callTeam =
     operationalCall?.teams.find(
       (team) =>
@@ -812,6 +816,22 @@ export function RemoteApp() {
             ? "TOCCA A TE"
             : "Attendi"}
         </strong>
+      </p>
+
+      <p>
+        Giocatore in chiamata:{" "}
+        <strong>
+          {currentPlayer?.name ?? "-"}
+        </strong>
+        {currentPlayer && (
+          <>
+            {" · "}
+            {currentPlayer.role}
+            {currentPlayer.realTeamName
+              ? ` · ${currentPlayer.realTeamName}`
+              : ""}
+          </>
+        )}
       </p>
 
       <p>
