@@ -622,6 +622,22 @@ export function RemoteApp() {
     pin
   ]);
 
+  function disconnectAndReturnToLogin(): void {
+    realtimeRef.current?.disconnect();
+    realtimeRef.current = null;
+
+    clearStoredRemoteAccess();
+
+    setSnapshot(null);
+    setSelectedTeamId("");
+    setPin("");
+    setBidValue("");
+    setCommandError(null);
+    setErrorMessage(null);
+    setRestorePending(false);
+    setStatus("LOGIN");
+  }
+
   if (status === "LOADING") {
     return (
       <main>
@@ -756,6 +772,15 @@ export function RemoteApp() {
         Connesso come OPERATOR
       </p>
 
+      <button
+        type="button"
+        onClick={
+          disconnectAndReturnToLogin
+        }
+      >
+        Esci / Cambia squadra
+      </button>
+
       <p>
         Sessione:{" "}
         <strong>
@@ -884,7 +909,7 @@ export function RemoteApp() {
       )}
 
       <p>
-        stateVersion:{" "}
+        Aggiornamento #{" "}
         {snapshot?.stateVersion ?? "-"}
       </p>
     </main>
