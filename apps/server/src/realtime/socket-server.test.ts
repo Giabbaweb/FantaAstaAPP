@@ -414,6 +414,43 @@ describe("Socket.IO server", () => {
     }
   });
 
+  it("allows the same operator device to reconnect for the same team", async () => {
+    const {
+      auctionSessionId,
+      auctionSessionTeamId
+    } = await seedTeamAccess();
+
+    const firstClient = createClient();
+    const secondClient = createClient();
+
+    try {
+      await waitForConnection(firstClient);
+
+      await registerClient(firstClient, {
+        deviceId: "operator-device-1",
+        auctionSessionId,
+        auctionSessionTeamId,
+        role: "OPERATOR",
+        pin: "1234"
+      });
+
+      await waitForConnection(secondClient);
+
+      await expect(
+        registerClient(secondClient, {
+          deviceId: "operator-device-1",
+          auctionSessionId,
+          auctionSessionTeamId,
+          role: "OPERATOR",
+          pin: "1234"
+        })
+      ).resolves.toBeDefined();
+    } finally {
+      firstClient.disconnect();
+      secondClient.disconnect();
+    }
+  });
+
   it("allows multiple observers for the same team", async () => {
     const {
       auctionSessionId,

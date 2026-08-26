@@ -124,25 +124,46 @@ export function createSocketServer(
               );
 
             if (
-              registration.role === "OPERATOR" &&
-              connectionManager
-                .findOperatorByAuctionSessionTeamId(
-                  registration.auctionSessionTeamId
-                )
+              registration.role === "OPERATOR"
             ) {
-              const errorPayload: RealtimeError = {
-                code:
-                  "OPERATOR_ALREADY_CONNECTED",
-                message:
-                  "An operator is already connected for this auction session team"
-              };
+              const existingOperator =
+                connectionManager
+                  .findOperatorByAuctionSessionTeamId(
+                    registration
+                      .auctionSessionTeamId
+                  );
 
-              socket.emit(
-                "realtime:error",
-                errorPayload
-              );
+              if (existingOperator) {
+                if (
+                  existingOperator.deviceId ===
+                    registration.deviceId
+                ) {
+                  connectionManager.disconnect(
+                    existingOperator.socketId
+                  );
 
-              return;
+                  io.sockets.sockets
+                    .get(
+                      existingOperator.socketId
+                    )
+                    ?.disconnect(true);
+                } else {
+                  const errorPayload:
+                    RealtimeError = {
+                      code:
+                        "OPERATOR_ALREADY_CONNECTED",
+                      message:
+                        "An operator is already connected for this auction session team"
+                    };
+
+                  socket.emit(
+                    "realtime:error",
+                    errorPayload
+                  );
+
+                  return;
+                }
+              }
             }
           }
 

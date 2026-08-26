@@ -30,13 +30,22 @@ type RemoteStatus =
   | "LIVE"
   | "ERROR";
 
-function getDeviceId(): string {
-  const storageKey =
-    "fantaastaapp.remote.device-id";
+const remoteDeviceStorageKey =
+  "fantaastaapp.remote.device-id";
 
+const remoteAccessStorageKey =
+  "fantaastaapp.remote.access";
+
+type StoredRemoteAccess = {
+  auctionSessionId: string;
+  teamId: string;
+  pin: string;
+};
+
+function getDeviceId(): string {
   const existing =
-    window.localStorage.getItem(
-      storageKey
+    window.sessionStorage.getItem(
+      remoteDeviceStorageKey
     );
 
   if (existing) {
@@ -46,12 +55,65 @@ function getDeviceId(): string {
   const generated =
     `remote-${crypto.randomUUID()}`;
 
-  window.localStorage.setItem(
-    storageKey,
+  window.sessionStorage.setItem(
+    remoteDeviceStorageKey,
     generated
   );
 
   return generated;
+}
+
+function readStoredRemoteAccess():
+  StoredRemoteAccess | null {
+  const raw =
+    window.sessionStorage.getItem(
+      remoteAccessStorageKey
+    );
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed =
+      JSON.parse(raw) as Partial<
+        StoredRemoteAccess
+      >;
+
+    if (
+      typeof parsed.auctionSessionId !==
+        "string" ||
+      typeof parsed.teamId !== "string" ||
+      typeof parsed.pin !== "string" ||
+      !/^\d{4,8}$/.test(parsed.pin)
+    ) {
+      return null;
+    }
+
+    return {
+      auctionSessionId:
+        parsed.auctionSessionId,
+      teamId: parsed.teamId,
+      pin: parsed.pin
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredRemoteAccess(
+  access: StoredRemoteAccess
+): void {
+  window.sessionStorage.setItem(
+    remoteAccessStorageKey,
+    JSON.stringify(access)
+  );
+}
+
+function clearStoredRemoteAccess(): void {
+  window.sessionStorage.removeItem(
+    remoteAccessStorageKey
+  );
 }
 
 export function RemoteApp() {
@@ -86,6 +148,11 @@ export function RemoteApp() {
     pin,
     setPin
   ] = useState("");
+
+  const [
+    restorePending,
+    setRestorePending
+  ] = useState(false);
 
   const [
     snapshot,
@@ -164,6 +231,31 @@ export function RemoteApp() {
           loadedSessionTeams
         );
         setTeams(loadedTeams);
+
+        const storedAccess =
+          readStoredRemoteAccess();
+
+        if (
+          storedAccess &&
+          storedAccess.auctionSessionId ===
+            activeSession.id &&
+          loadedSessionTeams.some(
+            (sessionTeam) =>
+              sessionTeam.teamId ===
+              storedAccess.teamId
+          )
+        ) {
+          setSelectedTeamId(
+            storedAccess.teamId
+          );
+          setPin(
+            storedAccess.pin
+          );
+          setRestorePending(true);
+        } else if (storedAccess) {
+          clearStoredRemoteAccess();
+        }
+
         setStatus("LOGIN");
       } catch (error) {
         if (cancelled) {
@@ -469,6 +561,14 @@ export function RemoteApp() {
         pin,
 
         onRegistered: () => {
+          writeStoredRemoteAccess({
+            auctionSessionId:
+              session.id,
+            teamId:
+              selected.sessionTeam.teamId,
+            pin
+          });
+
           setStatus("LIVE");
         },
 
@@ -484,6 +584,15 @@ export function RemoteApp() {
           setErrorMessage(
             error.message
           );
+
+          if (
+            error.code === "UNAUTHORIZED" ||
+            error.code ===
+              "VALIDATION_ERROR"
+          ) {
+            clearStoredRemoteAccess();
+          }
+
           setStatus("LOGIN");
 
           realtimeRef.current?.disconnect();
@@ -491,6 +600,27 @@ export function RemoteApp() {
         }
       });
   }
+
+  useEffect(() => {
+    if (
+      !restorePending ||
+      status !== "LOGIN" ||
+      !session ||
+      !selected ||
+      pin.length < 4
+    ) {
+      return;
+    }
+
+    setRestorePending(false);
+    connect();
+  }, [
+    restorePending,
+    status,
+    session,
+    selected,
+    pin
+  ]);
 
   if (status === "LOADING") {
     return (
