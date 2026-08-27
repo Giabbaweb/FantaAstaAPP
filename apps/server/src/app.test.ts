@@ -662,6 +662,318 @@ describe("GET /api/auction-sessions", () => {
       });
     });
   });
+  describe(
+    "POST /api/auction-sessions/setup",
+    () => {
+      async function createSetupLeague(
+        leagueId: string,
+        teamCount: number
+      ): Promise<void> {
+        await db.insert(leagues).values({
+          id: leagueId,
+          name: `Setup League ${leagueId}`,
+          normalizedName:
+            `setup league ${leagueId}`
+        });
+
+        if (teamCount === 0) {
+          return;
+        }
+
+        await db.insert(teams).values(
+          Array.from(
+            { length: teamCount },
+            (_, index) => ({
+              id:
+                `${leagueId}-team-${index + 1}`,
+              leagueId,
+              name:
+                `Team ${String(
+                  index + 1
+                ).padStart(2, "0")}`
+            })
+          )
+        );
+      }
+
+      it(
+        "creates a SETUP session and all 8 session teams atomically",
+        async () => {
+          const leagueId =
+            "league-atomic-session-setup";
+
+          await createSetupLeague(
+            leagueId,
+            8
+          );
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/setup",
+              payload: {
+                leagueId,
+                season: "2030/2031",
+                editionNumber: 101,
+                initialCredits: 300,
+                maximumInitialRosterEntries:
+                  11
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(201);
+
+          const body =
+            response.json<{
+              data: {
+                session: {
+                  id: string;
+                  leagueId: string;
+                  season: string;
+                  editionNumber: number;
+                  status: string;
+                  initialCredits: number;
+                  maximumInitialRosterEntries:
+                    number;
+                };
+                sessionTeams: Array<{
+                  id: string;
+                  auctionSessionId:
+                    string;
+                  teamId: string;
+                  tableOrder: number;
+                  renewalCredits: number;
+                  remainingCredits:
+                    number;
+                }>;
+              };
+              error: null;
+            }>();
+
+          expect(body.error).toBeNull();
+
+          expect(
+            body.data.session
+          ).toEqual(
+            expect.objectContaining({
+              leagueId,
+              season: "2030/2031",
+              editionNumber: 101,
+              status: "SETUP",
+              initialCredits: 300,
+              maximumInitialRosterEntries:
+                11
+            })
+          );
+
+          expect(
+            body.data.sessionTeams
+          ).toHaveLength(8);
+
+          expect(
+            body.data.sessionTeams.map(
+              (sessionTeam) => ({
+                tableOrder:
+                  sessionTeam.tableOrder,
+                renewalCredits:
+                  sessionTeam.renewalCredits,
+                remainingCredits:
+                  sessionTeam.remainingCredits
+              })
+            )
+          ).toEqual(
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                tableOrder: index + 1,
+                renewalCredits: 0,
+                remainingCredits: 300
+              })
+            )
+          );
+
+          const storedSessions =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.leagueId,
+                  leagueId
+                )
+              );
+
+          expect(
+            storedSessions
+          ).toHaveLength(1);
+
+          const storedSessionTeams =
+            await db
+              .select()
+              .from(
+                auctionSessionTeams
+              )
+              .where(
+                eq(
+                  auctionSessionTeams
+                    .auctionSessionId,
+                  body.data.session.id
+                )
+              );
+
+          expect(
+            storedSessionTeams
+          ).toHaveLength(8);
+        }
+      );
+
+      it(
+        "returns 409 and creates nothing when the league has 7 teams",
+        async () => {
+          const leagueId =
+            "league-atomic-session-seven";
+
+          await createSetupLeague(
+            leagueId,
+            7
+          );
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/setup",
+              payload: {
+                leagueId,
+                season: "2031/2032",
+                editionNumber: 102,
+                initialCredits: 300
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "INVALID_LEAGUE_TEAM_COUNT",
+              message: expect.any(String)
+            }
+          });
+
+          const storedSessions =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.leagueId,
+                  leagueId
+                )
+              );
+
+          expect(
+            storedSessions
+          ).toHaveLength(0);
+        }
+      );
+
+      it(
+        "returns 409 for a duplicate league season without creating another session",
+        async () => {
+          const leagueId =
+            "league-atomic-session-duplicate";
+
+          await createSetupLeague(
+            leagueId,
+            8
+          );
+
+          await db
+            .insert(auctionSessions)
+            .values({
+              id:
+                "existing-atomic-session",
+              leagueId,
+              season: "2032/2033",
+              editionNumber: 103,
+              initialCredits: 300
+            });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/setup",
+              payload: {
+                leagueId,
+                season: "2032/2033",
+                editionNumber: 104,
+                initialCredits: 300
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_SEASON_ALREADY_EXISTS",
+              message:
+                "An auction session already exists for this league and season"
+            }
+          });
+
+          const storedSessions =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.leagueId,
+                  leagueId
+                )
+              );
+
+          expect(
+            storedSessions
+          ).toHaveLength(1);
+
+          const storedSessionTeams =
+            await db
+              .select()
+              .from(
+                auctionSessionTeams
+              )
+              .where(
+                eq(
+                  auctionSessionTeams
+                    .auctionSessionId,
+                  "existing-atomic-session"
+                )
+              );
+
+          expect(
+            storedSessionTeams
+          ).toHaveLength(0);
+        }
+      );
+    }
+  );
+
   describe("POST /api/auction-sessions", () => {
     it("creates a new auction session", async () => {
       await db.insert(leagues).values({

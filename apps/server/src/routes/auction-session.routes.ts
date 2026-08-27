@@ -84,6 +84,13 @@ import type {
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
+import {
+  AuctionSessionSetupService,
+  AuctionSessionSetupServiceError
+} from "../services/auction-session-setup.service.js";
+import type {
+  AuctionSessionSetupResult
+} from "../services/auction-session-setup.service.js";
 
 type AuctionSessionListResponse = {
   data: AuctionSession[];
@@ -148,6 +155,27 @@ type CreateAuctionSessionResponse = {
   error: null;
 };
 
+type CreateAuctionSessionSetupResponse = {
+  data: AuctionSessionSetupResult;
+  error: null;
+};
+
+type AuctionSessionSetupConflictResponse = {
+  data: null;
+  error: {
+    code: "INVALID_LEAGUE_TEAM_COUNT";
+    message: string;
+  };
+};
+
+type AuctionSessionSetupFailureResponse = {
+  data: null;
+  error: {
+    code: "SESSION_SETUP_FAILED";
+    message: string;
+  };
+};
+
 type UpdateAuctionSessionResponse = {
   data: AuctionSession;
   error: null;
@@ -210,6 +238,9 @@ const repository =
 
 const service =
   new AuctionSessionService(repository);
+
+const setupService =
+  new AuctionSessionSetupService();
 
 const readinessService =
   new AuctionSessionReadinessService(
@@ -317,7 +348,90 @@ export function auctionSessionRoutes(
       }
     );
 
-fastify.get<{
+fastify.post<{
+      Body: CreateAuctionSessionInput;
+      Reply:
+        | CreateAuctionSessionSetupResponse
+        | InvalidRequestResponse
+        | AuctionSessionSetupConflictResponse
+        | AuctionSessionCreationConflictResponse
+        | AuctionSessionSetupFailureResponse;
+    }>(
+      "/api/auction-sessions/setup",
+      async (request, reply) => {
+        const validation =
+          createAuctionSessionSchema.safeParse(
+            request.body
+          );
+
+        if (!validation.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                validation.error.issues
+                  .map((issue) => issue.message)
+                  .join("; ")
+            }
+          });
+        }
+
+        try {
+          const result =
+            setupService.execute(
+              validation.data
+            );
+
+          return reply.code(201).send({
+            data: result,
+            error: null
+          });
+        } catch (error) {
+          if (
+            error instanceof
+              AuctionSessionSetupServiceError
+          ) {
+            switch (error.code) {
+              case "INVALID_LEAGUE_TEAM_COUNT":
+                return reply.code(409).send({
+                  data: null,
+                  error: {
+                    code:
+                      "INVALID_LEAGUE_TEAM_COUNT",
+                    message: error.message
+                  }
+                });
+
+              case "SESSION_SETUP_FAILED":
+                return reply.code(500).send({
+                  data: null,
+                  error: {
+                    code:
+                      "SESSION_SETUP_FAILED",
+                    message: error.message
+                  }
+                });
+            }
+          }
+
+          const mapped =
+            mapAuctionSessionCreationError(
+              error
+            );
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
+    fastify.get<{
       Params: AuctionSessionParams;
       Reply:
         | AuctionSessionDetailResponse
