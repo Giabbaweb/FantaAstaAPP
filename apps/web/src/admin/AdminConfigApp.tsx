@@ -299,6 +299,11 @@ export function AdminConfigApp() {
   >([]);
 
   const [
+    backupSectionExpanded,
+    setBackupSectionExpanded
+  ] = useState(false);
+
+  const [
     recoveryPointsLoading,
     setRecoveryPointsLoading
   ] = useState(false);
@@ -4976,11 +4981,38 @@ export function AdminConfigApp() {
         </section>
       )}
 
-      <section className="admin-config__backup">
-        <div className="admin-config__section-heading">
-          <div>
+      <section
+        className={
+          `admin-config__backup ${
+            backupSectionExpanded
+              ? "is-expanded"
+              : "is-collapsed"
+          }`
+        }
+      >
+        <button
+          type="button"
+          className="admin-config__backup-toggle"
+          aria-expanded={backupSectionExpanded}
+          onClick={() => {
+            setBackupSectionExpanded(
+              (current) => !current
+            );
+          }}
+        >
+          <div className="admin-config__backup-toggle-copy">
+            <span className="admin-config__backup-eyebrow">
+              SICUREZZA DATI
+            </span>
+
             <span>
               Backup e ripristino
+            </span>
+
+            <span className="admin-config__backup-count">
+              {recoveryPoints.length}
+              {" "}
+              backup
             </span>
 
             <strong>
@@ -4990,19 +5022,22 @@ export function AdminConfigApp() {
             </strong>
           </div>
 
-          <span>
-            {recoveryPoints.length}
-            {" "}
-            backup
+          <span
+            className="admin-config__backup-chevron"
+            aria-hidden="true"
+          >
+            {backupSectionExpanded ? "▲" : "▼"}
           </span>
-        </div>
+        </button>
 
-        <p>
-          I recovery point vengono creati
-          automaticamente durante le operazioni
-          critiche. Puoi creare anche un backup
-          manuale in qualsiasi momento.
-        </p>
+        {backupSectionExpanded && (
+          <div className="admin-config__backup-content">
+            <p>
+              I recovery point vengono creati
+              automaticamente durante le operazioni
+              critiche. Puoi creare anche un backup
+              manuale in qualsiasi momento.
+            </p>
 
         <div className="admin-config__backup-actions">
           <button
@@ -5075,17 +5110,17 @@ export function AdminConfigApp() {
                         )
                       }
                     </strong>
+                  </div>
 
+                  <div className="admin-config__backup-meta">
                     <span>
+                      Data:{" "}
                       {
                         formatBackupDate(
                           recoveryPoint.createdAt
                         )
                       }
                     </span>
-                  </div>
-
-                  <div className="admin-config__backup-meta">
                     <span>
                       Integrità:{" "}
                       <strong>
@@ -5117,7 +5152,7 @@ export function AdminConfigApp() {
                     </span>
 
                     <span>
-                      stateVersion:{" "}
+                      Aggiornamento:{" "}
                       {
                         recoveryPoint
                           .auctionSession
@@ -5195,6 +5230,8 @@ export function AdminConfigApp() {
                 </article>
               )
             )}
+          </div>
+        )}
           </div>
         )}
       </section>

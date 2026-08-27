@@ -2064,3 +2064,259 @@ button:first-child:not(:disabled):hover {
   color: #197337;
   font-weight: 800;
 }
+
+
+/* ============================================================
+   M14 C1.10b — Backup & Restore visual shell
+   ============================================================ */
+
+.admin-config__backup {
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #d7dde4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.admin-config__backup-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 0;
+  background: transparent;
+  color: #27313d;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-config__backup-toggle:hover {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.admin-config__backup-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -3px;
+}
+
+.admin-config__backup-toggle-copy {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.admin-config__backup-toggle-copy > span {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #27313d;
+}
+
+.admin-config__backup-toggle-copy > strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.admin-config__backup-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid #cfd6dd;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #4b5563;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-config__backup-chevron {
+  width: 1.2rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.admin-config__backup.is-expanded
+.admin-config__backup-toggle {
+  border-bottom: 1px solid #d7dde4;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.admin-config__backup-content {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+}
+
+.admin-config__backup-content > p:first-child {
+  margin: 0;
+  max-width: none;
+  color: #5f6873;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.admin-config__backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-config__backup-actions button {
+  min-height: 38px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #475569;
+  border-radius: 9px;
+  background: #475569;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  cursor: pointer;
+}
+
+.admin-config__backup-actions button:not(:disabled):hover {
+  background: #3f4b5c;
+}
+
+.admin-config__backup-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-config__backup-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-config__backup-item {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #d5dbe2;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #374151;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.035);
+}
+
+.admin-config__backup-item-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+}
+
+.admin-config__backup-item-main strong {
+  color: #27313d;
+  font-size: 0.9rem;
+}
+
+.admin-config__backup-item-main span {
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.admin-config__backup-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  color: #69727d;
+  font-size: 0.76rem;
+}
+
+.admin-config__backup-meta strong {
+  color: #4b5563;
+}
+
+.admin-config__backup-filename {
+  overflow-wrap: anywhere;
+  color: #87909a;
+  font-size: 0.72rem;
+}
+
+.admin-config__backup-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.admin-config__backup-item-actions button {
+  min-height: 34px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-config__backup-item-actions button:first-child {
+  border: 1px solid #667085;
+  background: #f8fafc;
+  color: #475467;
+}
+
+.admin-config__backup-item-actions button:first-child:not(:disabled):hover {
+  background: #eef1f4;
+}
+
+.admin-config__backup-item-actions button:last-child {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #667085;
+}
+
+.admin-config__backup-item-actions button:last-child:not(:disabled):hover {
+  background: #f5f6f7;
+}
+
+.admin-config__backup-item-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 760px) {
+  .admin-config__backup-toggle {
+    align-items: flex-start;
+  }
+
+  .admin-config__backup-toggle-copy {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .admin-config__backup-content {
+    padding:
+      1rem
+      0.9rem
+      1.05rem;
+  }
+}
+
+/* ============================================================
+   M14 C1.10d — Backup section eyebrow
+   ============================================================ */
+
+.admin-config__backup-eyebrow {
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
