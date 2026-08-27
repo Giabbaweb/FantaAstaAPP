@@ -6,6 +6,10 @@ import {
   PlayerPhotoCatalogService
 } from "../services/player-photo-catalog.service.js";
 import {
+  PlayerPhotoDeletionService,
+  type PlayerPhotoDeletionResult
+} from "../services/player-photo-deletion.service.js";
+import {
   PlayerPhotoImportService,
   type PlayerPhotoImportFile,
   type PlayerPhotoImportMode,
@@ -25,6 +29,11 @@ type PlayerPhotoImportResponse = {
   error: null;
 };
 
+type PlayerPhotoDeletionResponse = {
+  data: PlayerPhotoDeletionResult;
+  error: null;
+};
+
 type PlayerPhotoImportErrorResponse = {
   data: null;
   error: {
@@ -41,6 +50,9 @@ const catalogService =
 
 const importService =
   new PlayerPhotoImportService();
+
+const deletionService =
+  new PlayerPhotoDeletionService();
 
 const importLimits = {
   files: 1000,
@@ -180,6 +192,24 @@ export const playerPhotoRoutes:
               files,
               mode
             );
+
+          return reply
+            .code(200)
+            .send({
+              data: result,
+              error: null
+            });
+        }
+      );
+
+      fastify.delete<{
+        Reply:
+          PlayerPhotoDeletionResponse;
+      }>(
+        "/api/player-photos",
+        async (_request, reply) => {
+          const result =
+            await deletionService.deleteAll();
 
           return reply
             .code(200)

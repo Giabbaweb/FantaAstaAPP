@@ -359,6 +359,109 @@ describe(
     );
 
     it(
+      "deletes all managed player photos",
+      async () => {
+        const boundary =
+          "----FantaAstaPlayerPhotosDelete";
+
+        const uploadResponse =
+          await app.inject({
+            method: "POST",
+            url:
+              "/api/player-photos/import",
+            headers: {
+              "content-type":
+                `multipart/form-data; boundary=${boundary}`
+            },
+            payload:
+              buildMultipartBody(
+                "KEEP",
+                [
+                  {
+                    fileName:
+                      firstFileName,
+                    content:
+                      fakePng("first")
+                  },
+                  {
+                    fileName:
+                      secondFileName,
+                    content:
+                      fakePng("second")
+                  }
+                ],
+                boundary
+              )
+          });
+
+        expect(
+          uploadResponse.statusCode
+        ).toBe(200);
+
+        const beforeDelete =
+          await app.inject({
+            method: "GET",
+            url:
+              "/api/player-photos"
+          });
+
+        expect(
+          beforeDelete.statusCode
+        ).toBe(200);
+
+        expect(
+          beforeDelete.json()
+        ).toMatchObject({
+          data: {
+            count: 2
+          },
+          error: null
+        });
+
+        const deleteResponse =
+          await app.inject({
+            method: "DELETE",
+            url:
+              "/api/player-photos"
+          });
+
+        expect(
+          deleteResponse.statusCode
+        ).toBe(200);
+
+        expect(
+          deleteResponse.json()
+        ).toEqual({
+          data: {
+            deleted: 2
+          },
+          error: null
+        });
+
+        const afterDelete =
+          await app.inject({
+            method: "GET",
+            url:
+              "/api/player-photos"
+          });
+
+        expect(
+          afterDelete.statusCode
+        ).toBe(200);
+
+        expect(
+          afterDelete.json()
+        ).toEqual({
+          data: {
+            count: 0,
+            lastUpdatedAt: null
+          },
+          error: null
+        });
+      }
+    );
+
+    it(
       "rejects a missing import mode",
       async () => {
         const boundary =
