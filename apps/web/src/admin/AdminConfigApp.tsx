@@ -2925,12 +2925,16 @@ export function AdminConfigApp() {
 
   return (
     <main className="admin-config">
-      <header className="admin-config__header">
-        <div>
-          <p className="admin-config__eyebrow">
-            FantaAstaAPP
-          </p>
+      <header className="admin-config__header admin-config__header--three-zone">
+        <div className="admin-config__header-brand">
+          <img
+            src="/branding/fantaastaapp-logo.png"
+            alt="FantaAstaAPP"
+            className="admin-config__header-logo"
+          />
+        </div>
 
+        <div className="admin-config__header-center">
           <h1>
             Configurazione asta
           </h1>
@@ -2941,10 +2945,85 @@ export function AdminConfigApp() {
           </p>
         </div>
 
-        <a href="/admin">
-          Cockpit asta
-        </a>
+        <div className="admin-config__header-right">
+          <div className="admin-config__header-readiness">
+            {sessionReadinessLoading ? (
+              <strong>
+                Verifica configurazione...
+              </strong>
+            ) : sessionReadinessError ? (
+              <strong className="is-blocking">
+                Verifica non disponibile
+              </strong>
+            ) : sessionReadiness ? (
+              <strong
+                className={
+                  sessionReadiness.ready
+                    ? "is-ready"
+                    : "is-blocking"
+                }
+              >
+                {
+                  sessionReadiness.ready
+                    ? "✓ CONFIGURAZIONE PRONTA"
+                    : "! CONFIGURAZIONE INCOMPLETA"
+                }
+                {" · "}
+                {
+                  sessionReadiness.checks.filter(
+                    (check) => check.ok
+                  ).length
+                }
+                /
+                {
+                  sessionReadiness.checks.length
+                }
+              </strong>
+            ) : (
+              <strong>
+                Stato configurazione non disponibile
+              </strong>
+            )}
+          </div>
+
+          <div className="admin-config__header-actions">
+            <span className="admin-config__header-session-status">
+              {session.status}
+            </span>
+
+            {session.status === "SETUP" && (
+              <button
+                type="button"
+                disabled={
+                  sessionReadyPending ||
+                  sessionReadinessLoading ||
+                  !sessionReadiness?.ready
+                }
+                onClick={() => {
+                  void handleMarkSessionReady();
+                }}
+              >
+                {
+                  sessionReadyPending
+                    ? "Passaggio a READY..."
+                    : "PORTA SESSIONE A READY"
+                }
+              </button>
+            )}
+
+            <a
+              href="/admin"
+              className="admin-config__cockpit-link"
+            >
+              <span aria-hidden="true">
+                →
+              </span>
+              Cockpit asta
+            </a>
+          </div>
+        </div>
       </header>
+
 
       <section className="admin-config__panel admin-config__league-panel">
         <div className="admin-config__section-heading">
@@ -5236,134 +5315,6 @@ export function AdminConfigApp() {
         )}
       </section>
 
-      <section className="admin-config__panel">
-        <div className="admin-config__section-heading">
-          <div>
-            <p className="admin-config__eyebrow">
-              Chiusura configurazione
-            </p>
-
-            <h2>
-              Prontezza sessione
-            </h2>
-          </div>
-
-          <strong>
-            {session.status}
-          </strong>
-        </div>
-
-        {session.status === "SETUP" ? (
-          <>
-            <p>
-              Quando la configurazione è completa,
-              porta la sessione a READY per
-              consegnarla al cockpit dell'asta.
-            </p>
-
-            {sessionReadinessLoading ? (
-              <p>
-                Verifica della configurazione...
-              </p>
-            ) : sessionReadinessError ? (
-              <p className="admin-config-session__error">
-                {sessionReadinessError}
-              </p>
-            ) : sessionReadiness ? (
-              <div className="admin-config-readiness">
-                <div className="admin-config-readiness__summary">
-                  <strong>
-                    {
-                      sessionReadiness.ready
-                        ? "Configurazione pronta"
-                        : "Configurazione incompleta"
-                    }
-                  </strong>
-
-                  <span>
-                    {
-                      sessionReadiness.checks.filter(
-                        (check) => check.ok
-                      ).length
-                    }
-                    /
-                    {
-                      sessionReadiness.checks.length
-                    }
-                    {" controlli superati"}
-                  </span>
-                </div>
-
-                <div className="admin-config-readiness__checks">
-                  {sessionReadiness.checks.map(
-                    (check) => (
-                      <article
-                        key={check.code}
-                        className={
-                          check.ok
-                            ? "is-ok"
-                            : "is-blocking"
-                        }
-                      >
-                        <span
-                          className="admin-config-readiness__indicator"
-                          aria-hidden="true"
-                        >
-                          {check.ok ? "✓" : "!"}
-                        </span>
-
-                        <div>
-                          <strong>
-                            {check.label}
-                          </strong>
-
-                          <p>
-                            {check.message}
-                          </p>
-                        </div>
-                      </article>
-                    )
-                  )}
-                </div>
-              </div>
-            ) : null}
-
-            {sessionReadyError && (
-              <p className="admin-config-session__error">
-                {sessionReadyError}
-              </p>
-            )}
-
-            <div className="admin-config-session__actions">
-              <button
-                type="button"
-                disabled={
-                  sessionReadyPending ||
-                  sessionReadinessLoading ||
-                  !sessionReadiness?.ready
-                }
-                onClick={() => {
-                  void handleMarkSessionReady();
-                }}
-              >
-                {
-                  sessionReadyPending
-                    ? "Passaggio a READY..."
-                    : "PORTA SESSIONE A READY"
-                }
-              </button>
-            </div>
-          </>
-        ) : (
-          <p>
-            La configurazione della sessione è
-            conclusa. Stato corrente:{" "}
-            <strong>
-              {session.status}
-            </strong>.
-          </p>
-        )}
-      </section>
     </main>
   );
 }
