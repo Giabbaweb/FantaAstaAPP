@@ -2928,7 +2928,7 @@ export function AdminConfigApp() {
       <header className="admin-config__header admin-config__header--three-zone">
         <div className="admin-config__header-brand">
           <img
-            src="/branding/fantaastaapp-logo.png"
+            src="/branding/fantaastaapp-banner-faded.png"
             alt="FantaAstaAPP"
             className="admin-config__header-logo"
           />

@@ -483,7 +483,7 @@ export function PublicDisplay():
         <div className="public-display__app-brand">
           <img
             className="public-display__app-logo"
-            src="/branding/fantaastaapp-logo.png"
+            src="/branding/fantaastaapp-banner-faded.png"
             alt="FantaAstaAPP"
           />
 

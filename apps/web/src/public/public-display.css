@@ -3254,3 +3254,17 @@ body {
   color: #613500;
   font-weight: 950;
 }
+
+/* ==========================================================
+   M14 — Public display branding alignment
+   Horizontal FantaAstaAPP faded banner
+   ========================================================== */
+
+.public-display__app-logo {
+  width: clamp(300px, 26vw, 460px);
+  max-width: 100%;
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+  object-position: left center;
+}
