@@ -234,6 +234,11 @@ export function AdminConfigApp() {
   );
 
   const [
+    sessions,
+    setSessions
+  ] = useState<AuctionSession[]>([]);
+
+  const [
     leagues,
     setLeagues
   ] = useState<League[]>([]);
@@ -786,6 +791,7 @@ export function AdminConfigApp() {
           ) ??
           null;
 
+        setSessions(availableSessions);
         setSession(activeSession);
         setLeagues(availableLeagues);
 
@@ -933,11 +939,24 @@ export function AdminConfigApp() {
       [sessionTeams]
     );
 
+  const managedLeagueMatchesSession =
+    Boolean(
+      session &&
+      managedLeagueId === session.leagueId
+    );
+
   const orderedTeams =
     useMemo(
       () =>
         [...teams].sort(
           (left, right) => {
+            if (!managedLeagueMatchesSession) {
+              return left.name.localeCompare(
+                right.name,
+                "it-IT"
+              );
+            }
+
             const leftOrder =
               sessionTeamByTeamId
                 .get(left.id)
@@ -967,9 +986,115 @@ export function AdminConfigApp() {
         ),
       [
         teams,
+        managedLeagueMatchesSession,
         sessionTeamByTeamId
       ]
     );
+
+  useEffect(() => {
+    if (!session) {
+      setSessionTeams([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    setTableOrderError(null);
+
+    void fetchAuctionSessionTeams(
+      session.id
+    )
+      .then((loadedSessionTeams) => {
+        if (!cancelled) {
+          setSessionTeams(
+            loadedSessionTeams
+          );
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setSessionTeams([]);
+          setTableOrderError(
+            error instanceof Error
+              ? error.message
+              : "Errore durante il caricamento del Girotavolo."
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
+    if (!managedLeagueId) {
+      setTeams([]);
+      setTeamOwners({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const [
+          availableTeams,
+          availableOwners
+        ] = await Promise.all([
+          fetchTeamsByLeague(
+            managedLeagueId
+          ),
+          fetchOwners()
+        ]);
+
+        const ownerEntries =
+          await Promise.all(
+            availableTeams.map(
+              async (team) => {
+                const associations =
+                  await fetchTeamOwners(
+                    team.id
+                  );
+
+                return [
+                  team.id,
+                  associations
+                ] as const;
+              }
+            )
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        setTeams(availableTeams);
+        setOwners(availableOwners);
+        setTeamOwners(
+          Object.fromEntries(
+            ownerEntries
+          )
+        );
+
+        setEditingTeamId(null);
+        setTeamEditDraft(null);
+        setTeamEditError(null);
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Errore durante il caricamento delle squadre della lega."
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [managedLeagueId]);
 
   function beginSessionEdit(): void {
     if (
@@ -1206,6 +1331,18 @@ export function AdminConfigApp() {
         );
 
       setSession(updatedSession);
+
+      setSessions(
+        (currentSessions) =>
+          currentSessions.map(
+            (currentSession) =>
+              currentSession.id ===
+                updatedSession.id
+                ? updatedSession
+                : currentSession
+          )
+      );
+
       setSessionEditDraft(null);
     } catch (error) {
       setSessionEditError(
@@ -1248,6 +1385,17 @@ export function AdminConfigApp() {
         );
 
       setSession(updatedSession);
+
+      setSessions(
+        (currentSessions) =>
+          currentSessions.map(
+            (currentSession) =>
+              currentSession.id ===
+                updatedSession.id
+                ? updatedSession
+                : currentSession
+          )
+      );
 
       const refreshedReadiness =
         await fetchAuctionSessionReadiness(
@@ -3081,13 +3229,6 @@ export function AdminConfigApp() {
                     value={candidate.id}
                   >
                     {candidate.name}
-                    {
-                      session &&
-                      candidate.id ===
-                        session.leagueId
-                        ? " · sessione attiva"
-                        : ""
-                    }
                   </option>
                 )
               )}
@@ -3159,13 +3300,6 @@ export function AdminConfigApp() {
                     ID: {managedLeague.id}
                   </small>
 
-                  {session &&
-                    managedLeague.id ===
-                      session.leagueId && (
-                      <small className="admin-config-league__active">
-                        Lega della sessione attiva
-                      </small>
-                    )}
                 </>
               )}
             </div>
@@ -3308,24 +3442,127 @@ export function AdminConfigApp() {
         )}
 
         <p className="admin-config-league__note">
-          Creare o modificare una lega non cambia
-          automaticamente la lega associata alla
-          sessione d'asta attiva. Squadre e girotavolo
-          mostrati sotto continuano a riferirsi alla
-          sessione corrente.
+          La lega selezionata determina le squadre e
+          i Presidenti mostrati sotto. La sessione
+          d'asta resta indipendente e non viene
+          modificata cambiando lega.
         </p>
       </section>
 
       <section className="admin-config-session">
-        <div className="admin-config__summary">
-          <article>
+        <div className="admin-config__summary admin-config-session__summary">
+          <article className="admin-config-session__selector-card">
             <span>
-              Lega
+              Sessione d'asta
             </span>
 
-            <strong>
-              {league?.name ?? "-"}
-            </strong>
+            <select
+              className="admin-config-session__selector"
+              value={session.id}
+              disabled={
+                sessionEditPending ||
+                sessionEditDraft !== null
+              }
+              onChange={(event) => {
+                const selectedSession =
+                  sessions.find(
+                    (candidate) =>
+                      candidate.id ===
+                      event.target.value
+                  );
+
+                if (!selectedSession) {
+                  return;
+                }
+
+                setSession(
+                  selectedSession
+                );
+
+                setManagedLeagueId(
+                  selectedSession.leagueId
+                );
+
+                setSessionEditDraft(null);
+                setSessionEditError(null);
+                setSessionReadyError(null);
+                setTableOrderError(null);
+              }}
+            >
+              {sessions.map(
+                (candidate) => {
+                  const candidateLeague =
+                    leagues.find(
+                      (leagueCandidate) =>
+                        leagueCandidate.id ===
+                        candidate.leagueId
+                    );
+
+                  return (
+                    <option
+                      key={candidate.id}
+                      value={candidate.id}
+                    >
+                      {
+                        candidateLeague?.name ??
+                        "Lega"
+                      }
+                      {" · "}
+                      {candidate.season}
+                      {" · "}
+                      {candidate.editionNumber}ª
+                      {" · "}
+                      {candidate.status}
+                    </option>
+                  );
+                }
+              )}
+            </select>
+
+            <div className="admin-config-session__selector-actions">
+              {sessionEditDraft
+                ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={
+                          sessionEditPending
+                        }
+                        onClick={
+                          cancelSessionEdit
+                        }
+                      >
+                        Annulla
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={
+                          sessionEditPending
+                        }
+                        onClick={() => {
+                          void saveSessionEdit();
+                        }}
+                      >
+                        {
+                          sessionEditPending
+                            ? "Salvataggio..."
+                            : "Salva parametri"
+                        }
+                      </button>
+                    </>
+                  )
+                : (
+                    <button
+                      type="button"
+                      onClick={
+                        beginSessionEdit
+                      }
+                    >
+                      Modifica parametri
+                    </button>
+                  )}
+            </div>
           </article>
 
           <article>
@@ -3496,60 +3733,13 @@ export function AdminConfigApp() {
           </article>
         </div>
 
-        <div className="admin-config-session__footer">
-          <div>
-            {sessionEditError && (
-              <p className="admin-config-session__error">
-                {sessionEditError}
-              </p>
-            )}
+        {sessionEditError && (
+          <div className="admin-config-session__feedback">
+            <p className="admin-config-session__error">
+              {sessionEditError}
+            </p>
           </div>
-
-          <div className="admin-config-session__actions">
-            {sessionEditDraft
-              ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={
-                        sessionEditPending
-                      }
-                      onClick={
-                        cancelSessionEdit
-                      }
-                    >
-                      Annulla
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={
-                        sessionEditPending
-                      }
-                      onClick={() => {
-                        void saveSessionEdit();
-                      }}
-                    >
-                      {
-                        sessionEditPending
-                          ? "Salvataggio..."
-                          : "Salva parametri"
-                      }
-                    </button>
-                  </>
-                )
-              : (
-                  <button
-                    type="button"
-                    onClick={
-                      beginSessionEdit
-                    }
-                  >
-                    Modifica parametri
-                  </button>
-                )}
-          </div>
-        </div>
+        )}
       </section>
 
       <section className="admin-config__panel">
@@ -3564,10 +3754,22 @@ export function AdminConfigApp() {
 
           <span className="admin-config__girotavolo-count">
             {
-              sessionTeams.length
-            } partecipanti
+              managedLeagueMatchesSession
+                ? `${sessionTeams.length} partecipanti`
+                : `${teams.length} squadre`
+            }
           </span>
         </div>
+
+        {!managedLeagueMatchesSession && (
+          <p className="admin-config__table-order-error">
+            Squadre e Presidenti della lega selezionata.
+            Il Girotavolo appartiene alla sessione
+            d'asta e sarà disponibile quando la
+            sessione selezionata appartiene a questa
+            lega.
+          </p>
+        )}
 
         {tableOrderError && (
           <p className="admin-config__table-order-error">
@@ -3625,6 +3827,7 @@ export function AdminConfigApp() {
                         aria-label={`Sposta ${team.name} verso l'alto`}
                         title="Sposta verso l'alto"
                         disabled={
+                          !managedLeagueMatchesSession ||
                           tableOrderPending ||
                           !sessionTeam ||
                           sessionTeam.tableOrder === 1
@@ -3644,6 +3847,7 @@ export function AdminConfigApp() {
                         aria-label={`Sposta ${team.name} verso il basso`}
                         title="Sposta verso il basso"
                         disabled={
+                          !managedLeagueMatchesSession ||
                           tableOrderPending ||
                           !sessionTeam ||
                           sessionTeam.tableOrder ===

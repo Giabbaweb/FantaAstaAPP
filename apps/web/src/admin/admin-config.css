@@ -3119,3 +3119,94 @@ label:nth-of-type(5) {
 .admin-config__girotavolo-count {
   margin-left: 0;
 }
+
+
+/* M14 C1.13d.5 — session selector refinement */
+
+.admin-config-session__summary {
+  grid-template-columns:
+    minmax(0, 2fr)
+    repeat(5, minmax(0, 1fr));
+}
+
+.admin-config-session__selector-card {
+  min-width: 0;
+}
+
+.admin-config-session__selector {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  margin-top: 4px;
+  padding: 6px 34px 6px 10px;
+  border: 1px solid #bac7d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-config-session__selector:hover {
+  border-color: #8da3b8;
+}
+
+.admin-config-session__selector:focus {
+  outline: 2px solid rgba(25, 118, 210, 0.18);
+  outline-offset: 1px;
+  border-color: #6d91b3;
+}
+
+.admin-config-session__selector:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.admin-config-session__selector-actions {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-config-session__selector-actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #82b79a;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #22633a;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-config-session__selector-actions button:hover:not(:disabled) {
+  background: #f2faf5;
+}
+
+.admin-config-session__selector-actions button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.admin-config-session__feedback {
+  margin-top: 8px;
+}
+
+@media (max-width: 1000px) {
+  .admin-config-session__summary {
+    grid-template-columns:
+      minmax(0, 2fr)
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-config-session__summary {
+    grid-template-columns: 1fr;
+  }
+}
