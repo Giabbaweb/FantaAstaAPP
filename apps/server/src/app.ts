@@ -101,6 +101,9 @@ import {
   playerRoutes
 } from "./routes/player.routes.js";
 import {
+  playerPhotoRoutes
+} from "./routes/player-photo.routes.js";
+import {
   teamAccessRoutes
 } from "./routes/team-access.routes.js";
 import {
@@ -791,6 +794,7 @@ export async function buildApp(
   await app.register(teamOwnerRoutes);
   await app.register(auctionSessionTeamRoutes);
   await app.register(playerRoutes);
+  await app.register(playerPhotoRoutes);
   await app.register(playerImportRoutes);
   await app.register(initialRosterImportRoutes);
 
