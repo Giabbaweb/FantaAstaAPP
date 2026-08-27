@@ -3553,18 +3553,16 @@ export function AdminConfigApp() {
       </section>
 
       <section className="admin-config__panel">
-        <div className="admin-config__section-heading">
-          <div>
-            <p className="admin-config__eyebrow">
-              Squadre e Presidenti
-            </p>
+        <div className="admin-config__girotavolo-heading">
+          <span className="admin-config__girotavolo-kicker">
+            Squadre e Presidenti
+          </span>
 
-            <h2>
-              Girotavolo
-            </h2>
-          </div>
+          <h2>
+            Girotavolo
+          </h2>
 
-          <span>
+          <span className="admin-config__girotavolo-count">
             {
               sessionTeams.length
             } partecipanti
@@ -3606,7 +3604,11 @@ export function AdminConfigApp() {
               return (
                 <article
                   key={team.id}
-                  className="admin-config-team"
+                  className={
+                    editingTeamId === team.id
+                      ? "admin-config-team admin-config-team--editing"
+                      : "admin-config-team"
+                  }
                 >
                   <div className="admin-config-team__table-order">
                     <div className="admin-config-team__order">
@@ -3663,6 +3665,16 @@ export function AdminConfigApp() {
                   teamEditDraft ? (
                     <>
                       <div className="admin-config-team__edit-identity">
+                        <div className="admin-config-team__edit-heading">
+                          <span>
+                            Dati squadra
+                          </span>
+
+                          <strong>
+                            {team.name}
+                          </strong>
+                        </div>
+
                         <label>
                           <span>
                             Nome squadra
@@ -3890,6 +3902,16 @@ export function AdminConfigApp() {
                       </div>
 
                       <div className="admin-config-team__edit-owners">
+                        <div className="admin-config-team__edit-heading">
+                          <span>
+                            Presidenti
+                          </span>
+
+                          <strong>
+                            Gestione proprietà
+                          </strong>
+                        </div>
+
                         <label>
                           <span>
                             Presidente

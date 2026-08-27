@@ -2777,3 +2777,345 @@ button:first-child:not(:disabled):hover {
     align-items: center;
   }
 }
+
+/* ==========================================================
+   M14 — C1.12 — Team editor visual refinement
+   ========================================================== */
+
+.admin-config-team--editing {
+  grid-template-columns:
+    76px
+    minmax(0, 1.65fr)
+    minmax(260px, 0.9fr);
+  align-items: start;
+  gap: 16px;
+  padding: 16px 18px;
+  border-color: #b8c9d8;
+  background: #f8fbfd;
+  box-shadow:
+    0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.admin-config-team--editing
+.admin-config-team__table-order {
+  padding-top: 28px;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-identity,
+.admin-config-team--editing
+.admin-config-team__edit-owners {
+  box-sizing: border-box;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe4eb;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.admin-config-team__edit-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e5ebf0;
+}
+
+.admin-config-team__edit-heading > span {
+  color: #1976d2;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.admin-config-team__edit-heading > strong {
+  overflow: hidden;
+  color: #334a5e;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-identity {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-identity
+.admin-config-team__edit-heading {
+  grid-column: 1 / -1;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-identity
+label:nth-of-type(5) {
+  grid-column: 1 / -1;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-owners {
+  grid-template-columns: 1fr;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-actions {
+  grid-column: 2 / -1;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-actions button {
+  min-width: 92px;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-error {
+  grid-column: 2 / -1;
+}
+
+@media (max-width: 1100px) {
+  .admin-config-team--editing {
+    grid-template-columns:
+      70px
+      minmax(0, 1fr);
+  }
+
+  .admin-config-team--editing
+  .admin-config-team__edit-owners {
+    grid-column: 2;
+  }
+
+  .admin-config-team--editing
+  .admin-config-team__edit-actions,
+  .admin-config-team--editing
+  .admin-config-team__edit-error {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-config-team--editing {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-config-team--editing
+  .admin-config-team__table-order {
+    padding-top: 0;
+  }
+
+  .admin-config-team--editing
+  .admin-config-team__edit-identity,
+  .admin-config-team--editing
+  .admin-config-team__edit-owners,
+  .admin-config-team--editing
+  .admin-config-team__edit-actions,
+  .admin-config-team--editing
+  .admin-config-team__edit-error {
+    grid-column: 1;
+  }
+
+  .admin-config-team--editing
+  .admin-config-team__edit-identity {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-config-team--editing
+  .admin-config-team__edit-identity
+  .admin-config-team__edit-heading,
+  .admin-config-team--editing
+  .admin-config-team__edit-identity
+  label:nth-of-type(5) {
+    grid-column: 1;
+  }
+}
+
+/* ==========================================================
+   M14 — C1.12d — Girotavolo compact layout
+   ========================================================== */
+
+/* Section title + participant badge */
+
+.admin-config__girotavolo-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-config__girotavolo-title h2 {
+  margin: 0;
+}
+
+.admin-config__girotavolo-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid #dbe4eb;
+  border-radius: 999px;
+  background: #f1f5f8;
+  color: #40566a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/*
+ * Closed team rows:
+ * keep all useful information grouped on the left instead of
+ * distributing it across the complete available width.
+ */
+
+.admin-config-team:not(.admin-config-team--editing) {
+  grid-template-columns:
+    76px
+    minmax(300px, 430px)
+    minmax(230px, 330px)
+    90px
+    auto
+    1fr;
+  justify-content: start;
+  column-gap: 18px;
+}
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__identity {
+  grid-column: 2;
+}
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__owners {
+  grid-column: 3;
+  justify-self: start;
+  width: 100%;
+}
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__credits {
+  grid-column: 4;
+  justify-self: start;
+  text-align: left;
+}
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__actions {
+  grid-column: 5;
+  justify-self: start;
+}
+
+/*
+ * Editing row:
+ * actions move below the left DATA SQUADRA area instead of
+ * floating at the far bottom-right of the whole expanded row.
+ */
+
+.admin-config-team--editing
+.admin-config-team__edit-actions {
+  grid-column: 2;
+  justify-content: flex-start;
+  justify-self: start;
+  width: auto;
+  padding-top: 0;
+}
+
+.admin-config-team--editing
+.admin-config-team__edit-error {
+  grid-column: 2;
+}
+
+/* Responsive closed-row fallback */
+
+@media (max-width: 1350px) {
+  .admin-config-team:not(.admin-config-team--editing) {
+    grid-template-columns:
+      70px
+      minmax(260px, 1.2fr)
+      minmax(210px, 0.9fr)
+      80px
+      auto;
+    column-gap: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-config-team:not(.admin-config-team--editing) {
+    grid-template-columns:
+      64px
+      minmax(0, 1fr)
+      auto;
+    row-gap: 8px;
+  }
+
+  .admin-config-team:not(.admin-config-team--editing)
+  .admin-config-team__identity {
+    grid-column: 2;
+  }
+
+  .admin-config-team:not(.admin-config-team--editing)
+  .admin-config-team__owners {
+    grid-column: 2;
+  }
+
+  .admin-config-team:not(.admin-config-team--editing)
+  .admin-config-team__credits {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .admin-config-team:not(.admin-config-team--editing)
+  .admin-config-team__actions {
+    grid-column: 3;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-config-team--editing
+  .admin-config-team__edit-actions,
+  .admin-config-team--editing
+  .admin-config-team__edit-error {
+    grid-column: 1;
+  }
+}
+
+/* ==========================================================
+   M14 — C1.12e
+   Girotavolo section heading alignment
+   ========================================================== */
+
+.admin-config__girotavolo-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.admin-config__girotavolo-kicker {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.admin-config__girotavolo-heading h2 {
+  margin: 0;
+  color: #10243a;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+
+.admin-config__girotavolo-heading
+.admin-config__girotavolo-count {
+  margin-left: 0;
+}
