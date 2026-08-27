@@ -4,6 +4,8 @@ import {
   useState
 } from "react";
 
+import * as XLSX from "xlsx";
+
 import type {
   AuctionSession,
   AuctionSessionTeam,
@@ -22,13 +24,17 @@ import {
   createLeague,
   createManualBackup,
   createOwner,
+  deleteAllPlayerPhotos,
   deleteRecoveryPoint,
   createTeamOwner,
   deleteTeamOwner,
   fetchAuctionSessions,
   fetchAuctionSessionReadiness,
   fetchAuctionSessionTeams,
+  fetchInitialRosterOverview,
+  fetchInitialRosterStatus,
   fetchOwners,
+  fetchPlayerPhotoCatalog,
   fetchPlayers,
   fetchRecoveryPoints,
   markAuctionSessionReady,
@@ -36,6 +42,7 @@ import {
   fetchTeamsByLeague,
   importInitialRosters,
   importPlayerArchive,
+  importPlayerPhotos,
   previewInitialRosters,
   reorderAuctionSessionTeams,
   resetDevelopmentSession,
@@ -62,6 +69,13 @@ type ConfigStatus =
   | "LOADING"
   | "READY"
   | "ERROR";
+
+type UploadPanel =
+  | "ARCHIVE"
+  | "ROSTERS"
+  | "PHOTOS"
+  | null;
+
 
 type TeamOwnerMap =
   Record<string, TeamOwner[]>;
@@ -138,6 +152,33 @@ function formatBackupDate(
     {
       dateStyle: "short",
       timeStyle: "medium"
+    }
+  ).format(date);
+}
+
+function formatInitialRosterDate(
+  value: string
+): string {
+  const normalizedValue =
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(
+      value
+    )
+      ? `${value.replace(" ", "T")}Z`
+      : value;
+
+  const date =
+    new Date(normalizedValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      dateStyle: "short",
+      timeStyle: "short",
+      timeZone: "Europe/Rome"
     }
   ).format(date);
 }
@@ -306,6 +347,89 @@ export function AdminConfigApp() {
     players,
     setPlayers
   ] = useState<Player[]>([]);
+
+  const [
+    uploadPanel,
+    setUploadPanel
+  ] = useState<UploadPanel>(
+    null
+  );
+
+
+  const [
+    initialRosterStatus,
+    setInitialRosterStatus
+  ] = useState<Awaited<
+    ReturnType<typeof fetchInitialRosterStatus>
+  > | null>(null);
+
+  const [
+    initialRosterOverview,
+    setInitialRosterOverview
+  ] = useState<Awaited<
+    ReturnType<typeof fetchInitialRosterOverview>
+  > | null>(null);
+
+  const [
+    playerPhotoCatalog,
+    setPlayerPhotoCatalog
+  ] = useState<Awaited<
+    ReturnType<typeof fetchPlayerPhotoCatalog>
+  > | null>(null);
+
+  const [
+    playerPhotoCatalogError,
+    setPlayerPhotoCatalogError
+  ] = useState<string | null>(null);
+
+  const [
+    playerPhotoFiles,
+    setPlayerPhotoFiles
+  ] = useState<File[]>([]);
+
+  const [
+    playerPhotoMode,
+    setPlayerPhotoMode
+  ] = useState<
+    "KEEP" | "REPLACE"
+  >("KEEP");
+
+  const [
+    playerPhotoImportPending,
+    setPlayerPhotoImportPending
+  ] = useState(false);
+
+  const [
+    playerPhotoDeletePending,
+    setPlayerPhotoDeletePending
+  ] = useState(false);
+
+  const [
+    playerPhotoSuccess,
+    setPlayerPhotoSuccess
+  ] = useState<string | null>(null);
+
+  const [
+    playerPhotoError,
+    setPlayerPhotoError
+  ] = useState<string | null>(null);
+
+  const [
+    playerPhotoIssues,
+    setPlayerPhotoIssues
+  ] = useState<
+    {
+      fileName: string;
+      reason:
+        | "INVALID_FILENAME"
+        | "INVALID_PNG";
+    }[]
+  >([]);
+
+  const [
+    playerPhotoInputKey,
+    setPlayerPhotoInputKey
+  ] = useState(0);
 
   const [
     playerArchiveFile,
@@ -515,6 +639,117 @@ export function AdminConfigApp() {
   ] = useState<string | null>(
     null
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialRosterOverview() {
+      if (!session) {
+        setInitialRosterOverview(null);
+        return;
+      }
+
+      try {
+        const overview =
+          await fetchInitialRosterOverview(
+            session.id
+          );
+
+        if (!cancelled) {
+          setInitialRosterOverview(
+            overview
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setInitialRosterOverview(
+            null
+          );
+        }
+      }
+    }
+
+    void loadInitialRosterOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialRosterStatus() {
+      if (!session) {
+        setInitialRosterStatus(null);
+        return;
+      }
+
+      try {
+        const loadedStatus =
+          await fetchInitialRosterStatus(
+            session.id
+          );
+
+        if (!cancelled) {
+          setInitialRosterStatus(
+            loadedStatus
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setInitialRosterStatus(null);
+        }
+      }
+    }
+
+    void loadInitialRosterStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPlayerPhotoCatalog() {
+      try {
+        const catalog =
+          await fetchPlayerPhotoCatalog();
+
+        if (cancelled) {
+          return;
+        }
+
+        setPlayerPhotoCatalog(
+          catalog
+        );
+        setPlayerPhotoCatalogError(
+          null
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setPlayerPhotoCatalog(
+          null
+        );
+        setPlayerPhotoCatalogError(
+          error instanceof Error
+            ? error.message
+            : "Impossibile leggere il catalogo delle faccine"
+        );
+      }
+    }
+
+    void loadPlayerPhotoCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -2034,6 +2269,12 @@ export function AdminConfigApp() {
         refreshedSessionTeams
       );
 
+      setInitialRosterStatus(
+        await fetchInitialRosterStatus(
+          session.id
+        )
+      );
+
       setInitialRostersPreview(null);
       setInitialRostersContent(null);
       setInitialRostersFile(null);
@@ -2161,6 +2402,12 @@ export function AdminConfigApp() {
         refreshedSessionTeams
       );
 
+      setInitialRosterStatus(
+        await fetchInitialRosterStatus(
+          session.id
+        )
+      );
+
       setInitialRostersImportSuccess(
         `Import completato: ${result.importedEntries} confermati, costo totale ${result.totalCost} crediti`
       );
@@ -2172,6 +2419,122 @@ export function AdminConfigApp() {
       );
     } finally {
       setInitialRostersImportPending(false);
+    }
+  }
+
+  async function handlePlayerPhotoImport():
+    Promise<void> {
+    if (playerPhotoFiles.length === 0) {
+      return;
+    }
+
+    setPlayerPhotoImportPending(true);
+    setPlayerPhotoError(null);
+    setPlayerPhotoSuccess(null);
+    setPlayerPhotoIssues([]);
+
+    try {
+      const result =
+        await importPlayerPhotos(
+          playerPhotoFiles,
+          playerPhotoMode
+        );
+
+      const refreshedCatalog =
+        await fetchPlayerPhotoCatalog();
+
+      setPlayerPhotoCatalog(
+        refreshedCatalog
+      );
+      setPlayerPhotoCatalogError(
+        null
+      );
+
+      setPlayerPhotoFiles([]);
+      setPlayerPhotoInputKey(
+        (current) =>
+          current + 1
+      );
+
+      setPlayerPhotoIssues(
+        result.issues
+      );
+
+      const parts = [
+        `${result.created} nuove`,
+        `${result.replaced} sostituite`,
+        `${result.kept} mantenute`
+      ];
+
+      if (result.rejected > 0) {
+        parts.push(
+          `${result.rejected} scartate`
+        );
+      }
+
+      setPlayerPhotoSuccess(
+        `Caricamento completato: ${parts.join(", ")}.`
+      );
+    } catch (error) {
+      setPlayerPhotoError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il caricamento delle faccine"
+      );
+    } finally {
+      setPlayerPhotoImportPending(false);
+    }
+  }
+
+  async function handleDeleteAllPlayerPhotos():
+    Promise<void> {
+    const confirmed =
+      window.confirm(
+        "ATTENZIONE: verranno cancellate tutte le faccine giocatori caricate. Archivio giocatori, rose e dati dell'asta non saranno modificati. Continuare?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPlayerPhotoDeletePending(true);
+    setPlayerPhotoError(null);
+    setPlayerPhotoSuccess(null);
+    setPlayerPhotoIssues([]);
+
+    try {
+      const result =
+        await deleteAllPlayerPhotos();
+
+      const refreshedCatalog =
+        await fetchPlayerPhotoCatalog();
+
+      setPlayerPhotoCatalog(
+        refreshedCatalog
+      );
+      setPlayerPhotoCatalogError(
+        null
+      );
+
+      setPlayerPhotoFiles([]);
+      setPlayerPhotoInputKey(
+        (current) =>
+          current + 1
+      );
+
+      setPlayerPhotoSuccess(
+        result.deleted === 0
+          ? "Nessuna faccina da cancellare."
+          : `Cancellazione completata: ${result.deleted} faccine eliminate.`
+      );
+    } catch (error) {
+      setPlayerPhotoError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la cancellazione delle faccine"
+      );
+    } finally {
+      setPlayerPhotoDeletePending(false);
     }
   }
 
@@ -2219,6 +2582,277 @@ export function AdminConfigApp() {
       setPlayerArchivePending(false);
     }
   }
+
+  const exportInitialRosterOverviewExcel =
+    (): void => {
+      if (
+        !session ||
+        !initialRosterOverview
+      ) {
+        return;
+      }
+
+      const roleOrder = [
+        "P",
+        "D",
+        "C",
+        "A"
+      ] as const;
+
+      const teamBlockWidth = 4;
+      const teamsPerRow = 4;
+      const blockHeight = 28;
+
+      const sheetData:
+        Array<Array<string | number>> =
+          [];
+
+      const ensureCell = (
+        rowIndex: number,
+        columnIndex: number,
+        value: string | number
+      ): void => {
+        while (
+          sheetData.length <= rowIndex
+        ) {
+          sheetData.push([]);
+        }
+
+        const row =
+          sheetData[rowIndex];
+
+        if (!row) {
+          throw new Error(
+            "Unable to create Excel worksheet row"
+          );
+        }
+
+        while (
+          row.length <= columnIndex
+        ) {
+          row.push("");
+        }
+
+        row[columnIndex] = value;
+      };
+
+      const merges:
+        XLSX.Range[] = [];
+
+      initialRosterOverview.teams
+        .forEach(
+          (team, teamIndex) => {
+            const blockRow =
+              Math.floor(
+                teamIndex /
+                  teamsPerRow
+              );
+
+            const blockColumn =
+              teamIndex %
+              teamsPerRow;
+
+            const startRow =
+              blockRow *
+              blockHeight;
+
+            const startColumn =
+              blockColumn *
+              teamBlockWidth;
+
+            ensureCell(
+              startRow,
+              startColumn,
+              team.teamName
+            );
+
+            merges.push({
+              s: {
+                r: startRow,
+                c: startColumn
+              },
+              e: {
+                r: startRow,
+                c:
+                  startColumn +
+                  teamBlockWidth -
+                  1
+              }
+            });
+
+            ensureCell(
+              startRow + 1,
+              startColumn,
+              "Crediti"
+            );
+
+            ensureCell(
+              startRow + 1,
+              startColumn + 1,
+              team.remainingCredits
+            );
+
+            ensureCell(
+              startRow + 1,
+              startColumn + 2,
+              "Max offerta"
+            );
+
+            ensureCell(
+              startRow + 1,
+              startColumn + 3,
+              team.maximumBid ?? ""
+            );
+
+            [
+              "Ruolo",
+              "Giocatore",
+              "Squadra reale",
+              "Costo"
+            ].forEach(
+              (
+                header,
+                columnOffset
+              ) => {
+                ensureCell(
+                  startRow + 2,
+                  startColumn +
+                    columnOffset,
+                  header
+                );
+              }
+            );
+
+            let slotRow =
+              startRow + 3;
+
+            for (
+              const role of roleOrder
+            ) {
+              const entries =
+                team.entries
+                  .filter(
+                    (entry) =>
+                      entry.role === role
+                  )
+                  .sort(
+                    (first, second) =>
+                      first.playerName.localeCompare(
+                        second.playerName,
+                        "it"
+                      )
+                  );
+
+              const limit =
+                initialRosterOverview
+                  .roleLimits[role];
+
+              for (
+                let slotIndex = 0;
+                slotIndex < limit;
+                slotIndex += 1
+              ) {
+                const entry =
+                  entries[
+                    slotIndex
+                  ];
+
+                ensureCell(
+                  slotRow,
+                  startColumn,
+                  role
+                );
+
+                ensureCell(
+                  slotRow,
+                  startColumn + 1,
+                  entry
+                    ? entry.playerName
+                    : ""
+                );
+
+                ensureCell(
+                  slotRow,
+                  startColumn + 2,
+                  entry?.realTeamName ??
+                    ""
+                );
+
+                ensureCell(
+                  slotRow,
+                  startColumn + 3,
+                  entry
+                    ? entry.acquisitionCost
+                    : ""
+                );
+
+                slotRow += 1;
+              }
+            }
+          }
+        );
+
+      const worksheet =
+        XLSX.utils.aoa_to_sheet(
+          sheetData
+        );
+
+      worksheet["!merges"] =
+        merges;
+
+      worksheet["!cols"] =
+        Array.from(
+          {
+            length:
+              teamBlockWidth *
+              teamsPerRow
+          },
+          (_, index) => {
+            const position =
+              index %
+              teamBlockWidth;
+
+            switch (position) {
+              case 0:
+                return {
+                  wch: 8
+                };
+
+              case 1:
+                return {
+                  wch: 22
+                };
+
+              case 2:
+                return {
+                  wch: 16
+                };
+
+              default:
+                return {
+                  wch: 8
+                };
+            }
+          }
+        );
+
+      const workbook =
+        XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Rose iniziali"
+      );
+
+      XLSX.writeFile(
+        workbook,
+        `rose-iniziali-${session.season.replaceAll(
+          "/",
+          "-"
+        )}.xlsx`
+      );
+    };
 
   if (status === "LOADING") {
     return (
@@ -3489,17 +4123,111 @@ export function AdminConfigApp() {
         </div>
       </section>
 
-      <section className="admin-config__initial-rosters">
+      <section className="admin-config__uploads">
         <div className="admin-config__section-heading">
           <div>
             <span>
-              Rose iniziali FMS
+              Importazioni
             </span>
 
             <strong>
+              Upload files
+            </strong>
+          </div>
+        </div>
+
+        <p className="admin-config__uploads-intro">
+          Seleziona il tipo di file o archivio
+          che vuoi gestire.
+        </p>
+
+        <div className="admin-config__upload-selector">
+          <button
+            type="button"
+            className={
+              uploadPanel === "ARCHIVE"
+                ? "is-selected"
+                : undefined
+            }
+            onClick={() => {
+              setUploadPanel(
+                uploadPanel === "ARCHIVE"
+                  ? null
+                  : "ARCHIVE"
+              );
+            }}
+          >
+            Archivio giocatori
+          </button>
+
+          <button
+            type="button"
+            className={
+              uploadPanel === "ROSTERS"
+                ? "is-selected"
+                : undefined
+            }
+            onClick={() => {
+              setUploadPanel(
+                uploadPanel === "ROSTERS"
+                  ? null
+                  : "ROSTERS"
+              );
+            }}
+          >
+            Rose iniziali
+          </button>
+
+          <button
+            type="button"
+            className={
+              uploadPanel === "PHOTOS"
+                ? "is-selected"
+                : undefined
+            }
+            onClick={() => {
+              setUploadPanel(
+                uploadPanel === "PHOTOS"
+                  ? null
+                  : "PHOTOS"
+              );
+            }}
+          >
+            Faccine
+          </button>
+        </div>
+      </section>
+
+      {uploadPanel === "ROSTERS" && (
+        <section className="admin-config__initial-rosters">
+        <div className="admin-config__section-heading admin-config__initial-rosters-heading">
+          <div className="admin-config__initial-rosters-heading-content">
+            <div className="admin-config__initial-rosters-heading-row">
+              <span className="admin-config__initial-rosters-title">
+                Rose iniziali FMS
+              </span>
+
+              <span className="admin-config__initial-rosters-badge">
+                {initialRosterStatus?.count ?? 0}
+                {" "}
+                confermati caricati
+              </span>
+            </div>
+
+            <strong className="admin-config__initial-rosters-subtitle">
               Confermati della sessione
               {" "}
               {session.season}
+
+              <span className="admin-config__initial-rosters-updated">
+                {
+                  initialRosterStatus?.lastUpdatedAt
+                    ? ` · Ultimo caricamento: ${formatInitialRosterDate(
+                        initialRosterStatus.lastUpdatedAt
+                      )}`
+                    : " · Mai caricate"
+                }
+              </span>
             </strong>
           </div>
         </div>
@@ -3525,6 +4253,19 @@ export function AdminConfigApp() {
                 ? "Reset rose in corso..."
                 : "RESET ROSE INIZIALI"
             }
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              !initialRosterOverview ||
+              initialRosterStatus?.count === 0
+            }
+            onClick={
+              exportInitialRosterOverviewExcel
+            }
+          >
+            Scarica rose iniziali
           </button>
 
           <input
@@ -3813,44 +4554,46 @@ export function AdminConfigApp() {
             {initialRostersResetSuccess}
           </p>
         )}
-      </section>
+        </section>
+      )}
 
-      <section className="admin-config__player-archive">
-        <div className="admin-config__section-heading">
-          <div>
-            <span>
-              Archivio giocatori FMS
-            </span>
+      {uploadPanel === "ARCHIVE" && (
+        <section className="admin-config__player-archive">
+        <div className="admin-config__section-heading admin-config__archive-heading">
+          <div className="admin-config__archive-heading-content">
+            <div className="admin-config__archive-heading-row">
+              <span className="admin-config__archive-title">
+                Archivio giocatori FMS
+              </span>
 
-            <strong>
+              <div className="admin-config__archive-badges">
+                <span>
+                  {players.length} giocatori caricati
+                </span>
+
+                <span>
+                  P {playerRoleCounts.P}
+                </span>
+
+                <span>
+                  D {playerRoleCounts.D}
+                </span>
+
+                <span>
+                  C {playerRoleCounts.C}
+                </span>
+
+                <span>
+                  A {playerRoleCounts.A}
+                </span>
+              </div>
+            </div>
+
+            <strong className="admin-config__archive-subtitle">
               Archivio della sessione
               {" "}
               {session.season}
             </strong>
-          </div>
-        </div>
-
-        <div className="admin-config__player-archive-summary">
-          <strong>
-            {players.length} giocatori caricati
-          </strong>
-
-          <div className="admin-config__player-role-counts">
-            <span>
-              P {playerRoleCounts.P}
-            </span>
-
-            <span>
-              D {playerRoleCounts.D}
-            </span>
-
-            <span>
-              C {playerRoleCounts.C}
-            </span>
-
-            <span>
-              A {playerRoleCounts.A}
-            </span>
           </div>
         </div>
 
@@ -3965,7 +4708,273 @@ export function AdminConfigApp() {
             {developmentResetError}
           </p>
         )}
-      </section>
+        </section>
+      )}
+
+      {uploadPanel === "PHOTOS" && (
+        <section className="admin-config__player-photos">
+        <div className="admin-config__section-heading">
+          <div className="admin-config__photo-heading">
+            <div>
+              <span>
+                Faccine giocatori
+              </span>
+
+              <strong>
+                Immagini archivio FMS
+              </strong>
+            </div>
+
+            <span className="admin-config__upload-count-badge admin-config__upload-count-badge--photos">
+              {
+                playerPhotoCatalog
+                  ? `${playerPhotoCatalog.count} faccine`
+                  : "-"
+              }
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-config__player-photo-summary">
+          <div>
+            <span>
+              Ultimo aggiornamento
+            </span>
+
+            <strong>
+              {
+                playerPhotoCatalog
+                  ?.lastUpdatedAt
+                  ? formatBackupDate(
+                      playerPhotoCatalog
+                        .lastUpdatedAt
+                    )
+                  : "Mai aggiornate"
+              }
+            </strong>
+          </div>
+
+          <p>
+            Le immagini sono indipendenti dalle
+            singole sessioni e non vengono incluse
+            nei backup dell'asta.
+          </p>
+        </div>
+
+        <div className="admin-config__player-photo-help">
+          <strong>
+            Formato richiesto: PNG
+          </strong>
+
+          <span>
+            Il nome del file deve essere il codice
+            FMS del giocatore.
+            Esempio:{" "}
+            <code>
+              100002.png
+            </code>
+          </span>
+        </div>
+
+        <div className="admin-config__player-photo-upload">
+          <input
+            key={playerPhotoInputKey}
+            type="file"
+            accept=".png,image/png"
+            multiple
+            disabled={
+              playerPhotoImportPending ||
+              playerPhotoDeletePending
+            }
+            onChange={(event) => {
+              const selectedFiles =
+                Array.from(
+                  event.target.files ?? []
+                );
+
+              const invalidFiles =
+                selectedFiles.filter(
+                  (file) =>
+                    !/\.png$/i.test(
+                      file.name
+                    )
+                );
+
+              if (
+                invalidFiles.length > 0
+              ) {
+                setPlayerPhotoFiles([]);
+                setPlayerPhotoError(
+                  "Sono ammessi esclusivamente file PNG."
+                );
+                setPlayerPhotoSuccess(null);
+                setPlayerPhotoIssues([]);
+                return;
+              }
+
+              setPlayerPhotoFiles(
+                selectedFiles
+              );
+              setPlayerPhotoError(null);
+              setPlayerPhotoSuccess(null);
+              setPlayerPhotoIssues([]);
+            }}
+          />
+
+          <div className="admin-config__player-photo-selection">
+            <strong>
+              {
+                playerPhotoFiles.length === 0
+                  ? "Nessun file selezionato"
+                  : `${playerPhotoFiles.length} file selezionati`
+              }
+            </strong>
+
+            <small>
+              Massimo 1000 file per caricamento,
+              2 MB per singola immagine.
+            </small>
+          </div>
+        </div>
+
+        <fieldset
+          className="admin-config__player-photo-mode"
+          disabled={
+            playerPhotoImportPending ||
+            playerPhotoDeletePending
+          }
+        >
+          <legend>
+            Se una faccina esiste già
+          </legend>
+
+          <label>
+            <input
+              type="radio"
+              name="player-photo-mode"
+              value="KEEP"
+              checked={
+                playerPhotoMode === "KEEP"
+              }
+              onChange={() => {
+                setPlayerPhotoMode(
+                  "KEEP"
+                );
+              }}
+            />
+
+            <span>
+              Mantieni quella esistente
+            </span>
+          </label>
+
+          <label>
+            <input
+              type="radio"
+              name="player-photo-mode"
+              value="REPLACE"
+              checked={
+                playerPhotoMode ===
+                "REPLACE"
+              }
+              onChange={() => {
+                setPlayerPhotoMode(
+                  "REPLACE"
+                );
+              }}
+            />
+
+            <span>
+              Sostituiscila con quella caricata
+            </span>
+          </label>
+        </fieldset>
+
+        <div className="admin-config__player-photo-actions">
+          <button
+            type="button"
+            disabled={
+              playerPhotoFiles.length === 0 ||
+              playerPhotoImportPending ||
+              playerPhotoDeletePending
+            }
+            onClick={() => {
+              void handlePlayerPhotoImport();
+            }}
+          >
+            {
+              playerPhotoImportPending
+                ? "Caricamento in corso..."
+                : "CARICA FACCINE"
+            }
+          </button>
+
+          <button
+            type="button"
+            className="admin-config__player-photo-delete"
+            disabled={
+              playerPhotoDeletePending ||
+              playerPhotoImportPending ||
+              !playerPhotoCatalog ||
+              playerPhotoCatalog.count === 0
+            }
+            onClick={() => {
+              void handleDeleteAllPlayerPhotos();
+            }}
+          >
+            {
+              playerPhotoDeletePending
+                ? "Cancellazione..."
+                : "CANCELLA TUTTE LE FACCINE"
+            }
+          </button>
+        </div>
+
+        {playerPhotoCatalogError && (
+          <p className="admin-config__player-archive-error">
+            {playerPhotoCatalogError}
+          </p>
+        )}
+
+        {playerPhotoSuccess && (
+          <p className="admin-config__player-archive-success">
+            {playerPhotoSuccess}
+          </p>
+        )}
+
+        {playerPhotoError && (
+          <p className="admin-config__player-archive-error">
+            {playerPhotoError}
+          </p>
+        )}
+
+        {playerPhotoIssues.length > 0 && (
+          <div className="admin-config__player-photo-issues">
+            <strong>
+              File scartati
+            </strong>
+
+            {playerPhotoIssues.map(
+              (issue) => (
+                <span
+                  key={
+                    `${issue.fileName}-${issue.reason}`
+                  }
+                >
+                  {issue.fileName}:{" "}
+                  {
+                    issue.reason ===
+                    "INVALID_FILENAME"
+                      ? "nome file non valido"
+                      : "contenuto PNG non valido"
+                  }
+                </span>
+              )
+            )}
+          </div>
+        )}
+        </section>
+      )}
 
       <section className="admin-config__backup">
         <div className="admin-config__section-heading">

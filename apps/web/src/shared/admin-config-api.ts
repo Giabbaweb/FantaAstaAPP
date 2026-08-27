@@ -20,6 +20,68 @@ import {
   apiRequest
 } from "./api-client.js";
 
+export type InitialRosterStatus = {
+  count: number;
+  lastUpdatedAt: string | null;
+};
+
+export type InitialRosterOverviewEntry = {
+  playerName: string;
+  realTeamName: string | null;
+  role: "P" | "D" | "C" | "A";
+  acquisitionCost: number;
+};
+
+export type InitialRosterOverviewTeam = {
+  auctionSessionTeamId: string;
+  teamId: string;
+  teamName: string;
+  tableOrder: number;
+  remainingCredits: number;
+  maximumBid: number | null;
+  entries: InitialRosterOverviewEntry[];
+};
+
+export type InitialRosterOverview = {
+  rosterSizeLimit: number;
+  roleLimits: {
+    P: number;
+    D: number;
+    C: number;
+    A: number;
+  };
+  teams: InitialRosterOverviewTeam[];
+};
+
+export type PlayerPhotoCatalog = {
+  count: number;
+  lastUpdatedAt: string | null;
+};
+
+export type PlayerPhotoImportMode =
+  | "KEEP"
+  | "REPLACE";
+
+export type PlayerPhotoImportIssue = {
+  fileName: string;
+  reason:
+    | "INVALID_FILENAME"
+    | "INVALID_PNG";
+};
+
+export type PlayerPhotoImportResult = {
+  selected: number;
+  created: number;
+  replaced: number;
+  kept: number;
+  rejected: number;
+  issues: PlayerPhotoImportIssue[];
+};
+
+export type PlayerPhotoDeletionResult = {
+  deleted: number;
+};
+
 export type PlayerArchiveImportResult = {
   importedPlayers: Player[];
   summary: {
@@ -395,6 +457,67 @@ export function importInitialRosters(
         content,
         resolutions
       })
+    }
+  );
+}
+
+export function fetchInitialRosterStatus(
+  auctionSessionId: string
+): Promise<InitialRosterStatus> {
+  return apiRequest<InitialRosterStatus>(
+    `/api/auction-sessions/${auctionSessionId}/initial-rosters/status`
+  );
+}
+
+export function fetchInitialRosterOverview(
+  auctionSessionId: string
+): Promise<InitialRosterOverview> {
+  return apiRequest<InitialRosterOverview>(
+    `/api/auction-sessions/${auctionSessionId}/initial-rosters/overview`
+  );
+}
+
+export function fetchPlayerPhotoCatalog():
+  Promise<PlayerPhotoCatalog> {
+  return apiRequest<PlayerPhotoCatalog>(
+    "/api/player-photos"
+  );
+}
+
+export async function importPlayerPhotos(
+  files: File[],
+  mode: PlayerPhotoImportMode
+): Promise<PlayerPhotoImportResult> {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "mode",
+    mode
+  );
+
+  for (const file of files) {
+    formData.append(
+      "files",
+      file
+    );
+  }
+
+  return apiRequest<PlayerPhotoImportResult>(
+    "/api/player-photos/import",
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+}
+
+export function deleteAllPlayerPhotos():
+  Promise<PlayerPhotoDeletionResult> {
+  return apiRequest<PlayerPhotoDeletionResult>(
+    "/api/player-photos",
+    {
+      method: "DELETE"
     }
   );
 }

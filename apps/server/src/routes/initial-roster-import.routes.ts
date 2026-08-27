@@ -3,7 +3,17 @@ import type {
 } from "fastify";
 import { eq } from "drizzle-orm";
 
-import { db } from "../db/client.js";
+import {
+  calculateMaximumBid,
+  rosterRoleLimits,
+  rosterSizeLimit
+} from "@fantaastaapp/domain";
+
+
+import {
+  db,
+  sqlite
+} from "../db/client.js";
 import {
   auctionSessionTeams,
   teams
@@ -36,6 +46,50 @@ type InitialRosterImportBody = {
   content: string;
   resolutions?: InitialRosterImportResolution[];
 };
+
+type InitialRosterStatusParams = {
+  auctionSessionId: string;
+};
+
+type InitialRosterStatusResponse = {
+  data: {
+    count: number;
+    lastUpdatedAt: string | null;
+  };
+  error: null;
+};
+
+type InitialRosterOverviewEntry = {
+  playerName: string;
+  realTeamName: string | null;
+  role: "P" | "D" | "C" | "A";
+  acquisitionCost: number;
+};
+
+type InitialRosterOverviewTeam = {
+  auctionSessionTeamId: string;
+  teamId: string;
+  teamName: string;
+  tableOrder: number;
+  remainingCredits: number;
+  maximumBid: number | null;
+  entries: InitialRosterOverviewEntry[];
+};
+
+type InitialRosterOverviewResponse = {
+  data: {
+    roleLimits: {
+      P: number;
+      D: number;
+      C: number;
+      A: number;
+    };
+    rosterSizeLimit: number;
+    teams: InitialRosterOverviewTeam[];
+  };
+  error: null;
+};
+
 
 type InitialRosterPreviewIssue =
   InitialRosterImportIssue & {
@@ -117,6 +171,243 @@ const importService =
 export const initialRosterImportRoutes:
   FastifyPluginAsync =
     async (fastify) => {
+      fastify.get<{
+        Params: InitialRosterStatusParams;
+        Reply: InitialRosterStatusResponse;
+      }>(
+        "/api/auction-sessions/:auctionSessionId/initial-rosters/status",
+        async (request, reply) => {
+          const row = sqlite
+            .prepare(
+              `
+                SELECT
+                  COUNT(*) AS count,
+                  MAX(re.created_at) AS lastUpdatedAt
+                FROM roster_entries re
+                INNER JOIN auction_session_teams ast
+                  ON ast.id = re.auction_session_team_id
+                WHERE
+                  ast.auction_session_id = ?
+                  AND re.source = 'INITIAL_ROSTER'
+              `
+            )
+            .get(
+              request.params.auctionSessionId
+            ) as {
+              count: number;
+              lastUpdatedAt:
+                | string
+                | null;
+            };
+
+          return reply
+            .code(200)
+            .send({
+              data: {
+                count: row.count,
+                lastUpdatedAt:
+                  row.lastUpdatedAt
+              },
+              error: null
+            });
+        }
+      );
+
+      fastify.get<{
+        Params: InitialRosterStatusParams;
+        Reply: InitialRosterOverviewResponse;
+      }>(
+        "/api/auction-sessions/:auctionSessionId/initial-rosters/overview",
+        async (request, reply) => {
+          const sessionRow = sqlite
+            .prepare(
+              `
+                SELECT
+                  initial_credits AS initialCredits
+                FROM auction_sessions
+                WHERE id = ?
+              `
+            )
+            .get(
+              request.params.auctionSessionId
+            ) as
+              | {
+                  initialCredits: number;
+                }
+              | undefined;
+
+          const initialCredits =
+            sessionRow?.initialCredits ?? 0;
+
+          const rows = sqlite
+            .prepare(
+              `
+                SELECT
+                  ast.id AS auctionSessionTeamId,
+                  ast.team_id AS teamId,
+                  t.name AS teamName,
+                  ast.table_order AS tableOrder,
+                  p.name AS playerName,
+                  p.real_team_name AS realTeamName,
+                  p.role AS role,
+                  re.acquisition_cost AS acquisitionCost
+                FROM auction_session_teams ast
+                INNER JOIN teams t
+                  ON t.id = ast.team_id
+                LEFT JOIN roster_entries re
+                  ON re.auction_session_team_id = ast.id
+                  AND re.source = 'INITIAL_ROSTER'
+                LEFT JOIN players p
+                  ON p.id = re.player_id
+                WHERE
+                  ast.auction_session_id = ?
+                ORDER BY
+                  ast.table_order ASC,
+                  CASE p.role
+                    WHEN 'P' THEN 1
+                    WHEN 'D' THEN 2
+                    WHEN 'C' THEN 3
+                    WHEN 'A' THEN 4
+                    ELSE 5
+                  END,
+                  p.name COLLATE NOCASE ASC
+              `
+            )
+            .all(
+              request.params.auctionSessionId
+            ) as Array<{
+              auctionSessionTeamId: string;
+              teamId: string;
+              teamName: string;
+              tableOrder: number;
+              playerName: string | null;
+              realTeamName: string | null;
+              role:
+                | "P"
+                | "D"
+                | "C"
+                | "A"
+                | null;
+              acquisitionCost:
+                | number
+                | null;
+            }>;
+
+          const teams =
+            new Map<
+              string,
+              InitialRosterOverviewTeam
+            >();
+
+          for (const row of rows) {
+            let team =
+              teams.get(
+                row.auctionSessionTeamId
+              );
+
+            if (!team) {
+              team = {
+                auctionSessionTeamId:
+                  row.auctionSessionTeamId,
+                teamId:
+                  row.teamId,
+                teamName:
+                  row.teamName,
+                tableOrder:
+                  row.tableOrder,
+                remainingCredits:
+                  initialCredits,
+                maximumBid: null,
+                entries: []
+              };
+
+              teams.set(
+                row.auctionSessionTeamId,
+                team
+              );
+            }
+
+            if (
+              row.playerName &&
+              row.role &&
+              row.acquisitionCost !== null
+            ) {
+              team.entries.push({
+                playerName:
+                  row.playerName,
+                realTeamName:
+                  row.realTeamName,
+                role:
+                  row.role,
+                acquisitionCost:
+                  row.acquisitionCost
+              });
+            }
+          }
+
+          const overviewTeams =
+            Array.from(
+              teams.values()
+            ).map((team) => {
+              const spentCredits =
+                team.entries.reduce(
+                  (
+                    total,
+                    entry
+                  ) =>
+                    total +
+                    entry.acquisitionCost,
+                  0
+                );
+
+              const remainingCredits =
+                Math.max(
+                  0,
+                  initialCredits -
+                    spentCredits
+                );
+
+              const remainingRosterSlots =
+                Math.max(
+                  0,
+                  rosterSizeLimit -
+                    team.entries.length
+                );
+
+              const maximumBid =
+                remainingRosterSlots > 0
+                  ? calculateMaximumBid({
+                      remainingCredits,
+                      remainingRosterSlots
+                    })
+                  : null;
+
+              return {
+                ...team,
+                remainingCredits,
+                maximumBid
+              };
+            });
+
+          return reply
+            .code(200)
+            .send({
+              data: {
+                roleLimits: {
+                  P: rosterRoleLimits.P,
+                  D: rosterRoleLimits.D,
+                  C: rosterRoleLimits.C,
+                  A: rosterRoleLimits.A
+                },
+                rosterSizeLimit,
+                teams:
+                  overviewTeams
+              },
+              error: null
+            });
+        }
+      );
+
       fastify.post<{
         Body: InitialRosterImportBody;
         Reply:
