@@ -1,6 +1,15 @@
+import {
+  readFile
+} from "node:fs/promises";
+import path from "node:path";
+
 import type {
   FastifyPluginAsync
 } from "fastify";
+
+import {
+  workspaceRoot
+} from "../db/client.js";
 
 import {
   PlayerPhotoCatalogService
@@ -45,14 +54,13 @@ type PlayerPhotoImportErrorResponse = {
   };
 };
 
-const catalogService =
-  new PlayerPhotoCatalogService();
-
-const importService =
-  new PlayerPhotoImportService();
-
-const deletionService =
-  new PlayerPhotoDeletionService();
+const playerPhotosDirectory =
+  path.join(
+    workspaceRoot,
+    "data",
+    "assets",
+    "player-photos"
+  );
 
 const importLimits = {
   files: 1000,
@@ -69,9 +77,76 @@ function isImportMode(
   );
 }
 
-export const playerPhotoRoutes:
-  FastifyPluginAsync =
-    async (fastify) => {
+export function createPlayerPhotoRoutes(
+  photosDirectory:
+    string = playerPhotosDirectory
+): FastifyPluginAsync {
+  const catalogService =
+    new PlayerPhotoCatalogService(
+      photosDirectory
+    );
+
+  const importService =
+    new PlayerPhotoImportService(
+      photosDirectory
+    );
+
+  const deletionService =
+    new PlayerPhotoDeletionService(
+      photosDirectory
+    );
+
+  return async (fastify) => {
+      fastify.get<{
+        Params: {
+          fmsCode: string;
+        };
+      }>(
+        "/api/player-photos/:fmsCode",
+        async (request, reply) => {
+          const { fmsCode } =
+            request.params;
+
+          if (!/^\d+$/.test(fmsCode)) {
+            return reply
+              .code(404)
+              .send();
+          }
+
+          const filePath =
+            path.join(
+              photosDirectory,
+              `${fmsCode}.png`
+            );
+
+          try {
+            const content =
+              await readFile(filePath);
+
+            return reply
+              .type("image/png")
+              .header(
+                "Cache-Control",
+                "no-cache"
+              )
+              .code(200)
+              .send(content);
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              "code" in error &&
+              error.code === "ENOENT"
+            ) {
+              return reply
+                .code(404)
+                .send();
+            }
+
+            throw error;
+          }
+        }
+      );
+
       fastify.get<{
         Reply: PlayerPhotoCatalogResponse;
       }>(
@@ -219,4 +294,8 @@ export const playerPhotoRoutes:
             });
         }
       );
-    };
+  };
+}
+
+export const playerPhotoRoutes =
+  createPlayerPhotoRoutes();

@@ -8,25 +8,22 @@ import {
 } from "vitest";
 
 import {
+  mkdtemp,
   readFile,
-  rm
+  rm,
+  writeFile
 } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
-import {
-  buildApp
-} from "../app.js";
-import {
-  workspaceRoot
-} from "../db/client.js";
+import multipart from "@fastify/multipart";
+import Fastify from "fastify";
 
-const photoDirectory =
-  path.join(
-    workspaceRoot,
-    "data",
-    "assets",
-    "player-photos"
-  );
+import {
+  createPlayerPhotoRoutes
+} from "./player-photo.routes.js";
+
+let photoDirectory = "";
 
 const firstFileName =
   "999990001.png";
@@ -121,13 +118,30 @@ async function cleanup():
 describe(
   "player photo routes",
   () => {
-    let app: Awaited<
-      ReturnType<typeof buildApp>
-    >;
+    const app = Fastify({
+      logger: false
+    });
 
     beforeAll(async () => {
-      await cleanup();
-      app = await buildApp();
+      photoDirectory =
+        await mkdtemp(
+          path.join(
+            os.tmpdir(),
+            "fantaasta-player-photo-routes-"
+          )
+        );
+
+      await app.register(
+        multipart
+      );
+
+      await app.register(
+        createPlayerPhotoRoutes(
+          photoDirectory
+        )
+      );
+
+      await app.ready();
     });
 
     afterEach(async () => {
@@ -135,8 +149,15 @@ describe(
     });
 
     afterAll(async () => {
-      await cleanup();
       await app.close();
+
+      await rm(
+        photoDirectory,
+        {
+          recursive: true,
+          force: true
+        }
+      );
     });
 
     it(
@@ -355,6 +376,87 @@ describe(
         ).resolves.toEqual(
           incoming
         );
+      }
+    );
+
+    it(
+      "serves a managed player photo",
+      async () => {
+        const content =
+          fakePng("served");
+
+        await writeFile(
+          path.join(
+            photoDirectory,
+            firstFileName
+          ),
+          content
+        );
+
+        const response =
+          await app.inject({
+            method: "GET",
+            url:
+              "/api/player-photos/999990001"
+          });
+
+        expect(
+          response.statusCode
+        ).toBe(200);
+
+        expect(
+          response.headers[
+            "content-type"
+          ]
+        ).toContain(
+          "image/png"
+        );
+
+        expect(
+          response.headers[
+            "cache-control"
+          ]
+        ).toBe(
+          "no-cache"
+        );
+
+        expect(
+          response.rawPayload
+        ).toEqual(
+          content
+        );
+      }
+    );
+
+    it(
+      "returns 404 for a missing player photo",
+      async () => {
+        const response =
+          await app.inject({
+            method: "GET",
+            url:
+              "/api/player-photos/999999999"
+          });
+
+        expect(
+          response.statusCode
+        ).toBe(404);
+      }
+    );
+
+    it(
+      "returns 404 for a non-numeric player photo code",
+      async () => {
+        const response =
+          await app.inject({
+            method: "GET",
+            url:
+              "/api/player-photos/not-a-code"
+          });
+
+        expect(
+          response.statusCode
+        ).toBe(404);
       }
     );
 

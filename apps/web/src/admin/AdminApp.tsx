@@ -1732,7 +1732,7 @@ export function AdminApp() {
           {cockpit?.currentPlayer ? (
             <div className="admin-current-player">
               <img
-                src={`/player-photos/${cockpit.currentPlayer.fmsCode}.png`}
+                src={`/api/player-photos/${cockpit.currentPlayer.fmsCode}`}
                 alt=""
                 aria-hidden="true"
                 onError={(event) => {

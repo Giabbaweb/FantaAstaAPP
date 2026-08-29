@@ -602,7 +602,7 @@ export function PublicDisplay():
             <>
               <img
                 className="public-display__player-photo"
-                src={`/player-photos/${currentPlayer.fmsCode}.png`}
+                src={`/api/player-photos/${currentPlayer.fmsCode}`}
                 alt=""
                 aria-hidden="true"
                 onError={(event) => {

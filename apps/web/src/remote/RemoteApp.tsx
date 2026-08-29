@@ -1095,7 +1095,7 @@ export function RemoteApp() {
             <div className="remote-player__identity">
               <img
                 className="remote-player__photo"
-                src={`/player-photos/${currentPlayer.fmsCode}.png`}
+                src={`/api/player-photos/${currentPlayer.fmsCode}`}
                 alt=""
                 aria-hidden="true"
                 onError={(event) => {
