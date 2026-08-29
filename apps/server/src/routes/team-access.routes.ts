@@ -20,9 +20,21 @@ import {
 import {
   TeamAccessService
 } from "../realtime/team-access.service.js";
+import type {
+  TeamAccessStatus
+} from "../realtime/team-access.service.js";
 
 type TeamAccessParams = {
   id: string;
+};
+
+type AuctionSessionTeamAccessParams = {
+  auctionSessionId: string;
+};
+
+type TeamAccessStatusListResponse = {
+  data: TeamAccessStatus[];
+  error: null;
 };
 
 type InvalidRequestResponse = {
@@ -42,6 +54,24 @@ const service =
 export const teamAccessRoutes:
   FastifyPluginAsync =
     async (fastify) => {
+      fastify.get<{
+        Params: AuctionSessionTeamAccessParams;
+        Reply: TeamAccessStatusListResponse;
+      }>(
+        "/api/auction-sessions/:auctionSessionId/team-access",
+        async (request, reply) => {
+          const status =
+            await service.listSessionAccessStatus(
+              request.params.auctionSessionId
+            );
+
+          return reply.code(200).send({
+            data: status,
+            error: null
+          });
+        }
+      );
+
       fastify.put<{
         Params: TeamAccessParams;
         Body: SetTeamAccessPinInput;

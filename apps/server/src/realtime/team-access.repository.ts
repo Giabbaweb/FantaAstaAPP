@@ -20,6 +20,10 @@ export interface TeamAccessRepository {
     auctionSessionTeamId: string
   ): Promise<TeamAccessCredential | null>;
 
+  findByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<TeamAccessCredential[]>;
+
   updateAccessPinHash(
     auctionSessionTeamId: string,
     accessPinHash: string
@@ -51,6 +55,27 @@ export class SqliteTeamAccessRepository
       .limit(1);
 
     return credential ?? null;
+  }
+
+  async findByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<TeamAccessCredential[]> {
+    return db
+      .select({
+        auctionSessionTeamId:
+          auctionSessionTeams.id,
+        auctionSessionId:
+          auctionSessionTeams.auctionSessionId,
+        accessPinHash:
+          auctionSessionTeams.accessPinHash
+      })
+      .from(auctionSessionTeams)
+      .where(
+        eq(
+          auctionSessionTeams.auctionSessionId,
+          auctionSessionId
+        )
+      );
   }
 
   async updateAccessPinHash(

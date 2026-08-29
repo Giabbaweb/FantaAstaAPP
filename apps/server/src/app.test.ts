@@ -278,6 +278,104 @@ describe("application integration", () => {
   });
 
   describe("Team access PIN API", () => {
+    it("returns PIN configuration status without exposing the hash", async () => {
+      await db.insert(leagues).values({
+        id: "league-team-access-status",
+        name: "League Team Access Status",
+        normalizedName:
+          "league team access status"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-team-access-status",
+        leagueId:
+          "league-team-access-status",
+        season: "2035/2036",
+        editionNumber: 502,
+        initialCredits: 300
+      });
+
+      await db.insert(teams).values([
+        {
+          id: "team-access-status-1",
+          leagueId:
+            "league-team-access-status",
+          name: "Team Access Status 1"
+        },
+        {
+          id: "team-access-status-2",
+          leagueId:
+            "league-team-access-status",
+          name: "Team Access Status 2"
+        }
+      ]);
+
+      await db.insert(auctionSessionTeams).values([
+        {
+          id: "session-team-access-status-1",
+          auctionSessionId:
+            "session-team-access-status",
+          teamId:
+            "team-access-status-1",
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 300,
+          accessPinHash: "configured-test-hash"
+        },
+        {
+          id: "session-team-access-status-2",
+          auctionSessionId:
+            "session-team-access-status",
+          teamId:
+            "team-access-status-2",
+          tableOrder: 2,
+          renewalCredits: 0,
+          remainingCredits: 300
+        }
+      ]);
+
+      const response = await app.inject({
+        method: "GET",
+        url:
+          "/api/auction-sessions/session-team-access-status/team-access"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        data: Array<{
+          auctionSessionTeamId: string;
+          configured: boolean;
+        }>;
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+
+      expect(body.data).toEqual(
+        expect.arrayContaining([
+          {
+            auctionSessionTeamId:
+              "session-team-access-status-1",
+            configured: true
+          },
+          {
+            auctionSessionTeamId:
+              "session-team-access-status-2",
+            configured: false
+          }
+        ])
+      );
+
+      expect(
+        JSON.stringify(body)
+      ).not.toContain(
+        "configured-test-hash"
+      );
+
+      expect(body.data).toHaveLength(2);
+    });
+
     it("configures the PIN without storing it in clear text", async () => {
       await db.insert(leagues).values({
         id: "league-team-access-pin",
