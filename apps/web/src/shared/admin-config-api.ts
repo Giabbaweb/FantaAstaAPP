@@ -1,6 +1,7 @@
 import type {
   AuctionSession,
   AuctionSessionTeam,
+  CreateAuctionSessionInput,
   CreateLeagueInput,
   CreateOwnerInput,
   CreateTeamOwnerInput,
@@ -580,6 +581,26 @@ export function fetchAuctionSessions():
   Promise<AuctionSession[]> {
   return apiRequest<AuctionSession[]>(
     "/api/auction-sessions"
+  );
+}
+
+export type AuctionSessionSetupResult = {
+  session: AuctionSession;
+  sessionTeams: AuctionSessionTeam[];
+};
+
+export function createAuctionSessionSetup(
+  input: CreateAuctionSessionInput
+): Promise<AuctionSessionSetupResult> {
+  return apiRequest<AuctionSessionSetupResult>(
+    "/api/auction-sessions/setup",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
   );
 }
 

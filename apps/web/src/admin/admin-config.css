@@ -3164,6 +3164,19 @@ label:nth-of-type(5) {
   opacity: 0.72;
 }
 
+.admin-config-session__create-target {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #bac7d5;
+  border-radius: 7px;
+  background: #f7f9fb;
+  color: #172033;
+  font-weight: 700;
+}
+
 .admin-config-session__selector-actions {
   display: flex;
   justify-content: flex-start;
@@ -3195,6 +3208,13 @@ label:nth-of-type(5) {
 
 .admin-config-session__feedback {
   margin-top: 8px;
+}
+
+.admin-config-session__create-hint {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 @media (max-width: 1000px) {

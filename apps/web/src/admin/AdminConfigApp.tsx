@@ -21,6 +21,7 @@ import {
 } from "../shared/app-api.js";
 
 import {
+  createAuctionSessionSetup,
   createLeague,
   createManualBackup,
   createOwner,
@@ -190,6 +191,14 @@ type SessionEditDraft = {
   maximumInitialRosterEntries: string;
 };
 
+type SessionCreateDraft = {
+  leagueId: string;
+  season: string;
+  editionNumber: string;
+  initialCredits: string;
+  maximumInitialRosterEntries: string;
+};
+
 type LeagueEditMode =
   | "CREATE"
   | "EDIT";
@@ -258,6 +267,25 @@ export function AdminConfigApp() {
   const [
     sessionEditError,
     setSessionEditError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    sessionCreateDraft,
+    setSessionCreateDraft
+  ] = useState<SessionCreateDraft | null>(
+    null
+  );
+
+  const [
+    sessionCreatePending,
+    setSessionCreatePending
+  ] = useState(false);
+
+  const [
+    sessionCreateError,
+    setSessionCreateError
   ] = useState<string | null>(
     null
   );
@@ -945,6 +973,14 @@ export function AdminConfigApp() {
       managedLeagueId === session.leagueId
     );
 
+  const sessionFormDraft =
+    sessionCreateDraft ??
+    sessionEditDraft;
+
+  const sessionFormPending =
+    sessionCreatePending ||
+    sessionEditPending;
+
   const orderedTeams =
     useMemo(
       () =>
@@ -1095,6 +1131,157 @@ export function AdminConfigApp() {
       cancelled = true;
     };
   }, [managedLeagueId]);
+
+  function beginSessionCreate(): void {
+    if (
+      !managedLeague ||
+      teams.length !== 8 ||
+      sessionCreatePending ||
+      sessionEditDraft !== null
+    ) {
+      return;
+    }
+
+    setSessionCreateError(null);
+
+    setSessionCreateDraft({
+      leagueId: managedLeague.id,
+      season: session?.season ?? "",
+      editionNumber: session
+        ? String(session.editionNumber + 1)
+        : "",
+      initialCredits: session
+        ? String(session.initialCredits)
+        : "300",
+      maximumInitialRosterEntries:
+        session
+          ? String(
+              session.maximumInitialRosterEntries
+            )
+          : "11"
+    });
+  }
+
+  function cancelSessionCreate(): void {
+    if (sessionCreatePending) {
+      return;
+    }
+
+    setSessionCreateDraft(null);
+    setSessionCreateError(null);
+  }
+
+  async function saveSessionCreate():
+    Promise<void> {
+    if (
+      !sessionCreateDraft ||
+      sessionCreatePending
+    ) {
+      return;
+    }
+
+    const season =
+      sessionCreateDraft.season.trim();
+
+    const editionNumber =
+      Number(
+        sessionCreateDraft.editionNumber
+      );
+
+    const initialCredits =
+      Number(
+        sessionCreateDraft.initialCredits
+      );
+
+    const maximumInitialRosterEntries =
+      Number(
+        sessionCreateDraft
+          .maximumInitialRosterEntries
+      );
+
+    if (!season) {
+      setSessionCreateError(
+        "Inserisci la stagione."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(editionNumber) ||
+      editionNumber <= 0
+    ) {
+      setSessionCreateError(
+        "L'edizione deve essere un numero intero positivo."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(initialCredits) ||
+      initialCredits < 0
+    ) {
+      setSessionCreateError(
+        "I crediti iniziali devono essere un numero intero non negativo."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(
+        maximumInitialRosterEntries
+      ) ||
+      maximumInitialRosterEntries < 0 ||
+      maximumInitialRosterEntries > 24
+    ) {
+      setSessionCreateError(
+        "Il numero massimo di confermati deve essere compreso tra 0 e 24."
+      );
+      return;
+    }
+
+    setSessionCreatePending(true);
+    setSessionCreateError(null);
+
+    try {
+      const result =
+        await createAuctionSessionSetup({
+          leagueId: sessionCreateDraft.leagueId,
+          season,
+          editionNumber,
+          initialCredits,
+          maximumInitialRosterEntries
+        });
+
+      setSessions(
+        (currentSessions) => [
+          ...currentSessions,
+          result.session
+        ]
+      );
+
+      setSession(result.session);
+      setSessionTeams(
+        result.sessionTeams
+      );
+      setManagedLeagueId(
+        result.session.leagueId
+      );
+
+      setSessionEditDraft(null);
+      setSessionEditError(null);
+      setSessionReadyError(null);
+      setTableOrderError(null);
+      setSessionCreateDraft(null);
+    } catch (error) {
+      setSessionCreateError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la creazione della sessione."
+      );
+    } finally {
+      setSessionCreatePending(false);
+    }
+  }
 
   function beginSessionEdit(): void {
     if (
@@ -3206,7 +3393,8 @@ export function AdminConfigApp() {
               }
               disabled={
                 leagueEditPending ||
-                leagueEditMode !== null
+                leagueEditMode !== null ||
+                sessionCreateDraft !== null
               }
               onChange={(event) => {
                 setManagedLeagueId(
@@ -3240,7 +3428,8 @@ export function AdminConfigApp() {
               type="button"
               disabled={
                 leagueEditPending ||
-                leagueEditMode !== null
+                leagueEditMode !== null ||
+                sessionCreateDraft !== null
               }
               onClick={
                 beginCreateLeague
@@ -3254,7 +3443,8 @@ export function AdminConfigApp() {
               disabled={
                 !managedLeague ||
                 leagueEditPending ||
-                leagueEditMode !== null
+                leagueEditMode !== null ||
+                sessionCreateDraft !== null
               }
               onClick={
                 beginEditLeague
@@ -3453,15 +3643,32 @@ export function AdminConfigApp() {
         <div className="admin-config__summary admin-config-session__summary">
           <article className="admin-config-session__selector-card">
             <span>
-              Sessione d'asta
+              {
+                sessionCreateDraft
+                  ? `Nuova sessione · ${
+                      managedLeague?.name ??
+                      "Lega"
+                    }`
+                  : "Sessione d'asta"
+              }
             </span>
 
-            <select
+            {sessionCreateDraft
+              ? (
+                  <div className="admin-config-session__create-target">
+                    {
+                      managedLeague?.name ??
+                      "Lega selezionata"
+                    }
+                  </div>
+                )
+              : (
+                  <select
               className="admin-config-session__selector"
               value={session.id}
               disabled={
-                sessionEditPending ||
-                sessionEditDraft !== null
+                sessionFormPending ||
+                sessionFormDraft !== null
               }
               onChange={(event) => {
                 const selectedSession =
@@ -3518,18 +3725,19 @@ export function AdminConfigApp() {
                 }
               )}
             </select>
+                )}
 
             <div className="admin-config-session__selector-actions">
-              {sessionEditDraft
+              {sessionCreateDraft
                 ? (
                     <>
                       <button
                         type="button"
                         disabled={
-                          sessionEditPending
+                          sessionCreatePending
                         }
                         onClick={
-                          cancelSessionEdit
+                          cancelSessionCreate
                         }
                       >
                         Annulla
@@ -3538,31 +3746,96 @@ export function AdminConfigApp() {
                       <button
                         type="button"
                         disabled={
-                          sessionEditPending
+                          sessionCreatePending
                         }
                         onClick={() => {
-                          void saveSessionEdit();
+                          void saveSessionCreate();
                         }}
                       >
                         {
-                          sessionEditPending
-                            ? "Salvataggio..."
-                            : "Salva parametri"
+                          sessionCreatePending
+                            ? "Creazione..."
+                            : "Crea sessione"
                         }
                       </button>
                     </>
                   )
-                : (
-                    <button
-                      type="button"
-                      onClick={
-                        beginSessionEdit
-                      }
-                    >
-                      Modifica parametri
-                    </button>
-                  )}
+                : sessionEditDraft
+                  ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={
+                            sessionFormPending
+                          }
+                          onClick={
+                            cancelSessionEdit
+                          }
+                        >
+                          Annulla
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            sessionFormPending
+                          }
+                          onClick={() => {
+                            void saveSessionEdit();
+                          }}
+                        >
+                          {
+                            sessionFormPending
+                              ? "Salvataggio..."
+                              : "Salva parametri"
+                          }
+                        </button>
+                      </>
+                    )
+                  : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={
+                            beginSessionEdit
+                          }
+                        >
+                          Modifica parametri
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            !managedLeague ||
+                            teams.length !== 8
+                          }
+                          title={
+                            !managedLeague
+                              ? "Seleziona una lega."
+                              : teams.length !== 8
+                                ? "Per creare una sessione la lega deve avere esattamente 8 squadre."
+                                : undefined
+                          }
+                          onClick={
+                            beginSessionCreate
+                          }
+                        >
+                          + Nuova sessione
+                        </button>
+                      </>
+                    )}
             </div>
+
+            {!sessionCreateDraft &&
+              managedLeague &&
+              teams.length !== 8 && (
+                <p className="admin-config-session__create-hint">
+                  La lega selezionata ha{" "}
+                  {teams.length} squadre. Per creare
+                  una sessione ne servono
+                  esattamente 8.
+                </p>
+              )}
           </article>
 
           <article>
@@ -3570,27 +3843,40 @@ export function AdminConfigApp() {
               Stagione
             </span>
 
-            {sessionEditDraft
+            {sessionFormDraft
               ? (
                   <input
                     type="text"
                     value={
-                      sessionEditDraft.season
+                      sessionFormDraft.season
                     }
                     disabled={
-                      sessionEditPending
+                      sessionFormPending
                     }
                     onChange={(event) => {
-                      setSessionEditDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                season:
-                                  event.target.value
-                              }
-                            : current
-                      );
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  season:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  season:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
                     }}
                   />
                 )
@@ -3606,30 +3892,43 @@ export function AdminConfigApp() {
               Edizione
             </span>
 
-            {sessionEditDraft
+            {sessionFormDraft
               ? (
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={
-                      sessionEditDraft
+                      sessionFormDraft
                         .editionNumber
                     }
                     disabled={
                       sessionEditPending
                     }
                     onChange={(event) => {
-                      setSessionEditDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                editionNumber:
-                                  event.target.value
-                              }
-                            : current
-                      );
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  editionNumber:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  editionNumber:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
                     }}
                   />
                 )
@@ -3645,30 +3944,43 @@ export function AdminConfigApp() {
               Crediti iniziali
             </span>
 
-            {sessionEditDraft
+            {sessionFormDraft
               ? (
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={
-                      sessionEditDraft
+                      sessionFormDraft
                         .initialCredits
                     }
                     disabled={
                       sessionEditPending
                     }
                     onChange={(event) => {
-                      setSessionEditDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                initialCredits:
-                                  event.target.value
-                              }
-                            : current
-                      );
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  initialCredits:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  initialCredits:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
                     }}
                   />
                 )
@@ -3684,7 +3996,7 @@ export function AdminConfigApp() {
               Max confermati
             </span>
 
-            {sessionEditDraft
+            {sessionFormDraft
               ? (
                   <input
                     type="number"
@@ -3692,23 +4004,36 @@ export function AdminConfigApp() {
                     max="24"
                     step="1"
                     value={
-                      sessionEditDraft
+                      sessionFormDraft
                         .maximumInitialRosterEntries
                     }
                     disabled={
                       sessionEditPending
                     }
                     onChange={(event) => {
-                      setSessionEditDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                maximumInitialRosterEntries:
-                                  event.target.value
-                              }
-                            : current
-                      );
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  maximumInitialRosterEntries:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  maximumInitialRosterEntries:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
                     }}
                   />
                 )
@@ -3728,15 +4053,23 @@ export function AdminConfigApp() {
             </span>
 
             <strong>
-              {session.status}
+              {
+                sessionCreateDraft
+                  ? "SETUP"
+                  : session.status
+              }
             </strong>
           </article>
         </div>
 
-        {sessionEditError && (
+        {(sessionCreateError ||
+          sessionEditError) && (
           <div className="admin-config-session__feedback">
             <p className="admin-config-session__error">
-              {sessionEditError}
+              {
+                sessionCreateError ??
+                sessionEditError
+              }
             </p>
           </div>
         )}
