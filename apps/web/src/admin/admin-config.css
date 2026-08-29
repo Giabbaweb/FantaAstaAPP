@@ -3011,6 +3011,31 @@ label:nth-of-type(5) {
   justify-self: start;
 }
 
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #82b79a;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #22633a;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__actions button:hover:not(:disabled) {
+  background: #f2faf5;
+}
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__actions button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /*
  * Editing row:
  * actions move below the left DATA SQUADRA area instead of
@@ -3228,5 +3253,193 @@ label:nth-of-type(5) {
 @media (max-width: 700px) {
   .admin-config-session__summary {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* ==========================================================
+   M14 — C1.14d
+   Remote access integrated into Girotavolo team rows
+   ========================================================== */
+
+.admin-config__girotavolo-pin-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid #cce5d5;
+  border-radius: 999px;
+  background: #edf8f1;
+  color: #28633d;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/*
+ * Riga chiusa:
+ * 1 ordine
+ * 2 squadra
+ * 3 presidenti
+ * 4 crediti
+ * 5 modifica squadra
+ * 6 accesso remote
+ */
+
+.admin-config-team:not(.admin-config-team--editing)
+.admin-config-team__remote-access {
+  grid-column: 6;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-content: start;
+  column-gap: 10px;
+  row-gap: 1px;
+  min-width: 0;
+}
+
+.admin-config-team__remote-access-label {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-config-team__remote-access-main {
+  display: contents;
+}
+
+.admin-config-team__remote-access-status {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.admin-config-team__remote-access-status.is-configured {
+  background: transparent;
+  color: #267047;
+}
+
+.admin-config-team__remote-access-status.is-missing {
+  background: transparent;
+  color: #9a5b12;
+}
+
+.admin-config-team__remote-access-edit {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #82b79a;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #22633a;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-config-team__remote-access-edit:hover:not(:disabled) {
+  background: #f2faf5;
+}
+
+.admin-config-team__remote-access-edit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/*
+ * Editor PIN:
+ * resta compatto, ma quando viene aperto può usare più spazio.
+ * Qui potrà comparire anche il futuro pulsante QR.
+ */
+
+.admin-config-team__remote-access-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-config-team__remote-access-editor input {
+  box-sizing: border-box;
+  width: 82px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #bac7d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #263746;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.admin-config-team__remote-access-editor button {
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #c5d1db;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #40566a;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-config-team__remote-access-editor button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-config-team__remote-access-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b42318;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/*
+ * Nei layout più stretti C1.12d elimina la sesta colonna:
+ * remote scende sotto i dati senza comprimere il contenuto.
+ */
+
+@media (max-width: 1350px) {
+  .admin-config-team:not(.admin-config-team--editing)
+  .admin-config-team__remote-access {
+    grid-column: 2 / -1;
+    justify-self: stretch;
+    flex-wrap: wrap;
+    padding-top: 7px;
+    border-top: 1px solid #e3e9ef;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-config-team:not(.admin-config-team--editing)
+  .admin-config-team__remote-access {
+    grid-column: 2 / -1;
   }
 }

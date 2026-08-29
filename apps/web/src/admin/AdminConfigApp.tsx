@@ -39,6 +39,7 @@ import {
   fetchPlayers,
   fetchRecoveryPoints,
   markAuctionSessionReady,
+  fetchTeamAccessStatus,
   fetchTeamOwners,
   fetchTeamsByLeague,
   importInitialRosters,
@@ -50,6 +51,7 @@ import {
   resetInitialRosters,
   restoreRecoveryPoint,
   resetSetupData,
+  setTeamAccessPin,
   updateAuctionSession,
   updateLeague,
   updateTeam,
@@ -80,6 +82,9 @@ type UploadPanel =
 
 type TeamOwnerMap =
   Record<string, TeamOwner[]>;
+
+type TeamAccessConfiguredMap =
+  Record<string, boolean>;
 
 const NEW_OWNER_VALUE =
   "__NEW_OWNER__";
@@ -634,6 +639,49 @@ export function AdminConfigApp() {
   ] = useState<TeamOwnerMap>({});
 
   const [
+    teamAccessConfigured,
+    setTeamAccessConfigured
+  ] = useState<TeamAccessConfiguredMap>(
+    {}
+  );
+
+  const [
+    teamAccessLoading,
+    setTeamAccessLoading
+  ] = useState(false);
+
+  const [
+    teamAccessError,
+    setTeamAccessError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    editingTeamAccessId,
+    setEditingTeamAccessId
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    teamAccessPinDraft,
+    setTeamAccessPinDraft
+  ] = useState("");
+
+  const [
+    teamAccessPinPending,
+    setTeamAccessPinPending
+  ] = useState(false);
+
+  const [
+    teamAccessPinError,
+    setTeamAccessPinError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
     tableOrderPending,
     setTableOrderPending
   ] = useState(false);
@@ -1064,6 +1112,65 @@ export function AdminConfigApp() {
   }, [session?.id]);
 
   useEffect(() => {
+    setEditingTeamAccessId(null);
+    setTeamAccessPinDraft("");
+    setTeamAccessPinError(null);
+
+    if (!session) {
+      setTeamAccessConfigured({});
+      setTeamAccessError(null);
+      setTeamAccessLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    setTeamAccessLoading(true);
+    setTeamAccessError(null);
+
+    void fetchTeamAccessStatus(
+      session.id
+    )
+      .then((statuses) => {
+        if (cancelled) {
+          return;
+        }
+
+        setTeamAccessConfigured(
+          Object.fromEntries(
+            statuses.map(
+              (status) => [
+                status.auctionSessionTeamId,
+                status.configured
+              ]
+            )
+          )
+        );
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setTeamAccessConfigured({});
+        setTeamAccessError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante il caricamento degli accessi /remote."
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTeamAccessLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id]);
+
+  useEffect(() => {
     if (!managedLeagueId) {
       setTeams([]);
       setTeamOwners({});
@@ -1280,6 +1387,74 @@ export function AdminConfigApp() {
       );
     } finally {
       setSessionCreatePending(false);
+    }
+  }
+
+  function beginTeamAccessEdit(
+    auctionSessionTeamId: string
+  ): void {
+    if (teamAccessPinPending) {
+      return;
+    }
+
+    setEditingTeamAccessId(
+      auctionSessionTeamId
+    );
+    setTeamAccessPinDraft("");
+    setTeamAccessPinError(null);
+  }
+
+  function cancelTeamAccessEdit(): void {
+    if (teamAccessPinPending) {
+      return;
+    }
+
+    setEditingTeamAccessId(null);
+    setTeamAccessPinDraft("");
+    setTeamAccessPinError(null);
+  }
+
+  async function saveTeamAccessPin(): Promise<void> {
+    if (
+      !editingTeamAccessId ||
+      teamAccessPinPending
+    ) {
+      return;
+    }
+
+    if (!/^\d{4}$/.test(teamAccessPinDraft)) {
+      setTeamAccessPinError(
+        "Il PIN deve contenere esattamente 4 cifre."
+      );
+      return;
+    }
+
+    setTeamAccessPinPending(true);
+    setTeamAccessPinError(null);
+
+    try {
+      await setTeamAccessPin(
+        editingTeamAccessId,
+        teamAccessPinDraft
+      );
+
+      setTeamAccessConfigured(
+        (current) => ({
+          ...current,
+          [editingTeamAccessId]: true
+        })
+      );
+
+      setEditingTeamAccessId(null);
+      setTeamAccessPinDraft("");
+    } catch (error) {
+      setTeamAccessPinError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il salvataggio del PIN."
+      );
+    } finally {
+      setTeamAccessPinPending(false);
     }
   }
 
@@ -4092,7 +4267,30 @@ export function AdminConfigApp() {
                 : `${teams.length} squadre`
             }
           </span>
+
+          {managedLeagueMatchesSession && (
+            <span className="admin-config__girotavolo-pin-count">
+              {
+                teamAccessLoading
+                  ? "PIN..."
+                  : teamAccessError
+                    ? "PIN ?"
+                    : `${
+                        Object.values(
+                          teamAccessConfigured
+                        ).filter(Boolean).length
+                      } / ${sessionTeams.length} PIN`
+              }
+            </span>
+          )}
         </div>
+
+        {managedLeagueMatchesSession &&
+          teamAccessError && (
+          <p className="admin-config__table-order-error">
+            Accesso /remote: {teamAccessError}
+          </p>
+        )}
 
         {!managedLeagueMatchesSession && (
           <p className="admin-config__table-order-error">
@@ -4747,9 +4945,133 @@ export function AdminConfigApp() {
                             );
                           }}
                         >
-                          Modifica
+                          Modifica squadra
                         </button>
                       </div>
+
+                        {managedLeagueMatchesSession &&
+                          sessionTeam && (
+                          <div className="admin-config-team__remote-access">
+                            <span className="admin-config-team__remote-access-label">
+                              Remote
+                            </span>
+
+                            <div className="admin-config-team__remote-access-main">
+                              <span
+                                className={
+                                  `admin-config-team__remote-access-status ${
+                                    teamAccessConfigured[
+                                      sessionTeam.id
+                                    ] === true
+                                      ? "is-configured"
+                                      : "is-missing"
+                                  }`
+                                }
+                              >
+                                {
+                                  teamAccessConfigured[
+                                    sessionTeam.id
+                                  ] === true
+                                    ? "✓ PIN"
+                                    : "PIN mancante"
+                                }
+                              </span>
+
+                              {editingTeamAccessId ===
+                              sessionTeam.id ? (
+                                <div className="admin-config-team__remote-access-editor">
+                                  <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    autoComplete="new-password"
+                                    maxLength={4}
+                                    placeholder="4 cifre"
+                                    aria-label={
+                                      `PIN /remote ${team.name}`
+                                    }
+                                    value={
+                                      teamAccessPinDraft
+                                    }
+                                    disabled={
+                                      teamAccessPinPending
+                                    }
+                                    onChange={(event) => {
+                                      setTeamAccessPinDraft(
+                                        event.target.value
+                                          .replace(
+                                            /\D/g,
+                                            ""
+                                          )
+                                          .slice(0, 4)
+                                      );
+                                      setTeamAccessPinError(
+                                        null
+                                      );
+                                    }}
+                                  />
+
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      teamAccessPinPending
+                                    }
+                                    onClick={() => {
+                                      void saveTeamAccessPin();
+                                    }}
+                                  >
+                                    {
+                                      teamAccessPinPending
+                                        ? "Salvataggio..."
+                                        : "Salva"
+                                    }
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      teamAccessPinPending
+                                    }
+                                    onClick={
+                                      cancelTeamAccessEdit
+                                    }
+                                  >
+                                    Annulla
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="admin-config-team__remote-access-edit"
+                                  disabled={
+                                    teamAccessPinPending ||
+                                    teamAccessLoading
+                                  }
+                                  onClick={() => {
+                                    beginTeamAccessEdit(
+                                      sessionTeam.id
+                                    );
+                                  }}
+                                >
+                                  {
+                                    teamAccessConfigured[
+                                      sessionTeam.id
+                                    ] === true
+                                      ? "Modifica PIN"
+                                      : "Imposta PIN"
+                                  }
+                                </button>
+                              )}
+                            </div>
+
+                            {editingTeamAccessId ===
+                              sessionTeam.id &&
+                              teamAccessPinError && (
+                              <p className="admin-config-team__remote-access-error">
+                                {teamAccessPinError}
+                              </p>
+                            )}
+                          </div>
+                        )}
                     </>
                   )}
 

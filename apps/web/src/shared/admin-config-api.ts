@@ -672,6 +672,37 @@ export function fetchAuctionSessionTeams(
   );
 }
 
+export type TeamAccessStatus = {
+  auctionSessionTeamId: string;
+  configured: boolean;
+};
+
+export function fetchTeamAccessStatus(
+  auctionSessionId: string
+): Promise<TeamAccessStatus[]> {
+  return apiRequest<TeamAccessStatus[]>(
+    `/api/auction-sessions/${auctionSessionId}/team-access`
+  );
+}
+
+export function setTeamAccessPin(
+  auctionSessionTeamId: string,
+  pin: string
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/auction-session-teams/${auctionSessionTeamId}/access-pin`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin
+      })
+    }
+  );
+}
+
 export function reorderAuctionSessionTeams(
   auctionSessionId: string,
   teamIds: string[]
