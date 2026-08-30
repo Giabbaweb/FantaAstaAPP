@@ -3111,6 +3111,144 @@ label:nth-of-type(5) {
   }
 }
 
+
+/* ==========================================================
+   M14 — Ambrosiana operational validation
+   League context + team creation
+   ========================================================== */
+
+.admin-config__context-info {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 1px solid #bfd7ea;
+  border-radius: 8px;
+  background: #f2f8fc;
+  color: #40566a;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.admin-config__context-info strong {
+  color: #244a68;
+}
+
+.admin-config__team-create-actions button {
+  min-height: 30px;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #b9c9d6;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #243b53;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-config__team-create-actions button:hover:not(:disabled) {
+  border-color: #7da4c2;
+  background: #f5f9fc;
+}
+
+.admin-config__team-create-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-config__team-create-form {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 0.8fr)
+    minmax(260px, 1.2fr)
+    auto;
+  align-items: end;
+  gap: 12px 16px;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid #d4dde6;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.admin-config__team-create-copy {
+  display: grid;
+  align-self: center;
+  gap: 3px;
+}
+
+.admin-config__team-create-copy strong {
+  color: #102a43;
+  font-size: 0.86rem;
+}
+
+.admin-config__team-create-copy span {
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.admin-config__team-create-form label {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-config__team-create-form label > span {
+  color: #52667a;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-config__team-create-form input {
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #cbd7e2;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #102a43;
+  font: inherit;
+}
+
+.admin-config__team-create-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-config__team-create-buttons button {
+  min-height: 36px;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #c4d0da;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #243b53;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-config__team-create-buttons
+.admin-config__team-create-primary {
+  border-color: #8ab99a;
+  background: #edf7f0;
+  color: #22633a;
+}
+
+.admin-config__team-create-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-config__team-create-form
+.admin-config__table-order-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .admin-config__team-create-form {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
 /* ==========================================================
    M14 — C1.12e
    Girotavolo section heading alignment

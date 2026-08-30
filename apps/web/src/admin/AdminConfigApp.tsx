@@ -25,6 +25,7 @@ import {
   createLeague,
   createManualBackup,
   createOwner,
+  createTeam,
   deleteAllPlayerPhotos,
   deleteRecoveryPoint,
   createTeamOwner,
@@ -701,6 +702,28 @@ export function AdminConfigApp() {
   );
 
   const [
+    teamCreateOpen,
+    setTeamCreateOpen
+  ] = useState(false);
+
+  const [
+    teamCreateName,
+    setTeamCreateName
+  ] = useState("");
+
+  const [
+    teamCreatePending,
+    setTeamCreatePending
+  ] = useState(false);
+
+  const [
+    teamCreateError,
+    setTeamCreateError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
     teamEditDraft,
     setTeamEditDraft
   ] = useState<TeamEditDraft | null>(
@@ -1001,6 +1024,36 @@ export function AdminConfigApp() {
       [owners]
     );
 
+  const managedLeagueOwners =
+    useMemo(
+      () => {
+        const ownerIds =
+          new Set(
+            teams.flatMap(
+              (team) =>
+                (
+                  teamOwners[
+                    team.id
+                  ] ?? []
+                ).map(
+                  (association) =>
+                    association.ownerId
+                )
+            )
+          );
+
+        return owners.filter(
+          (owner) =>
+            ownerIds.has(owner.id)
+        );
+      },
+      [
+        owners,
+        teams,
+        teamOwners
+      ]
+    );
+
   const sessionTeamByTeamId =
     useMemo(
       () =>
@@ -1223,6 +1276,9 @@ export function AdminConfigApp() {
         setEditingTeamId(null);
         setTeamEditDraft(null);
         setTeamEditError(null);
+        setTeamCreateOpen(false);
+        setTeamCreateName("");
+        setTeamCreateError(null);
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(
@@ -2051,6 +2107,85 @@ export function AdminConfigApp() {
             }
           : current
     );
+  }
+
+  function beginTeamCreate(): void {
+    if (
+      !managedLeague ||
+      teamCreatePending ||
+      teamEditPending
+    ) {
+      return;
+    }
+
+    setTeamCreateName("");
+    setTeamCreateError(null);
+    setTeamCreateOpen(true);
+  }
+
+  function cancelTeamCreate(): void {
+    if (teamCreatePending) {
+      return;
+    }
+
+    setTeamCreateOpen(false);
+    setTeamCreateName("");
+    setTeamCreateError(null);
+  }
+
+  async function saveTeamCreate(): Promise<void> {
+    if (
+      !managedLeague ||
+      teamCreatePending
+    ) {
+      return;
+    }
+
+    const name = teamCreateName.trim();
+
+    if (!name) {
+      setTeamCreateError(
+        "Inserisci il nome della squadra."
+      );
+      return;
+    }
+
+    setTeamCreatePending(true);
+    setTeamCreateError(null);
+
+    try {
+      const createdTeam =
+        await createTeam({
+          leagueId: managedLeague.id,
+          name
+        });
+
+      const refreshedTeams =
+        await fetchTeamsByLeague(
+          managedLeague.id
+        );
+
+      setTeams(refreshedTeams);
+      setTeamOwners(
+        (current) => ({
+          ...current,
+          [createdTeam.id]: []
+        })
+      );
+
+      setTeamCreateOpen(false);
+      setTeamCreateName("");
+
+      beginTeamEdit(createdTeam);
+    } catch (error) {
+      setTeamCreateError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la creazione della squadra."
+      );
+    } finally {
+      setTeamCreatePending(false);
+    }
   }
 
   function beginTeamEdit(
@@ -3474,9 +3609,20 @@ export function AdminConfigApp() {
                 }
               >
                 {
-                  sessionReadiness.ready
-                    ? "✓ CONFIGURAZIONE PRONTA"
-                    : "! CONFIGURAZIONE INCOMPLETA"
+                  managedLeagueMatchesSession
+                    ? (
+                        sessionReadiness.ready
+                          ? "✓ CONFIGURAZIONE PRONTA"
+                          : "! CONFIGURAZIONE INCOMPLETA"
+                      )
+                    : `${
+                        league?.name ??
+                        "Sessione selezionata"
+                      } · ${
+                        sessionReadiness.ready
+                          ? "✓ CONFIGURAZIONE PRONTA"
+                          : "! CONFIGURAZIONE INCOMPLETA"
+                      }`
                 }
                 {" · "}
                 {
@@ -4268,6 +4414,26 @@ export function AdminConfigApp() {
             }
           </span>
 
+          <div className="admin-config__team-create-actions">
+            <button
+              type="button"
+              disabled={
+                !managedLeague ||
+                teamCreatePending ||
+                teamEditPending ||
+                teams.length >= 8
+              }
+              title={
+                teams.length >= 8
+                  ? "La lega ha già 8 squadre."
+                  : undefined
+              }
+              onClick={beginTeamCreate}
+            >
+              + Nuova squadra
+            </button>
+          </div>
+
           {managedLeagueMatchesSession && (
             <span className="admin-config__girotavolo-pin-count">
               {
@@ -4293,13 +4459,86 @@ export function AdminConfigApp() {
         )}
 
         {!managedLeagueMatchesSession && (
-          <p className="admin-config__table-order-error">
-            Squadre e Presidenti della lega selezionata.
-            Il Girotavolo appartiene alla sessione
-            d'asta e sarà disponibile quando la
-            sessione selezionata appartiene a questa
-            lega.
+          <p className="admin-config__context-info">
+            <strong>
+              Stai gestendo {managedLeague?.name ?? "la lega selezionata"}.
+            </strong>
+            {" "}
+            Il Girotavolo e i PIN saranno disponibili
+            dopo la creazione di una sessione d'asta
+            per questa lega.
           </p>
+        )}
+
+        {teamCreateOpen && (
+          <div className="admin-config__team-create-form">
+            <div className="admin-config__team-create-copy">
+              <strong>Nuova squadra</strong>
+              <span>
+                La squadra verrà creata nella lega selezionata
+                e potrai completarne subito dati e Presidente.
+              </span>
+            </div>
+
+            <label>
+              <span>Nome squadra</span>
+
+              <input
+                type="text"
+                autoFocus
+                maxLength={100}
+                value={teamCreateName}
+                disabled={teamCreatePending}
+                placeholder="Nome squadra"
+                onChange={(event) => {
+                  setTeamCreateName(
+                    event.target.value
+                  );
+                  setTeamCreateError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void saveTeamCreate();
+                  }
+                }}
+              />
+            </label>
+
+            <div className="admin-config__team-create-buttons">
+              <button
+                type="button"
+                className="admin-config__team-create-primary"
+                disabled={
+                  teamCreatePending ||
+                  !teamCreateName.trim()
+                }
+                onClick={() => {
+                  void saveTeamCreate();
+                }}
+              >
+                {
+                  teamCreatePending
+                    ? "Creazione..."
+                    : "Crea squadra"
+                }
+              </button>
+
+              <button
+                type="button"
+                disabled={teamCreatePending}
+                onClick={cancelTeamCreate}
+              >
+                Annulla
+              </button>
+            </div>
+
+            {teamCreateError && (
+              <p className="admin-config__table-order-error">
+                {teamCreateError}
+              </p>
+            )}
+          </div>
         )}
 
         {tableOrderError && (
@@ -4678,7 +4917,7 @@ export function AdminConfigApp() {
                               Seleziona...
                             </option>
 
-                            {owners.map(
+                            {managedLeagueOwners.map(
                               (owner) => (
                                 <option
                                   key={owner.id}
@@ -4757,7 +4996,7 @@ export function AdminConfigApp() {
                               Nessuno
                             </option>
 
-                            {owners.map(
+                            {managedLeagueOwners.map(
                               (owner) => (
                                 <option
                                   key={owner.id}

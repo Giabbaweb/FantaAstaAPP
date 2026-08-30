@@ -13,6 +13,7 @@ import type {
   UpdateAuctionSessionInput,
   UpdateLeagueInput,
   UpdateOwnerInput,
+  CreateTeamInput,
   UpdateTeamInput,
   UpdateTeamOwnerInput
 } from "@fantaastaapp/contracts";
@@ -721,6 +722,21 @@ export function reorderAuctionSessionTeams(
   );
 }
 
+
+export function createTeam(
+  input: CreateTeamInput
+): Promise<Team> {
+  return apiRequest<Team>(
+    "/api/teams",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(input)
+    }
+  );
+}
 
 export function updateTeam(
   teamId: string,
