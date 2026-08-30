@@ -3960,442 +3960,6 @@ export function AdminConfigApp() {
         </p>
       </section>
 
-      <section className="admin-config-session">
-        <div className="admin-config__summary admin-config-session__summary">
-          <article className="admin-config-session__selector-card">
-            <span>
-              {
-                sessionCreateDraft
-                  ? `Nuova sessione · ${
-                      managedLeague?.name ??
-                      "Lega"
-                    }`
-                  : "Sessione d'asta"
-              }
-            </span>
-
-            {sessionCreateDraft
-              ? (
-                  <div className="admin-config-session__create-target">
-                    {
-                      managedLeague?.name ??
-                      "Lega selezionata"
-                    }
-                  </div>
-                )
-              : (
-                  <select
-              className="admin-config-session__selector"
-              value={session.id}
-              disabled={
-                sessionFormPending ||
-                sessionFormDraft !== null
-              }
-              onChange={(event) => {
-                const selectedSession =
-                  sessions.find(
-                    (candidate) =>
-                      candidate.id ===
-                      event.target.value
-                  );
-
-                if (!selectedSession) {
-                  return;
-                }
-
-                setSession(
-                  selectedSession
-                );
-
-                setManagedLeagueId(
-                  selectedSession.leagueId
-                );
-
-                setSessionEditDraft(null);
-                setSessionEditError(null);
-                setSessionReadyError(null);
-                setTableOrderError(null);
-              }}
-            >
-              {sessions.map(
-                (candidate) => {
-                  const candidateLeague =
-                    leagues.find(
-                      (leagueCandidate) =>
-                        leagueCandidate.id ===
-                        candidate.leagueId
-                    );
-
-                  return (
-                    <option
-                      key={candidate.id}
-                      value={candidate.id}
-                    >
-                      {
-                        candidateLeague?.name ??
-                        "Lega"
-                      }
-                      {" · "}
-                      {candidate.season}
-                      {" · "}
-                      {candidate.editionNumber}ª
-                      {" · "}
-                      {candidate.status}
-                    </option>
-                  );
-                }
-              )}
-            </select>
-                )}
-
-            <div className="admin-config-session__selector-actions">
-              {sessionCreateDraft
-                ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={
-                          sessionCreatePending
-                        }
-                        onClick={
-                          cancelSessionCreate
-                        }
-                      >
-                        Annulla
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={
-                          sessionCreatePending
-                        }
-                        onClick={() => {
-                          void saveSessionCreate();
-                        }}
-                      >
-                        {
-                          sessionCreatePending
-                            ? "Creazione..."
-                            : "Crea sessione"
-                        }
-                      </button>
-                    </>
-                  )
-                : sessionEditDraft
-                  ? (
-                      <>
-                        <button
-                          type="button"
-                          disabled={
-                            sessionFormPending
-                          }
-                          onClick={
-                            cancelSessionEdit
-                          }
-                        >
-                          Annulla
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={
-                            sessionFormPending
-                          }
-                          onClick={() => {
-                            void saveSessionEdit();
-                          }}
-                        >
-                          {
-                            sessionFormPending
-                              ? "Salvataggio..."
-                              : "Salva parametri"
-                          }
-                        </button>
-                      </>
-                    )
-                  : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={
-                            beginSessionEdit
-                          }
-                        >
-                          Modifica parametri
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={
-                            !managedLeague ||
-                            teams.length !== 8
-                          }
-                          title={
-                            !managedLeague
-                              ? "Seleziona una lega."
-                              : teams.length !== 8
-                                ? "Per creare una sessione la lega deve avere esattamente 8 squadre."
-                                : undefined
-                          }
-                          onClick={
-                            beginSessionCreate
-                          }
-                        >
-                          + Nuova sessione
-                        </button>
-                      </>
-                    )}
-            </div>
-
-            {!sessionCreateDraft &&
-              managedLeague &&
-              teams.length !== 8 && (
-                <p className="admin-config-session__create-hint">
-                  La lega selezionata ha{" "}
-                  {teams.length} squadre. Per creare
-                  una sessione ne servono
-                  esattamente 8.
-                </p>
-              )}
-          </article>
-
-          <article>
-            <span>
-              Stagione
-            </span>
-
-            {sessionFormDraft
-              ? (
-                  <input
-                    type="text"
-                    value={
-                      sessionFormDraft.season
-                    }
-                    disabled={
-                      sessionFormPending
-                    }
-                    onChange={(event) => {
-                      if (sessionCreateDraft) {
-                        setSessionCreateDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  season:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      } else {
-                        setSessionEditDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  season:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      }
-                    }}
-                  />
-                )
-              : (
-                  <strong>
-                    {session.season}
-                  </strong>
-                )}
-          </article>
-
-          <article>
-            <span>
-              Edizione
-            </span>
-
-            {sessionFormDraft
-              ? (
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={
-                      sessionFormDraft
-                        .editionNumber
-                    }
-                    disabled={
-                      sessionEditPending
-                    }
-                    onChange={(event) => {
-                      if (sessionCreateDraft) {
-                        setSessionCreateDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  editionNumber:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      } else {
-                        setSessionEditDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  editionNumber:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      }
-                    }}
-                  />
-                )
-              : (
-                  <strong>
-                    {session.editionNumber}ª
-                  </strong>
-                )}
-          </article>
-
-          <article>
-            <span>
-              Crediti iniziali
-            </span>
-
-            {sessionFormDraft
-              ? (
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={
-                      sessionFormDraft
-                        .initialCredits
-                    }
-                    disabled={
-                      sessionEditPending
-                    }
-                    onChange={(event) => {
-                      if (sessionCreateDraft) {
-                        setSessionCreateDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  initialCredits:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      } else {
-                        setSessionEditDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  initialCredits:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      }
-                    }}
-                  />
-                )
-              : (
-                  <strong>
-                    {session.initialCredits}
-                  </strong>
-                )}
-          </article>
-
-          <article>
-            <span>
-              Max confermati
-            </span>
-
-            {sessionFormDraft
-              ? (
-                  <input
-                    type="number"
-                    min="0"
-                    max="24"
-                    step="1"
-                    value={
-                      sessionFormDraft
-                        .maximumInitialRosterEntries
-                    }
-                    disabled={
-                      sessionEditPending
-                    }
-                    onChange={(event) => {
-                      if (sessionCreateDraft) {
-                        setSessionCreateDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  maximumInitialRosterEntries:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      } else {
-                        setSessionEditDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  maximumInitialRosterEntries:
-                                    event.target.value
-                                }
-                              : current
-                        );
-                      }
-                    }}
-                  />
-                )
-              : (
-                  <strong>
-                    {
-                      session
-                        .maximumInitialRosterEntries
-                    }
-                  </strong>
-                )}
-          </article>
-
-          <article>
-            <span>
-              Stato
-            </span>
-
-            <strong>
-              {
-                sessionCreateDraft
-                  ? "SETUP"
-                  : session.status
-              }
-            </strong>
-          </article>
-        </div>
-
-        {(sessionCreateError ||
-          sessionEditError) && (
-          <div className="admin-config-session__feedback">
-            <p className="admin-config-session__error">
-              {
-                sessionCreateError ??
-                sessionEditError
-              }
-            </p>
-          </div>
-        )}
-      </section>
-
       <section className="admin-config__panel">
         <div className="admin-config__girotavolo-heading">
           <span className="admin-config__girotavolo-kicker">
@@ -5325,6 +4889,442 @@ export function AdminConfigApp() {
             }
           )}
         </div>
+      </section>
+
+      <section className="admin-config-session">
+        <div className="admin-config__summary admin-config-session__summary">
+          <article className="admin-config-session__selector-card">
+            <span>
+              {
+                sessionCreateDraft
+                  ? `Nuova sessione · ${
+                      managedLeague?.name ??
+                      "Lega"
+                    }`
+                  : "Sessione d'asta"
+              }
+            </span>
+
+            {sessionCreateDraft
+              ? (
+                  <div className="admin-config-session__create-target">
+                    {
+                      managedLeague?.name ??
+                      "Lega selezionata"
+                    }
+                  </div>
+                )
+              : (
+                  <select
+              className="admin-config-session__selector"
+              value={session.id}
+              disabled={
+                sessionFormPending ||
+                sessionFormDraft !== null
+              }
+              onChange={(event) => {
+                const selectedSession =
+                  sessions.find(
+                    (candidate) =>
+                      candidate.id ===
+                      event.target.value
+                  );
+
+                if (!selectedSession) {
+                  return;
+                }
+
+                setSession(
+                  selectedSession
+                );
+
+                setManagedLeagueId(
+                  selectedSession.leagueId
+                );
+
+                setSessionEditDraft(null);
+                setSessionEditError(null);
+                setSessionReadyError(null);
+                setTableOrderError(null);
+              }}
+            >
+              {sessions.map(
+                (candidate) => {
+                  const candidateLeague =
+                    leagues.find(
+                      (leagueCandidate) =>
+                        leagueCandidate.id ===
+                        candidate.leagueId
+                    );
+
+                  return (
+                    <option
+                      key={candidate.id}
+                      value={candidate.id}
+                    >
+                      {
+                        candidateLeague?.name ??
+                        "Lega"
+                      }
+                      {" · "}
+                      {candidate.season}
+                      {" · "}
+                      {candidate.editionNumber}ª
+                      {" · "}
+                      {candidate.status}
+                    </option>
+                  );
+                }
+              )}
+            </select>
+                )}
+
+            <div className="admin-config-session__selector-actions">
+              {sessionCreateDraft
+                ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={
+                          sessionCreatePending
+                        }
+                        onClick={
+                          cancelSessionCreate
+                        }
+                      >
+                        Annulla
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={
+                          sessionCreatePending
+                        }
+                        onClick={() => {
+                          void saveSessionCreate();
+                        }}
+                      >
+                        {
+                          sessionCreatePending
+                            ? "Creazione..."
+                            : "Crea sessione"
+                        }
+                      </button>
+                    </>
+                  )
+                : sessionEditDraft
+                  ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={
+                            sessionFormPending
+                          }
+                          onClick={
+                            cancelSessionEdit
+                          }
+                        >
+                          Annulla
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            sessionFormPending
+                          }
+                          onClick={() => {
+                            void saveSessionEdit();
+                          }}
+                        >
+                          {
+                            sessionFormPending
+                              ? "Salvataggio..."
+                              : "Salva parametri"
+                          }
+                        </button>
+                      </>
+                    )
+                  : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={
+                            beginSessionEdit
+                          }
+                        >
+                          Modifica parametri
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            !managedLeague ||
+                            teams.length !== 8
+                          }
+                          title={
+                            !managedLeague
+                              ? "Seleziona una lega."
+                              : teams.length !== 8
+                                ? "Per creare una sessione la lega deve avere esattamente 8 squadre."
+                                : undefined
+                          }
+                          onClick={
+                            beginSessionCreate
+                          }
+                        >
+                          + Nuova sessione
+                        </button>
+                      </>
+                    )}
+            </div>
+
+            {!sessionCreateDraft &&
+              managedLeague &&
+              teams.length !== 8 && (
+                <p className="admin-config-session__create-hint">
+                  La lega selezionata ha{" "}
+                  {teams.length} squadre. Per creare
+                  una sessione ne servono
+                  esattamente 8.
+                </p>
+              )}
+          </article>
+
+          <article>
+            <span>
+              Stagione
+            </span>
+
+            {sessionFormDraft
+              ? (
+                  <input
+                    type="text"
+                    value={
+                      sessionFormDraft.season
+                    }
+                    disabled={
+                      sessionFormPending
+                    }
+                    onChange={(event) => {
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  season:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  season:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {session.season}
+                  </strong>
+                )}
+          </article>
+
+          <article>
+            <span>
+              Edizione
+            </span>
+
+            {sessionFormDraft
+              ? (
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={
+                      sessionFormDraft
+                        .editionNumber
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  editionNumber:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  editionNumber:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {session.editionNumber}ª
+                  </strong>
+                )}
+          </article>
+
+          <article>
+            <span>
+              Crediti iniziali
+            </span>
+
+            {sessionFormDraft
+              ? (
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={
+                      sessionFormDraft
+                        .initialCredits
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  initialCredits:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  initialCredits:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {session.initialCredits}
+                  </strong>
+                )}
+          </article>
+
+          <article>
+            <span>
+              Max confermati
+            </span>
+
+            {sessionFormDraft
+              ? (
+                  <input
+                    type="number"
+                    min="0"
+                    max="24"
+                    step="1"
+                    value={
+                      sessionFormDraft
+                        .maximumInitialRosterEntries
+                    }
+                    disabled={
+                      sessionEditPending
+                    }
+                    onChange={(event) => {
+                      if (sessionCreateDraft) {
+                        setSessionCreateDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  maximumInitialRosterEntries:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      } else {
+                        setSessionEditDraft(
+                          (current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  maximumInitialRosterEntries:
+                                    event.target.value
+                                }
+                              : current
+                        );
+                      }
+                    }}
+                  />
+                )
+              : (
+                  <strong>
+                    {
+                      session
+                        .maximumInitialRosterEntries
+                    }
+                  </strong>
+                )}
+          </article>
+
+          <article>
+            <span>
+              Stato
+            </span>
+
+            <strong>
+              {
+                sessionCreateDraft
+                  ? "SETUP"
+                  : session.status
+              }
+            </strong>
+          </article>
+        </div>
+
+        {(sessionCreateError ||
+          sessionEditError) && (
+          <div className="admin-config-session__feedback">
+            <p className="admin-config-session__error">
+              {
+                sessionCreateError ??
+                sessionEditError
+              }
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="admin-config__uploads">
