@@ -116,7 +116,11 @@ export class AuctionSessionReadinessService {
       );
     }
 
+    const initialRostersAvailable =
+      rosterEntrySessionTeamIds.length > 0;
+
     const initialRostersWithinLimit =
+      initialRostersAvailable &&
       sessionTeams.every(
         (record) =>
           (
@@ -225,9 +229,11 @@ export class AuctionSessionReadinessService {
             label:
               "Rose iniziali",
             message:
-              initialRostersWithinLimit
-                ? `Tutte le rose rispettano il limite di ${session.maximumInitialRosterEntries} confermati.`
-                : `Almeno una rosa supera il limite di ${session.maximumInitialRosterEntries} confermati.`
+              !initialRostersAvailable
+                ? "Importare le rose iniziali prima di portare la sessione a READY."
+                : initialRostersWithinLimit
+                  ? `Tutte le rose rispettano il limite di ${session.maximumInitialRosterEntries} confermati.`
+                  : `Almeno una rosa supera il limite di ${session.maximumInitialRosterEntries} confermati.`
           }
         ];
 

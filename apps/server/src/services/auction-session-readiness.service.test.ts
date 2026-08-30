@@ -236,6 +236,43 @@ describe(
     );
 
     it(
+      "requires initial roster entries to be loaded",
+      async () => {
+        const snapshot =
+          createValidSnapshot();
+
+        snapshot.rosterEntrySessionTeamIds = [];
+
+        const result =
+          await createService(
+            snapshot
+          ).getReadiness(
+            "session-1"
+          );
+
+        expect(result?.ready)
+          .toBe(false);
+
+        expect(
+          checkOk(
+            result,
+            "INITIAL_ROSTERS_WITHIN_LIMIT"
+          )
+        ).toBe(false);
+
+        expect(
+          result?.checks.find(
+            (check) =>
+              check.code ===
+              "INITIAL_ROSTERS_WITHIN_LIMIT"
+          )?.message
+        ).toBe(
+          "Importare le rose iniziali prima di portare la sessione a READY."
+        );
+      }
+    );
+
+    it(
       "allows a team to have zero initial roster entries",
       async () => {
         const snapshot =
