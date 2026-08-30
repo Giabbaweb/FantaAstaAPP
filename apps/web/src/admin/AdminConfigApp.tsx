@@ -3592,6 +3592,15 @@ export function AdminConfigApp() {
 
         <div className="admin-config__header-right">
           <div className="admin-config__header-readiness">
+            <span className="admin-config__header-readiness-context">
+              SESSIONE · {
+                league?.name ??
+                "Lega"
+              } · {session.season} · {
+                session.editionNumber
+              }ª
+            </span>
+
             {sessionReadinessLoading ? (
               <strong>
                 Verifica configurazione...
@@ -3601,40 +3610,80 @@ export function AdminConfigApp() {
                 Verifica non disponibile
               </strong>
             ) : sessionReadiness ? (
-              <strong
-                className={
-                  sessionReadiness.ready
-                    ? "is-ready"
-                    : "is-blocking"
-                }
-              >
-                {
-                  managedLeagueMatchesSession
-                    ? (
-                        sessionReadiness.ready
-                          ? "✓ CONFIGURAZIONE PRONTA"
-                          : "! CONFIGURAZIONE INCOMPLETA"
-                      )
-                    : `${
-                        league?.name ??
-                        "Sessione selezionata"
-                      } · ${
-                        sessionReadiness.ready
-                          ? "✓ CONFIGURAZIONE PRONTA"
-                          : "! CONFIGURAZIONE INCOMPLETA"
-                      }`
-                }
-                {" · "}
-                {
-                  sessionReadiness.checks.filter(
-                    (check) => check.ok
-                  ).length
-                }
-                /
-                {
-                  sessionReadiness.checks.length
-                }
-              </strong>
+              <details className="admin-config__readiness-details">
+                <summary
+                  className={
+                    sessionReadiness.ready
+                      ? "is-ready"
+                      : "is-blocking"
+                  }
+                >
+                  <span
+                    className="admin-config__readiness-traffic-light"
+                    aria-hidden="true"
+                  >
+                    {
+                      sessionReadiness.ready
+                        ? "✓"
+                        : "!"
+                    }
+                  </span>
+
+                  <strong>
+                    {
+                      sessionReadiness.ready
+                        ? "CONFIGURAZIONE PRONTA"
+                        : "CONFIGURAZIONE INCOMPLETA"
+                    }
+                    {" · "}
+                    {
+                      sessionReadiness.checks.filter(
+                        (check) => check.ok
+                      ).length
+                    }
+                    /
+                    {
+                      sessionReadiness.checks.length
+                    }
+                  </strong>
+
+                  <span className="admin-config__readiness-details-label">
+                    Dettagli
+                  </span>
+                </summary>
+
+                <div className="admin-config__readiness-details-panel">
+                  {sessionReadiness.checks.map(
+                    (check) => (
+                      <div
+                        key={check.code}
+                        className={
+                          check.ok
+                            ? "is-ok"
+                            : "is-blocking"
+                        }
+                      >
+                        <span
+                          className="admin-config__readiness-details-icon"
+                          aria-hidden="true"
+                        >
+                          {check.ok ? "✓" : "!"}
+                        </span>
+
+                        <div>
+                          <strong>
+                            {check.label}
+                          </strong>
+
+                          <p>
+                            {check.message}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </details>
             ) : (
               <strong>
                 Stato configurazione non disponibile
