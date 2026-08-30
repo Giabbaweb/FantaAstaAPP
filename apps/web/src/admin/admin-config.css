@@ -3758,3 +3758,597 @@ label:nth-of-type(5) {
 .admin-config__readiness-traffic-light {
   background: #d92d20;
 }
+
+
+/* ==========================================================
+   M14 — A-LA.8 — Compact league management
+   ========================================================== */
+
+.admin-config__league-panel {
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+.admin-config-league__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-config-league__count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #eef4fa;
+  color: #496174;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-config-league__toolbar {
+  display: grid;
+  grid-template-columns:
+    minmax(280px, 420px)
+    minmax(260px, 1fr)
+    auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.admin-config-league__toolbar label {
+  width: 100%;
+  max-width: none;
+}
+
+.admin-config-league__current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.admin-config-league__logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+}
+
+.admin-config-league__identity {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-config-league__identity strong {
+  overflow: hidden;
+  color: #263b4d;
+  font-size: 0.9rem;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-config-league__identity small {
+  overflow: hidden;
+  color: #718096;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-config-league__actions {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.admin-config-league__note {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 1050px) {
+  .admin-config-league__toolbar {
+    grid-template-columns:
+      minmax(260px, 1fr)
+      minmax(220px, 1fr);
+  }
+
+  .admin-config-league__actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-config-league__toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .admin-config-league__actions {
+    grid-column: auto;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+
+/* ==========================================================
+   M14 — A-LA.8b — Compact league + collapsible teams
+   ========================================================== */
+
+.admin-config-league__heading {
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-config-league__heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.admin-config-league__heading-actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #b7c5d1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #294257;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-config-league__heading-actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.admin-config-league__toolbar {
+  grid-template-columns:
+    minmax(280px, 420px)
+    minmax(320px, 1fr);
+  align-items: center;
+}
+
+.admin-config-league__logo {
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+}
+
+.admin-config-league__current {
+  gap: 14px;
+}
+
+.admin-config-league__identity strong {
+  font-size: 1rem;
+}
+
+.admin-config__teams-section {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-config__teams-toggle {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 0;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-config__teams-toggle-title {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.admin-config__teams-toggle-meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-config__teams-toggle-chevron {
+  min-width: 18px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.admin-config__teams-section-content {
+  display: grid;
+  gap: 12px;
+  padding: 0 18px 18px;
+  border-top: 1px solid #e6ebf0;
+}
+
+.admin-config__teams-section-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 14px;
+}
+
+.admin-config__teams-section-actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #b7c5d1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #294257;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-config__teams-section-actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .admin-config-league__toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-config__teams-toggle {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-config__teams-toggle-meta {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* ==========================================================
+   M14 — A-LA.8c — Exact compact league layout
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   GESTIONE LEGHE
+   ---------------------------------------------------------- */
+
+.admin-config__league-panel {
+  gap: 10px;
+}
+
+.admin-config-league__heading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.admin-config-league__toolbar {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(280px, 430px);
+  align-items: center;
+  justify-content: start;
+  gap: 14px;
+}
+
+.admin-config-league__current {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 170px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.admin-config-league__logo {
+  width: 84px;
+  height: 84px;
+}
+
+.admin-config-league__identity {
+  display: grid;
+  gap: 3px;
+  min-width: 72px;
+}
+
+.admin-config-league__identity strong {
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.admin-config-league__identity small {
+  font-size: 0.66rem;
+}
+
+.admin-config-league__toolbar label {
+  width: 430px;
+  max-width: 100%;
+}
+
+.admin-config-league__note {
+  margin: 0;
+}
+
+.admin-config-league__actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.admin-config-league__actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+/* ----------------------------------------------------------
+   SQUADRE / PRESIDENTI / GIROTAVOLO — collapsed header
+   ---------------------------------------------------------- */
+
+.admin-config__teams-toggle {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.admin-config__teams-toggle-title {
+  flex: 0 0 auto;
+}
+
+.admin-config__teams-toggle-meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-config__teams-toggle-chevron {
+  margin-left: auto;
+}
+
+/* ----------------------------------------------------------
+   RESPONSIVE
+   ---------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .admin-config-league__toolbar {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .admin-config-league__toolbar label {
+    width: 100%;
+  }
+
+  .admin-config__teams-toggle {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .admin-config__teams-toggle-title {
+    grid-column: 1;
+  }
+
+  .admin-config__teams-toggle-meta {
+    grid-column: 1;
+    flex-wrap: wrap;
+  }
+
+  .admin-config__teams-toggle-chevron {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+}
+
+/* ==========================================================
+   M14 — A-LA.8d — League editor proportional spacing
+   ========================================================== */
+
+.admin-config-league__editor {
+  grid-template-columns:
+    minmax(300px, 1.05fr)
+    minmax(320px, 1fr)
+    auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px 14px;
+}
+
+.admin-config-league__editor label {
+  min-width: 0;
+}
+
+.admin-config-league__preview {
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-config-league__preview > div {
+  width: 58px;
+  height: 58px;
+}
+
+.admin-config-league__preview small {
+  max-width: 110px;
+  font-size: 0.68rem;
+}
+
+.admin-config-league__editor-actions {
+  grid-column: 3;
+  justify-content: flex-end;
+  align-self: end;
+  flex-wrap: nowrap;
+}
+
+.admin-config-league__editor-actions button {
+  min-width: 82px;
+}
+
+@media (max-width: 1050px) {
+  .admin-config-league__editor {
+    grid-template-columns:
+      minmax(260px, 1fr)
+      minmax(260px, 1fr);
+  }
+
+  .admin-config-league__preview {
+    grid-column: 1;
+  }
+
+  .admin-config-league__editor-actions {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-config-league__editor {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-config-league__preview,
+  .admin-config-league__editor-actions {
+    grid-column: 1;
+  }
+
+  .admin-config-league__editor-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* ==========================================================
+   M14 — A-LA.8e — Compact league editor
+   ========================================================== */
+
+/*
+ * CREATE ed EDIT condividono lo stesso editor.
+ * Evitiamo colonne elastiche che dilatano il form
+ * sull'intera larghezza disponibile.
+ */
+.admin-config-league__editor {
+  display: grid;
+  grid-template-columns:
+    minmax(300px, 440px)
+    minmax(300px, 440px)
+    auto
+    auto;
+  justify-content: start;
+  align-items: end;
+  column-gap: 12px;
+  row-gap: 10px;
+  padding: 12px 14px;
+}
+
+/* I due campi principali */
+.admin-config-league__editor > label {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Anteprima logo compatta */
+.admin-config-league__preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  min-width: 0;
+}
+
+.admin-config-league__preview > div {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+}
+
+.admin-config-league__preview small {
+  width: auto;
+  max-width: 95px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+/*
+ * Azioni sulla stessa riga del form,
+ * immediatamente dopo l'anteprima.
+ */
+.admin-config-league__editor-actions {
+  grid-column: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: end;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding-bottom: 0;
+}
+
+.admin-config-league__editor-actions button {
+  min-width: 82px;
+  white-space: nowrap;
+}
+
+/* Eventuale errore occupa una riga sotto il form */
+.admin-config-league__error {
+  grid-column: 1 / -1;
+}
+
+/* Tablet */
+@media (max-width: 1250px) {
+  .admin-config-league__editor {
+    grid-template-columns:
+      minmax(260px, 1fr)
+      minmax(260px, 1fr)
+      auto;
+  }
+
+  .admin-config-league__editor-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .admin-config-league__editor {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-config-league__preview,
+  .admin-config-league__editor-actions,
+  .admin-config-league__error {
+    grid-column: 1;
+  }
+}

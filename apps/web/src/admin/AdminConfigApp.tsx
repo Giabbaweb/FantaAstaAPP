@@ -343,6 +343,11 @@ export function AdminConfigApp() {
   ] = useState(false);
 
   const [
+    teamsSectionExpanded,
+    setTeamsSectionExpanded
+  ] = useState(false);
+
+  const [
     recoveryPointsLoading,
     setRecoveryPointsLoading
   ] = useState(false);
@@ -3792,18 +3797,12 @@ export function AdminConfigApp() {
 
 
       <section className="admin-config__panel admin-config__league-panel">
-        <div className="admin-config__section-heading">
-          <div>
-            <p className="admin-config__eyebrow">
-              Archivio configurazione
-            </p>
+        <div className="admin-config-league__heading">
+          <span className="admin-config__girotavolo-kicker">
+            Gestione Leghe
+          </span>
 
-            <h2>
-              Gestione Leghe
-            </h2>
-          </div>
-
-          <span>
+          <span className="admin-config-league__count">
             {leagues.length} {
               leagues.length === 1
                 ? "lega"
@@ -3813,6 +3812,44 @@ export function AdminConfigApp() {
         </div>
 
         <div className="admin-config-league__toolbar">
+          {leagueEditMode === null && (
+            <div className="admin-config-league__current">
+              <div className="admin-config-league__logo">
+                {managedLeague?.logoPath
+                  ? (
+                      <img
+                        src={
+                          managedLeague.logoPath
+                        }
+                        alt={
+                          `Logo ${managedLeague.name}`
+                        }
+                      />
+                    )
+                  : (
+                      <span>
+                        Nessun logo
+                      </span>
+                    )}
+              </div>
+
+              <div className="admin-config-league__identity">
+                <strong>
+                  {
+                    managedLeague?.name ??
+                    "Nessuna lega selezionata"
+                  }
+                </strong>
+
+                {managedLeague && (
+                  <small>
+                    ID: {managedLeague.id}
+                  </small>
+                )}
+              </div>
+            </div>
+          )}
+
           <label>
             <span>
               Lega da gestire
@@ -3853,79 +3890,7 @@ export function AdminConfigApp() {
               )}
             </select>
           </label>
-
-          <div className="admin-config-league__actions">
-            <button
-              type="button"
-              disabled={
-                leagueEditPending ||
-                leagueEditMode !== null ||
-                sessionCreateDraft !== null
-              }
-              onClick={
-                beginCreateLeague
-              }
-            >
-              + Nuova lega
-            </button>
-
-            <button
-              type="button"
-              disabled={
-                !managedLeague ||
-                leagueEditPending ||
-                leagueEditMode !== null ||
-                sessionCreateDraft !== null
-              }
-              onClick={
-                beginEditLeague
-              }
-            >
-              Modifica lega
-            </button>
-          </div>
         </div>
-
-        {leagueEditMode === null && (
-          <div className="admin-config-league__current">
-            <div className="admin-config-league__logo">
-              {managedLeague?.logoPath
-                ? (
-                    <img
-                      src={
-                        managedLeague.logoPath
-                      }
-                      alt={
-                        `Logo ${managedLeague.name}`
-                      }
-                    />
-                  )
-                : (
-                    <span>
-                      Nessun logo
-                    </span>
-                  )}
-            </div>
-
-            <div>
-              <strong>
-                {
-                  managedLeague?.name ??
-                  "Nessuna lega selezionata"
-                }
-              </strong>
-
-              {managedLeague && (
-                <>
-                  <small>
-                    ID: {managedLeague.id}
-                  </small>
-
-                </>
-              )}
-            </div>
-          </div>
-        )}
 
         {leagueEditMode &&
           leagueEditDraft && (
@@ -4068,62 +4033,118 @@ export function AdminConfigApp() {
           d'asta resta indipendente e non viene
           modificata cambiando lega.
         </p>
+
+        <div className="admin-config-league__actions">
+          <button
+            type="button"
+            disabled={
+              leagueEditPending ||
+              leagueEditMode !== null ||
+              sessionCreateDraft !== null
+            }
+            onClick={
+              beginCreateLeague
+            }
+          >
+            + Nuova lega
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              !managedLeague ||
+              leagueEditPending ||
+              leagueEditMode !== null ||
+              sessionCreateDraft !== null
+            }
+            onClick={
+              beginEditLeague
+            }
+          >
+            Modifica lega
+          </button>
+        </div>
       </section>
 
-      <section className="admin-config__panel">
-        <div className="admin-config__girotavolo-heading">
-          <span className="admin-config__girotavolo-kicker">
-            Squadre e Presidenti
+      <section
+        className={
+          `admin-config__panel admin-config__teams-section ${
+            teamsSectionExpanded
+              ? "is-expanded"
+              : "is-collapsed"
+          }`
+        }
+      >
+        <button
+          type="button"
+          className="admin-config__teams-toggle"
+          aria-expanded={teamsSectionExpanded}
+          onClick={() => {
+            setTeamsSectionExpanded(
+              (current) => !current
+            );
+          }}
+        >
+          <span className="admin-config__teams-toggle-title">
+            SQUADRE - PRESIDENTI E GIROTAVOLO
           </span>
 
-          <h2>
-            Girotavolo
-          </h2>
-
-          <span className="admin-config__girotavolo-count">
-            {
-              managedLeagueMatchesSession
-                ? `${sessionTeams.length} partecipanti`
-                : `${teams.length} squadre`
-            }
-          </span>
-
-          <div className="admin-config__team-create-actions">
-            <button
-              type="button"
-              disabled={
-                !managedLeague ||
-                teamCreatePending ||
-                teamEditPending ||
-                teams.length >= 8
-              }
-              title={
-                teams.length >= 8
-                  ? "La lega ha già 8 squadre."
-                  : undefined
-              }
-              onClick={beginTeamCreate}
-            >
-              + Nuova squadra
-            </button>
-          </div>
-
-          {managedLeagueMatchesSession && (
-            <span className="admin-config__girotavolo-pin-count">
+          <span className="admin-config__teams-toggle-meta">
+            <span className="admin-config__girotavolo-count">
               {
-                teamAccessLoading
-                  ? "PIN..."
-                  : teamAccessError
-                    ? "PIN ?"
-                    : `${
-                        Object.values(
-                          teamAccessConfigured
-                        ).filter(Boolean).length
-                      } / ${sessionTeams.length} PIN`
+                managedLeagueMatchesSession
+                  ? `${sessionTeams.length} partecipanti`
+                  : `${teams.length} squadre`
               }
             </span>
-          )}
-        </div>
+
+            {managedLeagueMatchesSession && (
+              <span className="admin-config__girotavolo-pin-count">
+                {
+                  teamAccessLoading
+                    ? "PIN..."
+                    : teamAccessError
+                      ? "PIN ?"
+                      : `${
+                          Object.values(
+                            teamAccessConfigured
+                          ).filter(Boolean).length
+                        } / ${sessionTeams.length} PIN`
+                }
+              </span>
+            )}
+
+          </span>
+
+          <span
+            className="admin-config__teams-toggle-chevron"
+            aria-hidden="true"
+          >
+            {teamsSectionExpanded ? "▲" : "▼"}
+          </span>
+        </button>
+
+        {teamsSectionExpanded && (
+          <div className="admin-config__teams-section-content">
+            <div className="admin-config__teams-section-actions">
+              <button
+                type="button"
+                disabled={
+                  !managedLeague ||
+                  teamCreatePending ||
+                  teamEditPending ||
+                  teams.length >= 8
+                }
+                title={
+                  teams.length >= 8
+                    ? "La lega ha già 8 squadre."
+                    : undefined
+                }
+                onClick={beginTeamCreate}
+              >
+                + Nuova squadra
+              </button>
+            </div>
 
         {managedLeagueMatchesSession &&
           teamAccessError && (
@@ -4999,6 +5020,9 @@ export function AdminConfigApp() {
             }
           )}
         </div>
+
+          </div>
+        )}
       </section>
 
       <section className="admin-config-session">
