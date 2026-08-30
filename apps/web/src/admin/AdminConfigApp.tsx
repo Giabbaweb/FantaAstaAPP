@@ -1773,13 +1773,40 @@ export function AdminConfigApp() {
     }
   }
 
+  const otherOperationalSession =
+    session
+      ? sessions.find(
+          (candidateSession) =>
+            candidateSession.id !== session.id &&
+            (
+              candidateSession.status === "READY" ||
+              candidateSession.status === "RUNNING" ||
+              candidateSession.status === "SUSPENDED"
+            )
+        ) ?? null
+      : null;
+
+  const otherOperationalSessionLeague =
+    otherOperationalSession
+      ? leagues.find(
+          (candidateLeague) =>
+            candidateLeague.id ===
+            otherOperationalSession.leagueId
+        ) ?? null
+      : null;
+
+  const readyBlockedByOtherSession =
+    session?.status === "SETUP" &&
+    otherOperationalSession !== null;
+
   async function handleMarkSessionReady():
     Promise<void> {
     if (
       !session ||
       session.status !== "SETUP" ||
       !sessionReadiness?.ready ||
-      sessionReadyPending
+      sessionReadyPending ||
+      readyBlockedByOtherSession
     ) {
       return;
     }
@@ -3702,7 +3729,8 @@ export function AdminConfigApp() {
                 disabled={
                   sessionReadyPending ||
                   sessionReadinessLoading ||
-                  !sessionReadiness?.ready
+                  !sessionReadiness?.ready ||
+                  readyBlockedByOtherSession
                 }
                 onClick={() => {
                   void handleMarkSessionReady();
@@ -3726,6 +3754,39 @@ export function AdminConfigApp() {
               Cockpit asta
             </a>
           </div>
+
+          {readyBlockedByOtherSession &&
+            otherOperationalSession && (
+              <div
+                className="admin-config__ready-blocking-message"
+                role="status"
+              >
+                Sessione non attivabile:{" "}
+                <strong>
+                  {
+                    otherOperationalSessionLeague?.name ??
+                    "Un'altra lega"
+                  } · {
+                    otherOperationalSession.season
+                  } · {
+                    otherOperationalSession.editionNumber
+                  }ª
+                </strong>{" "}
+                è attualmente{" "}
+                <strong>
+                  {otherOperationalSession.status}
+                </strong>.
+              </div>
+            )}
+
+          {sessionReadyError && (
+            <div
+              className="admin-config__ready-blocking-message"
+              role="alert"
+            >
+              {sessionReadyError}
+            </div>
+          )}
         </div>
       </header>
 
