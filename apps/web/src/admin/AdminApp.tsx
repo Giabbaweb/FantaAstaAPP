@@ -61,6 +61,21 @@ type AdminStatus =
   | "READY"
   | "ERROR";
 
+function getPlayerRoleLabel(
+  role: "P" | "D" | "C" | "A"
+): string {
+  switch (role) {
+    case "P":
+      return "PORTIERE";
+    case "D":
+      return "DIFENSORE";
+    case "C":
+      return "CENTROCAMPISTA";
+    case "A":
+      return "ATTACCANTE";
+  }
+}
+
 function parseServerTime(
   value: string
 ): number {
@@ -1717,7 +1732,7 @@ export function AdminApp() {
             </span>
 
             <small>
-              Stato #{snapshot?.stateVersion ?? "-"}
+              Aggiornamento #{snapshot?.stateVersion ?? "-"}
             </small>
           </div>
         </div>
@@ -1747,8 +1762,12 @@ export function AdminApp() {
                 </h1>
 
                 <p>
-                  <strong>
-                    {cockpit.currentPlayer.role}
+                  <strong
+                    className={`admin-player-role admin-player-role--${cockpit.currentPlayer.role.toLowerCase()}`}
+                  >
+                    {getPlayerRoleLabel(
+                      cockpit.currentPlayer.role
+                    )}
                   </strong>
 
                   {cockpit.currentPlayer.realTeamName && (
@@ -1774,9 +1793,20 @@ export function AdminApp() {
               </div>
             </div>
           ) : (
-            <p className="admin-empty">
-              Nessun giocatore in chiamata.
-            </p>
+            <div className="admin-empty">
+              <p>
+                Nessun giocatore in chiamata.
+              </p>
+
+              {cockpit?.nextCallerName && (
+                <p className="admin-next-caller">
+                  Prossimo chiamante: {" "}
+                  <strong>
+                    {cockpit.nextCallerName}
+                  </strong>
+                </p>
+              )}
+            </div>
           )}
 
           {snapshot

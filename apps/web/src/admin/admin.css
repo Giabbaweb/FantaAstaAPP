@@ -169,6 +169,41 @@ input {
   color: #526274;
 }
 
+.admin-player-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.admin-player-role--p {
+  background: #1565c0;
+}
+
+.admin-player-role--d {
+  background: #218838;
+}
+
+.admin-player-role--c {
+  background: #795548;
+}
+
+.admin-player-role--a {
+  background: #d32f2f;
+}
+
+.admin-next-caller {
+  margin: 8px 0 0;
+  color: #334155;
+}
+
 .admin-call-metrics {
   display: grid;
   grid-template-columns: 0.7fr 1.3fr 1.3fr;

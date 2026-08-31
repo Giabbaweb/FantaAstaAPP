@@ -50,6 +50,7 @@ export type AdminCockpitProjection = {
 
   currentBid: number | null;
   currentCallerName: string | null;
+  nextCallerName: string | null;
   currentLeaderName: string | null;
   currentTurnName: string | null;
   currentTurnStartedAt: string | null;
@@ -107,6 +108,13 @@ export function createAdminCockpitProjection(
       currentCallerId
         ? teamNameById.get(
             currentCallerId
+          ) ?? null
+        : null,
+
+    nextCallerName:
+      snapshot.nextCallerAuctionSessionTeamId
+        ? teamNameById.get(
+            snapshot.nextCallerAuctionSessionTeamId
           ) ?? null
         : null,
 
