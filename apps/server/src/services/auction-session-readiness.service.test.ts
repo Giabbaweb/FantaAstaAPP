@@ -273,6 +273,95 @@ describe(
     );
 
     it(
+      "allows an empty initial roster when the configured limit is zero",
+      async () => {
+        const snapshot =
+          createValidSnapshot();
+
+        if (!snapshot.session) {
+          throw new Error(
+            "Expected session"
+          );
+        }
+
+        snapshot.session.maximumInitialRosterEntries =
+          0;
+        snapshot.rosterEntrySessionTeamIds = [];
+
+        const result =
+          await createService(
+            snapshot
+          ).getReadiness(
+            "session-1"
+          );
+
+        expect(result?.ready)
+          .toBe(true);
+
+        expect(
+          checkOk(
+            result,
+            "INITIAL_ROSTERS_WITHIN_LIMIT"
+          )
+        ).toBe(true);
+
+        expect(
+          result?.checks.find(
+            (check) =>
+              check.code ===
+              "INITIAL_ROSTERS_WITHIN_LIMIT"
+          )?.message
+        ).toBe(
+          "La sessione partirà senza confermati."
+        );
+      }
+    );
+
+    it(
+      "rejects initial roster entries when the configured limit is zero",
+      async () => {
+        const snapshot =
+          createValidSnapshot();
+
+        if (!snapshot.session) {
+          throw new Error(
+            "Expected session"
+          );
+        }
+
+        snapshot.session.maximumInitialRosterEntries =
+          0;
+
+        const result =
+          await createService(
+            snapshot
+          ).getReadiness(
+            "session-1"
+          );
+
+        expect(result?.ready)
+          .toBe(false);
+
+        expect(
+          checkOk(
+            result,
+            "INITIAL_ROSTERS_WITHIN_LIMIT"
+          )
+        ).toBe(false);
+
+        expect(
+          result?.checks.find(
+            (check) =>
+              check.code ===
+              "INITIAL_ROSTERS_WITHIN_LIMIT"
+          )?.message
+        ).toBe(
+          "Con limite confermati pari a 0 non devono essere presenti rose iniziali."
+        );
+      }
+    );
+
+    it(
       "allows a team to have zero initial roster entries",
       async () => {
         const snapshot =

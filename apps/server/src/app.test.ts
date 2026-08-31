@@ -1894,7 +1894,7 @@ describe("GET /api/auction-sessions", () => {
           season: "2026/2027",
           editionNumber: 35,
           initialCredits: 300,
-          maximumInitialRosterEntries: 11,
+          maximumInitialRosterEntries: 0,
           status: "READY",
           stateVersion
         });
@@ -2003,7 +2003,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 135,
             initialCredits: 300,
-            maximumInitialRosterEntries: 11,
+            maximumInitialRosterEntries: 0,
             status: "SETUP"
           });
 
@@ -2103,7 +2103,7 @@ describe("GET /api/auction-sessions", () => {
                   teamsWithOwnerCount: 8,
                   playerCount: 1,
                   maximumInitialRosterEntries:
-                    11
+                    0
                 })
             }),
             error: null
@@ -2200,7 +2200,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
-            maximumInitialRosterEntries: 11,
+            maximumInitialRosterEntries: 0,
             status: "SETUP"
           });
 
@@ -3083,7 +3083,7 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
-            maximumInitialRosterEntries: 11,
+            maximumInitialRosterEntries: 0,
             status: "SETUP"
           });
 
@@ -3215,7 +3215,7 @@ describe("GET /api/auction-sessions", () => {
               season: "2026/2027",
               editionNumber: 35,
               initialCredits: 330,
-              maximumInitialRosterEntries: 11,
+              maximumInitialRosterEntries: 0,
               status: "SETUP"
             }
           ]);
