@@ -1703,6 +1703,38 @@ export function AdminApp() {
         )
       : null;
 
+  const remainingRoleSlots =
+    cockpit
+      ? (["P", "D", "C", "A"] as const).reduce(
+          (totals, role) => {
+            totals[role] =
+              cockpit.teams.reduce(
+                (total, team) =>
+                  total +
+                  Math.max(
+                    0,
+                    team.rosterRoles[role].limit -
+                      team.rosterRoles[role].count
+                  ),
+                0
+              );
+
+            return totals;
+          },
+          {
+            P: 0,
+            D: 0,
+            C: 0,
+            A: 0
+          }
+        )
+      : {
+          P: 0,
+          D: 0,
+          C: 0,
+          A: 0
+        };
+
   return (
     <main className="admin-cockpit">
       <header className="admin-cockpit__header">
@@ -2379,9 +2411,95 @@ export function AdminApp() {
               </button>
             </div>
 
-            <button disabled>
-              Correzione amministrativa
-            </button>
+            <div className="admin-controls-dashboard">
+              <div className="admin-role-needs">
+                <span className="admin-controls-section__label">
+                  Posti ancora da coprire
+                </span>
+
+                <div className="admin-role-needs__grid">
+                  {(["P", "D", "C", "A"] as const).map(
+                    (role) => (
+                      <div
+                        key={role}
+                        data-role={role}
+                      >
+                        <strong>{role}</strong>
+                        <span>
+                          {remainingRoleSlots[role]}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="admin-recent-awards">
+                <span className="admin-controls-section__label">
+                  Ultime aggiudicazioni
+                </span>
+
+                <div className="admin-recent-awards__list">
+                  {
+                    snapshot?.publicDisplay
+                      .recentAwards.length ? (
+                      snapshot.publicDisplay
+                        .recentAwards.map(
+                          (award) => (
+                            <article
+                              key={award.eventId}
+                              className="admin-recent-award"
+                            >
+                              <span
+                                className="admin-recent-award__role"
+                                data-role={award.role}
+                              >
+                                {award.role}
+                              </span>
+
+                              <div className="admin-recent-award__copy">
+                                <strong title={award.playerName}>
+                                  {award.playerName}
+                                </strong>
+
+                                <span title={award.teamName}>
+                                  {award.teamName}
+                                </span>
+                              </div>
+
+                              <strong className="admin-recent-award__amount">
+                                {award.amount}
+                              </strong>
+                            </article>
+                          )
+                        )
+                    ) : (
+                      <p className="admin-recent-awards__empty">
+                        Nessuna aggiudicazione.
+                      </p>
+                    )
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-extraordinary-control">
+              <span className="admin-extraordinary-control__label">
+                Operazioni straordinarie
+              </span>
+
+              <div className="admin-extraordinary-control__action">
+                <button
+                  type="button"
+                  disabled
+                  title="Funzione non ancora disponibile"
+                >
+                  Correzione amministrativa
+                </button>
+
+                <small>Non disponibile</small>
+              </div>
+            </div>
           </div>
 
           {sessionCommandError && (
@@ -2389,10 +2507,6 @@ export function AdminApp() {
               {sessionCommandError}
             </small>
           )}
-
-          <small className="admin-controls__note">
-            Gli altri comandi verranno collegati nei prossimi checkpoint.
-          </small>
 
         </section>
       </div>

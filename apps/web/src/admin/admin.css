@@ -698,9 +698,23 @@ input {
 
 /* Session operational control */
 
+.admin-panel--controls {
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+.admin-panel--controls > .admin-panel__label {
+  margin-bottom: 8px;
+}
+
+.admin-panel--controls .admin-controls {
+  gap: 7px;
+}
+
 .admin-session-control {
   display: grid;
   grid-template-columns:
+    minmax(0, 1fr)
     minmax(0, 1fr);
   gap: 6px;
 }
@@ -716,6 +730,198 @@ input {
   font: inherit;
   font-size: 0.76rem;
   font-weight: 700;
+}
+
+.admin-session-control > button:only-child {
+  grid-column: 1 / -1;
+}
+
+.admin-controls-dashboard {
+  display: grid;
+  gap: 7px;
+  padding-top: 7px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.admin-controls-section__label,
+.admin-extraordinary-control__label {
+  display: block;
+  margin-bottom: 5px;
+  color: #64748b;
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.admin-role-needs__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.admin-role-needs__grid > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 27px;
+  padding: 3px 7px;
+  border-radius: 6px;
+}
+
+.admin-role-needs__grid strong,
+.admin-role-needs__grid span {
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-role-needs__grid [data-role="P"] {
+  background: #e3f0ff;
+  color: #1565c0;
+}
+
+.admin-role-needs__grid [data-role="D"] {
+  background: #e6f5ea;
+  color: #218838;
+}
+
+.admin-role-needs__grid [data-role="C"] {
+  background: #ffffc2;
+  color: #795548;
+}
+
+.admin-role-needs__grid [data-role="A"] {
+  background: #fdeaea;
+  color: #d32f2f;
+}
+
+.admin-recent-awards__list {
+  display: grid;
+  gap: 2px;
+  max-height: 79px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.admin-recent-award {
+  display: grid;
+  grid-template-columns:
+    27px
+    minmax(0, 1fr)
+    auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 25px;
+  padding: 2px 7px 2px 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #f8fafc;
+}
+
+.admin-recent-award__role {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 20px;
+  border-radius: 5px;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.admin-recent-award__role[data-role="P"] {
+  background: #1565c0;
+}
+
+.admin-recent-award__role[data-role="D"] {
+  background: #218838;
+}
+
+.admin-recent-award__role[data-role="C"] {
+  background: #795548;
+}
+
+.admin-recent-award__role[data-role="A"] {
+  background: #d32f2f;
+}
+
+.admin-recent-award__copy {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-recent-award__copy strong,
+.admin-recent-award__copy span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-recent-award__copy strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 0.72rem;
+}
+
+.admin-recent-award__copy span {
+  flex: 0 1 auto;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.admin-recent-award__amount {
+  color: #0f172a;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-recent-awards__empty {
+  margin: 0;
+  padding: 6px 8px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+}
+
+.admin-extraordinary-control {
+  margin-top: 0;
+  padding-top: 5px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.admin-extraordinary-control__label {
+  margin-bottom: 4px;
+  font-size: 0.58rem;
+}
+
+.admin-extraordinary-control__action {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-extraordinary-control__action button {
+  min-height: 27px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-extraordinary-control__action small {
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .admin-session-control button[data-action="resume"] {
@@ -1873,5 +2079,39 @@ input {
 
   .admin-player-search__result-meta {
     font-size: 0.66rem;
+  }
+}
+
+/* Cockpit controls — desktop breathing room */
+@media (min-width: 1101px) {
+  .admin-recent-awards__list {
+    gap: 3px;
+    max-height: 96px;
+  }
+
+  .admin-recent-award {
+    min-height: 29px;
+    padding: 3px 7px 3px 4px;
+  }
+
+  .admin-recent-award__role {
+    width: 25px;
+    height: 22px;
+  }
+
+  .admin-extraordinary-control {
+    padding-top: 7px;
+  }
+
+  .admin-extraordinary-control__label {
+    margin-bottom: 5px;
+    font-size: 0.61rem;
+  }
+
+  .admin-extraordinary-control__action button {
+    min-height: 32px;
+    padding: 4px 10px;
+    font-size: 0.76rem;
+    line-height: 1.1;
   }
 }
