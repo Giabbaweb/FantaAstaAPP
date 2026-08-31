@@ -1694,3 +1694,146 @@ input {
     font-size: 0.66rem;
   }
 }
+
+
+/* Cockpit 1B.6 — touch-friendly player autocomplete */
+
+.admin-player-search {
+  position: relative;
+  min-width: 0;
+}
+
+.admin-player-search > input[type="search"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-player-search__results {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  max-height: min(380px, 48vh);
+  overflow-y: auto;
+  border: 1px solid #cbd6e2;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow:
+    0 12px 28px rgb(15 23 42 / 16%),
+    0 2px 6px rgb(15 23 42 / 8%);
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-player-search__result {
+  display: flex;
+  width: 100%;
+  min-height: 52px !important;
+  padding: 8px 10px !important;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 3px;
+  border: 0 !important;
+  border-bottom: 1px solid #edf1f5 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  color: #172033 !important;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.admin-player-search__result:last-child {
+  border-bottom: 0 !important;
+}
+
+.admin-player-search__result:hover,
+.admin-player-search__result:focus-visible {
+  background: #f3f7fb !important;
+}
+
+.admin-player-search__result-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-player-search__result-main strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-player-search__result-meta {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.admin-player-search__role {
+  display: inline-flex;
+  align-items: center;
+  min-height: 19px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.56rem;
+  font-weight: 800;
+}
+
+.admin-player-search__role--p {
+  background: #1565c0;
+}
+
+.admin-player-search__role--d {
+  background: #218838;
+}
+
+.admin-player-search__role--c {
+  background: #795548;
+}
+
+.admin-player-search__role--a {
+  background: #d32f2f;
+}
+
+.admin-player-search__empty {
+  padding: 12px;
+  color: #64748b;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+@media (min-width: 760px) and (max-width: 1100px) {
+  .admin-player-search__results {
+    max-height: min(320px, 40vh);
+  }
+
+  .admin-player-search__result {
+    min-height: 50px !important;
+  }
+}
+
+
+/* Cockpit 1B.6b — wider complete autocomplete results */
+
+.admin-player-search__results {
+  right: auto;
+  width: min(620px, calc(100vw - 48px));
+  min-width: 100%;
+}
+
+@media (min-width: 760px) and (max-width: 1100px) {
+  .admin-player-search__results {
+    width: min(500px, calc(100vw - 44px));
+    max-height: min(360px, 42vh);
+  }
+
+  .admin-player-search__result-main strong {
+    font-size: 0.78rem;
+  }
+
+  .admin-player-search__result-meta {
+    font-size: 0.66rem;
+  }
+}

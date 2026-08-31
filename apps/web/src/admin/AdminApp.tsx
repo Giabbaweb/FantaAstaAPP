@@ -438,6 +438,16 @@ export function AdminApp() {
   ] = useState("");
 
   const [
+    playerSearchQuery,
+    setPlayerSearchQuery
+  ] = useState("");
+
+  const [
+    playerSearchOpen,
+    setPlayerSearchOpen
+  ] = useState(false);
+
+  const [
     includeNonAvailablePlayers,
     setIncludeNonAvailablePlayers
   ] = useState(false);
@@ -1492,6 +1502,8 @@ export function AdminApp() {
          * autorevole.
          */
         setSelectedPlayerFmsCode("");
+        setPlayerSearchQuery("");
+        setPlayerSearchOpen(false);
       } catch (error) {
         setCreateCallError(
           error instanceof Error
@@ -2071,45 +2083,139 @@ export function AdminApp() {
               <span className="admin-new-call__inline-label">
                 Cerca e apri il prossimo giocatore
               </span>
-              <input
-                type="search"
-                list="admin-available-players"
-                placeholder="Cerca giocatore..."
-                value={selectedPlayerFmsCode}
-                disabled={
-                  session?.status !== "RUNNING" ||
-                  Boolean(
-                    snapshot?.operationalAuctionCall
-                  ) ||
-                  createCallPending
-                }
-                onChange={(event) => {
-                  setSelectedPlayerFmsCode(
-                    event.target.value
-                  );
-                  setCreateCallError(null);
-                }}
-              />
+              <div className="admin-player-search">
+                <input
+                  type="search"
+                  placeholder="Cerca giocatore..."
+                  value={playerSearchQuery}
+                  autoComplete="off"
+                  disabled={
+                    session?.status !== "RUNNING" ||
+                    Boolean(
+                      snapshot?.operationalAuctionCall
+                    ) ||
+                    createCallPending
+                  }
+                  onFocus={() => {
+                    setPlayerSearchOpen(true);
+                  }}
+                  onBlur={() => {
+                    window.setTimeout(() => {
+                      setPlayerSearchOpen(false);
+                    }, 150);
+                  }}
+                  onChange={(event) => {
+                    setPlayerSearchQuery(
+                      event.target.value
+                    );
+                    setSelectedPlayerFmsCode("");
+                    setPlayerSearchOpen(true);
+                    setCreateCallError(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setPlayerSearchOpen(false);
+                    }
+                  }}
+                />
 
-              <datalist id="admin-available-players">
-                {players
-                  .filter(
-                    (player) =>
-                      includeNonAvailablePlayers ||
-                      player.availabilityStatus ===
-                        "AVAILABLE"
-                  )
-                  .map((player) => (
-                    <option
-                      key={player.id}
-                      value={player.fmsCode}
-                    >
-                      {player.name} · {player.role} ·{" "}
-                      {player.realTeamName ?? "-"} ·{" "}
-                      {player.availabilityStatus}
-                    </option>
-                  ))}
-              </datalist>
+                {playerSearchOpen &&
+                  (() => {
+                    const query =
+                      playerSearchQuery
+                        .trim()
+                        .toLocaleLowerCase("it");
+
+                    const matchingPlayers =
+                      players
+                        .filter(
+                          (player) =>
+                            includeNonAvailablePlayers ||
+                            player.availabilityStatus ===
+                              "AVAILABLE"
+                        )
+                        .filter((player) => {
+                          if (!query) {
+                            return true;
+                          }
+
+                          const searchableText = [
+                            player.fmsCode,
+                            player.name,
+                            player.realTeamName ?? "",
+                            player.role
+                          ]
+                            .join(" ")
+                            .toLocaleLowerCase("it");
+
+                          return searchableText.includes(
+                            query
+                          );
+                        });
+
+                    const visiblePlayers =
+                      query
+                        ? matchingPlayers
+                        : matchingPlayers.slice(0, 10);
+
+                    return (
+                      <div
+                        className="admin-player-search__results"
+                        role="listbox"
+                        aria-label="Risultati ricerca giocatori"
+                      >
+                        {visiblePlayers.length === 0 ? (
+                          <div className="admin-player-search__empty">
+                            Nessun giocatore trovato
+                          </div>
+                        ) : (
+                          visiblePlayers.map(
+                            (player) => (
+                              <button
+                                key={player.id}
+                                type="button"
+                                className="admin-player-search__result"
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                }}
+                                onClick={() => {
+                                  setSelectedPlayerFmsCode(
+                                    player.fmsCode
+                                  );
+                                  setPlayerSearchQuery(
+                                    player.name
+                                  );
+                                  setPlayerSearchOpen(false);
+                                  setCreateCallError(null);
+                                }}
+                              >
+                                <span className="admin-player-search__result-main">
+                                  <strong>
+                                    {player.name}
+                                  </strong>
+
+                                  <span
+                                    className={`admin-player-search__role admin-player-search__role--${player.role.toLowerCase()}`}
+                                  >
+                                    {getPlayerRoleLabel(
+                                      player.role
+                                    )}
+                                  </span>
+                                </span>
+
+                                <span className="admin-player-search__result-meta">
+                                  {player.realTeamName ?? "-"}
+                                  {" · "}
+                                  FMS {player.fmsCode}
+                                </span>
+                              </button>
+                            )
+                          )
+                        )}
+                      </div>
+                    );
+                  })()}
+              </div>
 
               <label
                 className="admin-new-call__availability-toggle"
@@ -2128,6 +2234,8 @@ export function AdminApp() {
                       event.target.checked
                     );
                     setSelectedPlayerFmsCode("");
+                    setPlayerSearchQuery("");
+                    setPlayerSearchOpen(false);
                     setCreateCallError(null);
                   }}
                 />
