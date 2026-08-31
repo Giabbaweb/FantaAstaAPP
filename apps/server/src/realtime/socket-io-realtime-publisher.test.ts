@@ -95,6 +95,7 @@ describe("SocketIoRealtimePublisher", () => {
           "2026-08-02T21:00:00.000Z"
       },
     sessionTeams: [],
+    nextCallerAuctionSessionTeamId: null,
     operationalAuctionCall: null,
     publicDisplay: {
       league: {
@@ -165,6 +166,7 @@ describe("SocketIoRealtimePublisher", () => {
             "2026-08-02T21:00:00.000Z"
         },
       sessionTeams: [],
+      nextCallerAuctionSessionTeamId: null,
       operationalAuctionCall: null,
         publicDisplay: {
           league: {

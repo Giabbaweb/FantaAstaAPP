@@ -41,6 +41,10 @@ export interface AuctionCallReader {
   findOperationalByAuctionSessionId(
     auctionSessionId: string
   ): Promise<AuctionCallAggregate | null>;
+
+  findLatestConfirmedByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<AuctionCallAggregate | null>;
 }
 
 export interface AuctionCallRepository
@@ -129,6 +133,16 @@ export class SqliteAuctionCallRepository
   ): Promise<AuctionCallAggregate | null> {
     return this
       .findOperationalByAuctionSessionIdWithExecutor(
+        db,
+        auctionSessionId
+      );
+  }
+
+  async findLatestConfirmedByAuctionSessionId(
+    auctionSessionId: string
+  ): Promise<AuctionCallAggregate | null> {
+    return this
+      .findLatestConfirmedByAuctionSessionIdWithExecutor(
         db,
         auctionSessionId
       );

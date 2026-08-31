@@ -17,6 +17,9 @@ import type {
   RealtimeSnapshotSessionReader,
   RealtimeSnapshotTeamReader
 } from "./realtime-snapshot.repository.js";
+import {
+  resolveNextCallerAuctionSessionTeamId
+} from "../services/auction-caller-rotation.js";
 
 export type RealtimeSnapshotServiceErrorCode =
   "REALTIME_SNAPSHOT_SESSION_NOT_FOUND";
@@ -73,6 +76,7 @@ export class RealtimeSnapshotService {
     const [
       sessionTeams,
       operationalAuctionCall,
+      latestConfirmedAuctionCall,
       publicDisplayLeague,
       publicDisplayTeams,
       recentAwards
@@ -84,6 +88,11 @@ export class RealtimeSnapshotService {
 
       this.auctionCallReader
         .findOperationalByAuctionSessionId(
+          auctionSessionId
+        ),
+
+      this.auctionCallReader
+        .findLatestConfirmedByAuctionSessionId(
           auctionSessionId
         ),
 
@@ -102,6 +111,25 @@ auctionSessionId
           auctionSessionId
         )
     ]);
+
+    let nextCallerAuctionSessionTeamId:
+      string | null = null;
+
+    if (sessionTeams.length > 0) {
+      try {
+        nextCallerAuctionSessionTeamId =
+          resolveNextCallerAuctionSessionTeamId({
+            sessionTeams,
+            previousCallerAuctionSessionTeamId:
+              latestConfirmedAuctionCall?.call
+                .callerAuctionSessionTeamId ??
+              null
+          });
+      } catch {
+        nextCallerAuctionSessionTeamId =
+          null;
+      }
+    }
 
     const currentPlayer =
       operationalAuctionCall
@@ -187,6 +215,7 @@ league: publicDisplayLeague,
       session: sessionState.session,
       sessionTeams,
       operationalAuctionCall,
+      nextCallerAuctionSessionTeamId,
       publicDisplay
     };
   }

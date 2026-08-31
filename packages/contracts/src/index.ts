@@ -1205,6 +1205,8 @@ export const realtimeAuctionSnapshotSchema = z.object({
   ),
   operationalAuctionCall:
     realtimeOperationalAuctionCallSchema.nullable(),
+  nextCallerAuctionSessionTeamId:
+    z.string().min(1).nullable(),
   publicDisplay:
     realtimePublicDisplayProjectionSchema
 });

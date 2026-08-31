@@ -91,6 +91,8 @@ describe("realtime auction snapshot contracts", () => {
           auctionCallTeam
         ]
       },
+      nextCallerAuctionSessionTeamId:
+        "auction-session-team-1",
       publicDisplay: {
         league: {
           id: "league-1",
@@ -132,6 +134,7 @@ describe("realtime auction snapshot contracts", () => {
         },
         sessionTeams: [],
         operationalAuctionCall: null,
+        nextCallerAuctionSessionTeamId: null,
         publicDisplay: {
           league: {
             id: "league-1",
@@ -169,6 +172,7 @@ describe("realtime auction snapshot contracts", () => {
         },
         sessionTeams: [],
         operationalAuctionCall: null,
+        nextCallerAuctionSessionTeamId: null,
         publicDisplay: {
           league: {
             id: "league-1",

@@ -33,6 +33,7 @@ describe("AuctionSnapshotDispatcher", () => {
         "2026-08-02T21:40:00.000Z"
     },
   sessionTeams: [],
+  nextCallerAuctionSessionTeamId: null,
   operationalAuctionCall: null,
   publicDisplay: {
     league: {
