@@ -1735,6 +1735,8 @@ export function AdminApp() {
           A: 0
         };
 
+  const latestActivity = activity[0];
+
   return (
     <main className="admin-cockpit">
       <header className="admin-cockpit__header">
@@ -2624,71 +2626,104 @@ export function AdminApp() {
 
 
       <section className="admin-cockpit__workspace">
-        <div className="admin-activity">
-          <div className="admin-activity__heading">
-            <div>
-              <p className="admin-panel__label">
+        <details className="admin-activity">
+          <summary className="admin-activity__summary">
+            <div className="admin-activity__summary-main">
+              <span className="admin-panel__label">
                 Attività recenti
-              </p>
+              </span>
 
-              <h2>
-                Ultime operazioni
-              </h2>
+              <strong>
+                {activity.length} eventi
+              </strong>
             </div>
 
-            <span>
-              {activity.length} eventi
-            </span>
-          </div>
-
-          {activityError ? (
-            <p className="admin-activity__error">
-              {activityError}
-            </p>
-          ) : activity.length === 0 ? (
-            <p className="admin-activity__empty">
-              Nessuna attività registrata.
-            </p>
-          ) : (
-            <div className="admin-activity__list">
-              {activity.map((item) => (
-                <article key={item.eventId}>
+            <div className="admin-activity__summary-latest">
+              {activityError ? (
+                <span className="admin-activity__error-inline">
+                  Errore caricamento attività
+                </span>
+              ) : latestActivity ? (
+                <>
                   <time>
                     {
                       formatActivityTime(
-                        item.createdAt
+                        latestActivity.createdAt
                       )
                     }
                   </time>
 
                   <strong>
-                    {getActivityLabel(item)}
+                    {getActivityLabel(latestActivity)}
                   </strong>
 
                   <span>
                     {
                       getActivityDescription(
-                        item
+                        latestActivity
                       )
                     }
                   </span>
-
-                  {item.comment && (
-                    <small title={item.comment}>
-                      {item.comment}
-                    </small>
-                  )}
-                </article>
-              ))}
+                </>
+              ) : (
+                <span>
+                  Nessuna attività registrata
+                </span>
+              )}
             </div>
-          )}
-        </div>
 
-        <aside className="admin-workspace__future">
-          <span>
-            Audit · Backup · Correzioni
-          </span>
-        </aside>
+            <span
+              className="admin-activity__chevron"
+              aria-hidden="true"
+            >
+              ▾
+            </span>
+          </summary>
+
+          <div className="admin-activity__body">
+            {activityError ? (
+              <p className="admin-activity__error">
+                {activityError}
+              </p>
+            ) : activity.length === 0 ? (
+              <p className="admin-activity__empty">
+                Nessuna attività registrata.
+              </p>
+            ) : (
+              <div className="admin-activity__list">
+                {activity.map((item) => (
+                  <article key={item.eventId}>
+                    <time>
+                      {
+                        formatActivityTime(
+                          item.createdAt
+                        )
+                      }
+                    </time>
+
+                    <strong>
+                      {getActivityLabel(item)}
+                    </strong>
+
+                    <span>
+                      {
+                        getActivityDescription(
+                          item
+                        )
+                      }
+                    </span>
+
+                    {item.comment && (
+                      <small title={item.comment}>
+                        {item.comment}
+                      </small>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
       </section>
     </main>
   );

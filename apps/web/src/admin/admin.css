@@ -480,47 +480,109 @@ input {
 
 
 .admin-cockpit__workspace {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 2fr)
-    minmax(260px, 1fr);
-  gap: 16px;
-  min-height: 150px;
-  max-width: 1180px;
-  margin: 8px auto 0;
+  width: 100%;
+  margin: 8px 0 0;
 }
 
-.admin-activity,
-.admin-workspace__future {
+.admin-activity {
+  overflow: hidden;
   border: 1px solid #d8e1eb;
   border-radius: 12px;
   background: #ffffff;
 }
 
-.admin-activity {
-  padding: 14px 16px;
+.admin-activity__summary {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 46px;
+  padding: 8px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
 }
 
-.admin-activity__heading {
+.admin-activity__summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-activity__summary-main {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
+  gap: 8px;
+  white-space: nowrap;
 }
 
-.admin-activity__heading .admin-panel__label {
-  margin-bottom: 3px;
-}
-
-.admin-activity__heading h2 {
+.admin-activity__summary-main .admin-panel__label {
   margin: 0;
-  font-size: 1rem;
 }
 
-.admin-activity__heading > span {
+.admin-activity__summary-main > strong {
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.admin-activity__summary-latest {
+  display: grid;
+  grid-template-columns:
+    auto
+    auto
+    minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 1px solid #e2e8f0;
+}
+
+.admin-activity__summary-latest time {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-activity__summary-latest strong {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.admin-activity__summary-latest > span {
+  overflow: hidden;
+  color: #475569;
+  font-size: 0.76rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-activity__chevron {
+  color: #64748b;
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.admin-activity[open]
+  .admin-activity__chevron {
+  transform: rotate(180deg);
+}
+
+.admin-activity[open]
+  .admin-activity__summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-activity__body {
+  padding: 0 14px 8px;
+}
+
+.admin-activity__error-inline {
+  color: #b42318 !important;
+  font-weight: 700;
 }
 
 .admin-activity__list {
@@ -579,17 +641,30 @@ input {
   color: #b42318;
 }
 
-.admin-workspace__future {
-  display: grid;
-  place-items: center;
-  border-style: dashed;
-  color: #94a3b8;
-  font-size: 0.78rem;
-}
-
 @media (max-width: 1100px) {
-  .admin-cockpit__workspace {
-    grid-template-columns: 1fr;
+  .admin-activity__summary {
+    grid-template-columns:
+      auto
+      minmax(0, 1fr)
+      auto;
+    gap: 10px;
+    min-height: 42px;
+    padding: 7px 12px;
+  }
+
+  .admin-activity__summary-main {
+    gap: 6px;
+  }
+
+  .admin-activity__summary-latest {
+    gap: 7px;
+    padding-left: 10px;
+  }
+
+  .admin-activity__summary-latest > span {
+    display: block;
+    min-width: 0;
+    font-size: 0.72rem;
   }
 
   .admin-activity__list article {
@@ -2113,5 +2188,98 @@ input {
     padding: 4px 10px;
     font-size: 0.76rem;
     line-height: 1.1;
+  }
+}
+
+/* Cockpit — draft call opening controls */
+
+.admin-open-call {
+  display: flex;
+  align-items: end;
+  gap: 7px;
+  margin-top: 3px;
+}
+
+.admin-open-call label {
+  display: grid;
+  grid-template-columns: auto 76px;
+  align-items: center;
+  gap: 7px;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-open-call input {
+  width: 76px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #bac7d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-open-call input:focus {
+  border-color: #4d91d9;
+  outline: 2px solid rgb(77 145 217 / 16%);
+  outline-offset: 0;
+}
+
+.admin-open-call button {
+  min-height: 32px;
+  padding: 4px 13px;
+  border: 1px solid #9eb2c8;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #334155;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-open-call button:not(:disabled):hover {
+  background: #e8eef5;
+}
+
+.admin-open-call button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-open-call__error {
+  align-self: center;
+  color: #b42318;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Slightly tighter on the iPad cockpit */
+@media (max-width: 1100px) {
+  .admin-open-call {
+    gap: 6px;
+  }
+
+  .admin-open-call label {
+    grid-template-columns: auto 64px;
+    gap: 6px;
+    font-size: 0.72rem;
+  }
+
+  .admin-open-call input {
+    width: 64px;
+    min-height: 30px;
+  }
+
+  .admin-open-call button {
+    min-height: 30px;
+    padding-inline: 11px;
+    font-size: 0.72rem;
   }
 }
