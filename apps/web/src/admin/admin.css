@@ -380,20 +380,58 @@ input {
   font-weight: 700;
 }
 
-.admin-call-team__details div:nth-child(3) dd {
-  color: #1769aa;
+.admin-call-team__details div[data-role] {
+  margin-inline: -4px;
+  padding: 3px 4px;
+  border-radius: 5px;
 }
 
-.admin-call-team__details div:nth-child(4) dd {
-  color: #2e7d32;
+.admin-call-team__details div[data-role="P"] {
+  background: #e3f0ff;
 }
 
-.admin-call-team__details div:nth-child(5) dd {
+.admin-call-team__details div[data-role="P"] dt,
+.admin-call-team__details div[data-role="P"] dd {
+  color: #1565c0;
+}
+
+.admin-call-team__details div[data-role="D"] {
+  background: #e6f5ea;
+}
+
+.admin-call-team__details div[data-role="D"] dt,
+.admin-call-team__details div[data-role="D"] dd {
+  color: #218838;
+}
+
+.admin-call-team__details div[data-role="C"] {
+  background: #ffffc2;
+}
+
+.admin-call-team__details div[data-role="C"] dt,
+.admin-call-team__details div[data-role="C"] dd {
   color: #795548;
 }
 
-.admin-call-team__details div:nth-child(6) dd {
-  color: #c62828;
+.admin-call-team__details div[data-role="A"] {
+  background: #fdeaea;
+}
+
+.admin-call-team__details div[data-role="A"] dt,
+.admin-call-team__details div[data-role="A"] dd {
+  color: #d32f2f;
+}
+
+.admin-call-team__details
+  div[data-role][data-complete="true"] {
+  background: #f8fafc;
+}
+
+.admin-call-team__details
+  div[data-role][data-complete="true"] dt,
+.admin-call-team__details
+  div[data-role][data-complete="true"] dd {
+  color: #94a3b8;
 }
 
 .admin-panel--new-call {

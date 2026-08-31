@@ -2447,7 +2447,13 @@ export function AdminApp() {
                 </div>
 
 
-                <div>
+                <div
+                  data-role="P"
+                  data-complete={
+                    team.rosterRoles.P.count >=
+                    team.rosterRoles.P.limit
+                  }
+                >
                   <dt>P</dt>
                   <dd>
                     {team.rosterRoles.P.count}/
@@ -2455,7 +2461,13 @@ export function AdminApp() {
                   </dd>
                 </div>
 
-                <div>
+                <div
+                  data-role="D"
+                  data-complete={
+                    team.rosterRoles.D.count >=
+                    team.rosterRoles.D.limit
+                  }
+                >
                   <dt>D</dt>
                   <dd>
                     {team.rosterRoles.D.count}/
@@ -2463,7 +2475,13 @@ export function AdminApp() {
                   </dd>
                 </div>
 
-                <div>
+                <div
+                  data-role="C"
+                  data-complete={
+                    team.rosterRoles.C.count >=
+                    team.rosterRoles.C.limit
+                  }
+                >
                   <dt>C</dt>
                   <dd>
                     {team.rosterRoles.C.count}/
@@ -2471,7 +2489,13 @@ export function AdminApp() {
                   </dd>
                 </div>
 
-                <div>
+                <div
+                  data-role="A"
+                  data-complete={
+                    team.rosterRoles.A.count >=
+                    team.rosterRoles.A.limit
+                  }
+                >
                   <dt>A</dt>
                   <dd>
                     {team.rosterRoles.A.count}/
