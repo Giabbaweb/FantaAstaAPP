@@ -1718,6 +1718,115 @@ export function AdminApp() {
           </span>
         </div>
 
+        <div className="admin-public-display-controls">
+            <p className="admin-public-display-controls__title">
+              Display
+            </p>
+
+            <div className="admin-public-display-modes">
+              {(
+                [
+                  [
+                    "STANDARD",
+                    "STD"
+                  ],
+                  [
+                    "DARK",
+                    "DARK"
+                  ],
+                  [
+                    "HIGH_CONTRAST_OUTDOOR",
+                    "OUT"
+                  ],
+                  [
+                    "COMPACT",
+                    "COMPACT"
+                  ]
+                ] as const
+              ).map(
+                ([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    disabled={
+                      publicDisplayControlPending
+                    }
+                    data-active={
+                      publicDisplayControl
+                        .displayMode ===
+                      mode
+                    }
+                    onClick={() => {
+                      void changePublicDisplay({
+                        displayMode:
+                          mode as PublicDisplayMode
+                      });
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+
+            <button
+              className="admin-public-display-view"
+              type="button"
+              disabled={
+                publicDisplayControlPending
+              }
+              data-active={
+                publicDisplayControl.activeView ===
+                "ROSTER_OVERVIEW"
+              }
+              onClick={() => {
+                void changePublicDisplay({
+                  activeView:
+                    publicDisplayControl
+                      .activeView ===
+                    "ROSTER_OVERVIEW"
+                      ? "AUCTION"
+                      : "ROSTER_OVERVIEW"
+                });
+              }}
+            >
+              {
+                publicDisplayControl.activeView ===
+                "ROSTER_OVERVIEW"
+                  ? "Nascondi foglione"
+                  : "Mostra foglione"
+              }
+            </button>
+
+            <div className="admin-public-display-export">
+              <button
+                type="button"
+                disabled={!snapshot}
+                onClick={
+                  printRosterOverview
+                }
+              >
+                Stampa / PDF
+              </button>
+
+              <button
+                type="button"
+                disabled={!snapshot}
+                onClick={
+                  exportRosterOverviewExcel
+                }
+              >
+                Esporta Excel
+              </button>
+            </div>
+
+            {publicDisplayControlError && (
+              <small className="admin-public-display-controls__error">
+                {publicDisplayControlError}
+              </small>
+            )}
+            </div>
+
         <div className="admin-cockpit__runtime">
           <div className="admin-cockpit__clock">
             <span>Ora</span>
@@ -2050,114 +2159,6 @@ export function AdminApp() {
             Gli altri comandi verranno collegati nei prossimi checkpoint.
           </small>
 
-          <div className="admin-public-display-controls">
-            <p className="admin-public-display-controls__title">
-              Schermo pubblico
-            </p>
-
-            <div className="admin-public-display-modes">
-              {(
-                [
-                  [
-                    "STANDARD",
-                    "STD"
-                  ],
-                  [
-                    "DARK",
-                    "DARK"
-                  ],
-                  [
-                    "HIGH_CONTRAST_OUTDOOR",
-                    "OUT"
-                  ],
-                  [
-                    "COMPACT",
-                    "COMPACT"
-                  ]
-                ] as const
-              ).map(
-                ([mode, label]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    disabled={
-                      publicDisplayControlPending
-                    }
-                    data-active={
-                      publicDisplayControl
-                        .displayMode ===
-                      mode
-                    }
-                    onClick={() => {
-                      void changePublicDisplay({
-                        displayMode:
-                          mode as PublicDisplayMode
-                      });
-                    }}
-                  >
-                    {label}
-                  </button>
-                )
-              )}
-            </div>
-
-            <button
-              className="admin-public-display-view"
-              type="button"
-              disabled={
-                publicDisplayControlPending
-              }
-              data-active={
-                publicDisplayControl.activeView ===
-                "ROSTER_OVERVIEW"
-              }
-              onClick={() => {
-                void changePublicDisplay({
-                  activeView:
-                    publicDisplayControl
-                      .activeView ===
-                    "ROSTER_OVERVIEW"
-                      ? "AUCTION"
-                      : "ROSTER_OVERVIEW"
-                });
-              }}
-            >
-              {
-                publicDisplayControl.activeView ===
-                "ROSTER_OVERVIEW"
-                  ? "Nascondi foglione"
-                  : "Mostra foglione"
-              }
-            </button>
-
-            <div className="admin-public-display-export">
-              <button
-                type="button"
-                disabled={!snapshot}
-                onClick={
-                  printRosterOverview
-                }
-              >
-                Stampa / PDF
-              </button>
-
-              <button
-                type="button"
-                disabled={!snapshot}
-                onClick={
-                  exportRosterOverviewExcel
-                }
-              >
-                Esporta Excel
-              </button>
-            </div>
-
-            {publicDisplayControlError && (
-              <small className="admin-public-display-controls__error">
-                {publicDisplayControlError}
-              </small>
-            )}
-          </div>
         </section>
       </div>
 

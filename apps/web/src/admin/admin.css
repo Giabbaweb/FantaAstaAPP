@@ -874,3 +874,496 @@ input {
   border-color: #4f8d67;
   color: #22633a;
 }
+
+
+/* Cockpit 1B.1 — compact public-display controls in header */
+
+.admin-cockpit__header {
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+  gap: 14px;
+  padding: 10px 14px;
+}
+
+.admin-cockpit__header
+  > .admin-public-display-controls {
+  display: grid;
+  grid-template-columns:
+    auto
+    auto
+    auto
+    auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.admin-cockpit__header
+  .admin-public-display-controls__title {
+  margin: 0 3px 0 0;
+  white-space: nowrap;
+  font-size: 0.62rem;
+}
+
+.admin-cockpit__header
+  .admin-public-display-modes {
+  display: grid;
+  grid-template-columns:
+    repeat(4, auto);
+  gap: 4px;
+}
+
+.admin-cockpit__header
+  .admin-public-display-modes button,
+.admin-cockpit__header
+  .admin-public-display-view,
+.admin-cockpit__header
+  .admin-public-display-export button {
+  min-height: 28px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.admin-cockpit__header
+  .admin-public-display-view {
+  width: auto;
+  margin-top: 0;
+}
+
+.admin-cockpit__header
+  .admin-public-display-export {
+  display: flex;
+  gap: 4px;
+  margin-top: 0;
+}
+
+.admin-cockpit__header
+  .admin-public-display-controls__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.65rem;
+}
+
+
+/* Cockpit 1B.1c — hide roster export controls on iPad / compact widths */
+
+@media (max-width: 1100px) {
+  .admin-cockpit__header
+    .admin-public-display-export {
+    display: none;
+  }
+
+  .admin-cockpit__header
+    > .admin-public-display-controls {
+    grid-template-columns:
+      auto
+      auto
+      auto;
+  }
+}
+
+/* Cockpit 1B.1d — resilient two-line league identity */
+
+.admin-cockpit__session {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: start;
+  column-gap: 7px;
+  row-gap: 1px;
+  min-width: 0;
+}
+
+.admin-cockpit__session > strong {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.05;
+}
+
+.admin-cockpit__session > span {
+  line-height: 1.05;
+}
+
+.admin-cockpit__session > span:last-child::before {
+  content: "·";
+  margin-right: 7px;
+  color: #94a3b8;
+}
+
+/* iPad / compact cockpit header */
+
+@media (max-width: 1100px) {
+  .admin-cockpit__header {
+    grid-template-columns:
+      auto
+      minmax(135px, 0.8fr)
+      minmax(0, 1.7fr)
+      auto;
+    gap: 9px;
+  }
+
+  .admin-cockpit__session {
+    column-gap: 5px;
+  }
+
+  .admin-cockpit__session > strong {
+    font-size: 0.82rem;
+  }
+
+  .admin-cockpit__session > span {
+    font-size: 0.72rem;
+  }
+
+  .admin-cockpit__session > span:last-child::before {
+    margin-right: 5px;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-controls__title {
+    width: 0;
+    margin: 0;
+    overflow: visible;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-controls__title::after {
+    content: "DISPLAY";
+    color: #506078;
+    font-size: 0.58rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .admin-cockpit__header
+    > .admin-public-display-controls {
+    gap: 3px;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-modes {
+    gap: 3px;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-modes button,
+  .admin-cockpit__header
+    .admin-public-display-view {
+    min-height: 26px;
+    padding: 3px 6px;
+    font-size: 0.62rem;
+  }
+
+  .admin-cockpit__runtime {
+    gap: 8px;
+  }
+}
+
+
+/* Cockpit 1B.1e — ordered responsive header */
+
+.admin-cockpit__header {
+  grid-template-columns:
+    auto
+    auto
+    minmax(0, 1fr)
+    auto;
+  align-items: stretch;
+  gap: 0;
+  min-height: 58px;
+  padding: 8px 14px;
+}
+
+/* ------------------------------------------------------------
+   BRAND
+   ------------------------------------------------------------ */
+
+.admin-cockpit__header > div:first-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 140px;
+  padding-right: 16px;
+}
+
+.admin-cockpit__brand {
+  line-height: 1.05;
+}
+
+.admin-cockpit__surface {
+  margin-top: 4px;
+  line-height: 1;
+}
+
+
+/* ------------------------------------------------------------
+   LEAGUE
+   ------------------------------------------------------------ */
+
+.admin-cockpit__session {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-content: center;
+  justify-content: start;
+  min-width: 165px;
+  padding: 0 18px;
+  border-left: 1px solid #d8e1eb;
+  column-gap: 6px;
+  row-gap: 4px;
+}
+
+.admin-cockpit__session > strong {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  font-size: 0.9rem;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-cockpit__session > span {
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-cockpit__session > span:last-child::before {
+  content: "·";
+  margin-right: 6px;
+  color: #94a3b8;
+}
+
+
+/* ------------------------------------------------------------
+   DISPLAY CONTROLS
+   ------------------------------------------------------------ */
+
+.admin-cockpit__header
+  > .admin-public-display-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0 18px;
+  border-top: 0;
+  border-left: 1px solid #d8e1eb;
+  gap: 8px;
+}
+
+.admin-cockpit__header
+  .admin-public-display-controls__title {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0 4px 0 0;
+  overflow: visible;
+  color: #506078;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-cockpit__header
+  .admin-public-display-controls__title::after {
+  content: none;
+}
+
+.admin-cockpit__header
+  .admin-public-display-modes {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.admin-cockpit__header
+  .admin-public-display-modes button,
+.admin-cockpit__header
+  .admin-public-display-view,
+.admin-cockpit__header
+  .admin-public-display-export button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.admin-cockpit__header
+  .admin-public-display-view {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+}
+
+.admin-cockpit__header
+  .admin-public-display-export {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+  margin: 0;
+}
+
+.admin-cockpit__header
+  .admin-public-display-controls__error {
+  position: absolute;
+  margin-top: 48px;
+}
+
+
+/* ------------------------------------------------------------
+   RUNTIME
+   ------------------------------------------------------------ */
+
+.admin-cockpit__runtime {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  align-content: center;
+  justify-self: stretch;
+  min-width: 190px;
+  margin: 0;
+  padding-left: 18px;
+  border-left: 1px solid #d8e1eb;
+  gap: 14px;
+}
+
+.admin-cockpit__clock {
+  min-width: 74px;
+}
+
+.admin-cockpit__state {
+  min-width: 98px;
+  text-align: center;
+}
+
+.admin-cockpit__state small {
+  margin-top: 4px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+
+/* ------------------------------------------------------------
+   IPAD LANDSCAPE / COMPACT HEADER
+   ------------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  .admin-cockpit__header {
+    grid-template-columns:
+      auto
+      minmax(145px, auto)
+      minmax(0, 1fr)
+      auto;
+    min-height: 64px;
+    padding: 8px 12px;
+  }
+
+  .admin-cockpit__header > div:first-child {
+    min-width: 130px;
+    padding-right: 12px;
+  }
+
+  .admin-cockpit__brand {
+    font-size: 1.18rem;
+  }
+
+  .admin-cockpit__surface {
+    font-size: 0.76rem;
+  }
+
+  .admin-cockpit__session {
+    min-width: 145px;
+    padding: 0 12px;
+    column-gap: 5px;
+  }
+
+  .admin-cockpit__session > strong {
+    font-size: 0.82rem;
+  }
+
+  .admin-cockpit__session > span {
+    font-size: 0.7rem;
+  }
+
+  .admin-cockpit__header
+    > .admin-public-display-controls {
+    padding: 0 12px;
+    gap: 9px;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-controls__title {
+    width: auto;
+    margin-right: 2px;
+    overflow: visible;
+    color: #506078;
+    font-size: 0.58rem;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-controls__title::after {
+    content: none;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-modes {
+    gap: 8px;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-modes button,
+  .admin-cockpit__header
+    .admin-public-display-view {
+    min-height: 38px;
+    padding: 6px 10px;
+    font-size: 0.66rem;
+  }
+
+  .admin-cockpit__header
+    .admin-public-display-export {
+    display: none;
+  }
+
+  .admin-cockpit__runtime {
+    min-width: 174px;
+    padding-left: 12px;
+    gap: 9px;
+  }
+
+  .admin-cockpit__clock {
+    min-width: 68px;
+  }
+
+  .admin-cockpit__clock strong {
+    font-size: 1.08rem;
+  }
+
+  .admin-cockpit__state {
+    min-width: 92px;
+  }
+
+  .admin-cockpit__state > span {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .admin-cockpit__state small {
+    font-size: 0.68rem;
+  }
+}
