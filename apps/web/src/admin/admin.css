@@ -431,7 +431,6 @@ input {
 }
 
 @media (max-width: 1100px) {
-  .admin-cockpit__top-grid,
   .admin-panel--new-call {
     grid-template-columns: 1fr;
   }
@@ -1365,5 +1364,333 @@ input {
 
   .admin-cockpit__state small {
     font-size: 0.68rem;
+  }
+}
+
+
+/* Cockpit 1B.2 — keep operational top grid horizontal on iPad */
+
+@media (min-width: 760px) and (max-width: 1100px) {
+  .admin-cockpit__top-grid {
+    grid-template-columns:
+      minmax(0, 1.75fr)
+      minmax(285px, 0.85fr);
+    gap: 12px;
+  }
+
+  .admin-cockpit__top-grid
+    > .admin-panel {
+    padding: 12px;
+  }
+
+  .admin-cockpit__top-grid
+    .admin-panel__label {
+    margin-bottom: 9px;
+  }
+
+  .admin-cockpit__top-grid
+    .admin-controls {
+    gap: 7px;
+  }
+
+  .admin-cockpit__top-grid
+    .admin-controls button {
+    min-height: 38px;
+  }
+
+  .admin-cockpit__top-grid
+    .admin-controls__note {
+    margin-top: 8px;
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+
+  .admin-cockpit__top-grid
+    .admin-session-control select {
+    min-height: 32px;
+  }
+}
+
+/* Cockpit 1B.3 — eight participant cards on one iPad row */
+
+@media (min-width: 760px) and (max-width: 1100px) {
+  .admin-panel--teams {
+    padding: 12px;
+  }
+
+  .admin-call-teams {
+    grid-template-columns:
+      repeat(8, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .admin-call-team {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .admin-call-team__summary {
+    min-height: 72px;
+    padding: 8px 7px;
+  }
+
+  .admin-call-team__summary strong {
+    display: block;
+    overflow: hidden;
+    font-size: 0.76rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .admin-call-team__summary span {
+    margin-top: 3px;
+    font-size: 0.66rem;
+    line-height: 1.1;
+  }
+
+  .admin-call-team__details {
+    padding: 7px;
+    gap: 3px;
+  }
+
+  .admin-call-team__details div {
+    gap: 3px;
+    font-size: 0.64rem;
+    line-height: 1.1;
+  }
+
+  .admin-call-team__details strong {
+    font-size: 0.67rem;
+  }
+}
+
+
+/* Cockpit 1B.4 — compact current call and participant cards */
+
+/* The participant cards no longer need an artificial minimum
+   height now that the useless total-slots row is gone. */
+
+.admin-call-teams article {
+  min-height: 0;
+}
+
+.admin-call-team__details div:last-child {
+  margin-bottom: 0;
+}
+
+
+/* iPad landscape */
+
+@media (min-width: 760px) and (max-width: 1100px) {
+  .admin-current-player {
+    gap: 12px;
+  }
+
+  .admin-current-player img {
+    width: 74px;
+    height: 74px;
+  }
+
+  .admin-current-player h1 {
+    font-size: 1.65rem;
+    line-height: 1.05;
+  }
+
+  .admin-current-player p {
+    margin-top: 4px;
+    font-size: 0.86rem;
+    line-height: 1.15;
+  }
+
+  .admin-player-role {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .admin-call-metrics {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .admin-call-metrics article {
+    padding: 9px;
+  }
+
+  .admin-call-metrics span {
+    margin-bottom: 2px;
+    font-size: 0.66rem;
+  }
+
+  .admin-call-metrics strong {
+    font-size: 0.92rem;
+  }
+
+  .admin-call-metric--leader {
+    gap: 6px 8px;
+  }
+
+  .admin-confirm-award {
+    width: 116px;
+    min-height: 48px;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+
+  .admin-call-metric--turn {
+    gap: 10px;
+  }
+
+  .admin-turn-timer {
+    gap: 6px;
+  }
+
+  .admin-turn-timer__icon {
+    font-size: 1.1rem;
+  }
+
+  .admin-turn-timer div {
+    min-width: 58px;
+  }
+
+  .admin-turn-timer div > strong {
+    font-size: 1.2rem;
+  }
+
+  .admin-turn-timer small {
+    font-size: 0.56rem;
+  }
+
+  .admin-call-team__summary {
+    padding: 7px 6px;
+  }
+
+  .admin-call-team__summary small {
+    margin-top: 3px;
+  }
+
+  .admin-call-team__details {
+    padding: 6px;
+  }
+
+  .admin-call-team__details div {
+    margin-bottom: 3px;
+  }
+
+  .admin-call-team__details div:last-child {
+    margin-bottom: 0;
+  }
+}
+
+
+/* Cockpit 1B.5 — inline next-player controls */
+
+.admin-current-call__new-call {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #d8e1eb;
+}
+
+.admin-new-call--inline {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(220px, 1fr)
+    auto
+    auto
+    auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-new-call__inline-label {
+  color: #40546a;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-new-call--inline > input[type="search"] {
+  min-width: 0;
+  min-height: 36px;
+}
+
+.admin-new-call--inline
+  .admin-new-call__availability-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.admin-new-call--inline
+  .admin-new-call__availability-toggle input {
+  flex: 0 0 auto;
+}
+
+.admin-new-call--inline > button {
+  min-height: 36px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.admin-new-call--inline
+  .admin-cancel-call {
+  padding-inline: 10px;
+}
+
+
+/* iPad landscape */
+
+@media (min-width: 760px) and (max-width: 1100px) {
+  .admin-current-call__new-call {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .admin-new-call--inline {
+    grid-template-columns:
+      auto
+      minmax(150px, 1fr)
+      auto
+      auto
+      auto;
+    gap: 6px;
+  }
+
+  .admin-new-call__inline-label {
+    max-width: 105px;
+    white-space: normal;
+    font-size: 0.58rem;
+    line-height: 1.1;
+  }
+
+  .admin-new-call--inline > input[type="search"] {
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 0.72rem;
+  }
+
+  .admin-new-call--inline
+    .admin-new-call__availability-toggle {
+    font-size: 0.62rem;
+  }
+
+  .admin-new-call--inline
+    .admin-new-call__availability-toggle input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .admin-new-call--inline > button {
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 0.66rem;
   }
 }

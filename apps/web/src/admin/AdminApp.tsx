@@ -2065,6 +2065,133 @@ export function AdminApp() {
               </div>
             </article>
           </div>
+
+            <div className="admin-current-call__new-call">
+              <div className="admin-new-call admin-new-call--inline">
+              <span className="admin-new-call__inline-label">
+                Cerca e apri il prossimo giocatore
+              </span>
+              <input
+                type="search"
+                list="admin-available-players"
+                placeholder="Cerca giocatore..."
+                value={selectedPlayerFmsCode}
+                disabled={
+                  session?.status !== "RUNNING" ||
+                  Boolean(
+                    snapshot?.operationalAuctionCall
+                  ) ||
+                  createCallPending
+                }
+                onChange={(event) => {
+                  setSelectedPlayerFmsCode(
+                    event.target.value
+                  );
+                  setCreateCallError(null);
+                }}
+              />
+
+              <datalist id="admin-available-players">
+                {players
+                  .filter(
+                    (player) =>
+                      includeNonAvailablePlayers ||
+                      player.availabilityStatus ===
+                        "AVAILABLE"
+                  )
+                  .map((player) => (
+                    <option
+                      key={player.id}
+                      value={player.fmsCode}
+                    >
+                      {player.name} · {player.role} ·{" "}
+                      {player.realTeamName ?? "-"} ·{" "}
+                      {player.availabilityStatus}
+                    </option>
+                  ))}
+              </datalist>
+
+              <label
+                className="admin-new-call__availability-toggle"
+              >
+                <input
+                  type="checkbox"
+                  checked={includeNonAvailablePlayers}
+                  disabled={
+                    createCallPending ||
+                    Boolean(
+                      snapshot?.operationalAuctionCall
+                    )
+                  }
+                  onChange={(event) => {
+                    setIncludeNonAvailablePlayers(
+                      event.target.checked
+                    );
+                    setSelectedPlayerFmsCode("");
+                    setCreateCallError(null);
+                  }}
+                />
+                Includi giocatori non disponibili
+              </label>
+
+              <button
+                type="button"
+                disabled={
+                  createCallPending ||
+                  session?.status !== "RUNNING" ||
+                  Boolean(
+                    snapshot?.operationalAuctionCall
+                  ) ||
+                  !players.some(
+                    (player) =>
+                      player.availabilityStatus ===
+                        "AVAILABLE" &&
+                      player.fmsCode ===
+                        selectedPlayerFmsCode.trim()
+                  )
+                }
+                onClick={() => {
+                  void createDraftAuctionCall();
+                }}
+              >
+                {
+                  createCallPending
+                    ? "Preparazione..."
+                    : "Prepara chiamata"
+                }
+              </button>
+
+              <button
+                type="button"
+                className="admin-cancel-call"
+                disabled={
+                  cancelCallPending ||
+                  !snapshot
+                    ?.operationalAuctionCall ||
+                  !(
+                    snapshot
+                      .operationalAuctionCall
+                      .call.status === "DRAFT" ||
+                    snapshot
+                      .operationalAuctionCall
+                      .call.status === "OPEN" ||
+                    snapshot
+                      .operationalAuctionCall
+                      .call.status === "SUSPENDED"
+                  )
+                }
+                onClick={() => {
+                  void executeCancelCall();
+                }}
+              >
+                {
+                  cancelCallPending
+                    ? "Annullamento..."
+                    : "Annulla chiamata"
+                }
+              </button>
+            </div>
+            </div>
         </section>
 
         <section className="admin-panel admin-panel--controls">
@@ -2211,15 +2338,6 @@ export function AdminApp() {
                   </dd>
                 </div>
 
-                <div>
-                  <dt>Slot tot.</dt>
-                  <dd>
-                    {
-                      team.rosterSize +
-                      team.remainingRosterSlots
-                    }
-                  </dd>
-                </div>
 
                 <div>
                   <dt>P</dt>
@@ -2258,145 +2376,6 @@ export function AdminApp() {
         </div>
       </section>
 
-      <section className="admin-panel admin-panel--new-call">
-        <div>
-          <p className="admin-panel__label">
-            Nuova chiamata
-          </p>
-
-          <h2>
-            Cerca e apri il prossimo giocatore
-          </h2>
-        </div>
-
-        <div className="admin-new-call">
-          <input
-            type="search"
-            list="admin-available-players"
-            placeholder="Cerca giocatore..."
-            value={selectedPlayerFmsCode}
-            disabled={
-              session?.status !== "RUNNING" ||
-              Boolean(
-                snapshot?.operationalAuctionCall
-              ) ||
-              createCallPending
-            }
-            onChange={(event) => {
-              setSelectedPlayerFmsCode(
-                event.target.value
-              );
-              setCreateCallError(null);
-            }}
-          />
-
-          <datalist id="admin-available-players">
-            {players
-              .filter(
-                (player) =>
-                  includeNonAvailablePlayers ||
-                  player.availabilityStatus ===
-                    "AVAILABLE"
-              )
-              .map((player) => (
-                <option
-                  key={player.id}
-                  value={player.fmsCode}
-                >
-                  {player.name} · {player.role} ·{" "}
-                  {player.realTeamName ?? "-"} ·{" "}
-                  {player.availabilityStatus}
-                </option>
-              ))}
-          </datalist>
-
-          <label
-            className="admin-new-call__availability-toggle"
-          >
-            <input
-              type="checkbox"
-              checked={includeNonAvailablePlayers}
-              disabled={
-                createCallPending ||
-                Boolean(
-                  snapshot?.operationalAuctionCall
-                )
-              }
-              onChange={(event) => {
-                setIncludeNonAvailablePlayers(
-                  event.target.checked
-                );
-                setSelectedPlayerFmsCode("");
-                setCreateCallError(null);
-              }}
-            />
-            Includi giocatori non disponibili
-          </label>
-
-          <button
-            type="button"
-            disabled={
-              createCallPending ||
-              session?.status !== "RUNNING" ||
-              Boolean(
-                snapshot?.operationalAuctionCall
-              ) ||
-              !players.some(
-                (player) =>
-                  player.availabilityStatus ===
-                    "AVAILABLE" &&
-                  player.fmsCode ===
-                    selectedPlayerFmsCode.trim()
-              )
-            }
-            onClick={() => {
-              void createDraftAuctionCall();
-            }}
-          >
-            {
-              createCallPending
-                ? "Preparazione..."
-                : "Prepara chiamata"
-            }
-          </button>
-
-          <button
-            type="button"
-            className="admin-cancel-call"
-            disabled={
-              cancelCallPending ||
-              !snapshot
-                ?.operationalAuctionCall ||
-              !(
-                snapshot
-                  .operationalAuctionCall
-                  .call.status === "DRAFT" ||
-                snapshot
-                  .operationalAuctionCall
-                  .call.status === "OPEN" ||
-                snapshot
-                  .operationalAuctionCall
-                  .call.status === "SUSPENDED"
-              )
-            }
-            onClick={() => {
-              void executeCancelCall();
-            }}
-          >
-            {
-              cancelCallPending
-                ? "Annullamento..."
-                : "Annulla chiamata"
-            }
-          </button>
-        </div>
-
-        {cancelCallError && (
-          <small className="admin-cancel-call__error">
-            {cancelCallError}
-          </small>
-        )}
-      </section>
 
       <section className="admin-cockpit__workspace">
         <div className="admin-activity">
