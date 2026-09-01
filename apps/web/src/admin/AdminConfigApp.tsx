@@ -4,6 +4,8 @@ import {
   useState
 } from "react";
 
+import QRCode from "react-qr-code";
+
 import * as XLSX from "xlsx";
 
 import type {
@@ -32,6 +34,7 @@ import {
   deleteTeamOwner,
   fetchAuctionSessions,
   fetchAuctionSessionReadiness,
+  fetchLanAddressCandidates,
   fetchAuctionSessionTeams,
   fetchInitialRosterOverview,
   fetchInitialRosterStatus,
@@ -277,6 +280,39 @@ export function AdminConfigApp() {
   ] = useState<string | null>(
     null
   );
+
+  const [
+    remoteBaseUrlDraft,
+    setRemoteBaseUrlDraft
+  ] = useState("");
+
+  const [
+    remoteBaseUrlPending,
+    setRemoteBaseUrlPending
+  ] = useState(false);
+
+  const [
+    remoteBaseUrlError,
+    setRemoteBaseUrlError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    lanAddressCandidates,
+    setLanAddressCandidates
+  ] = useState<
+    Awaited<
+      ReturnType<
+        typeof fetchLanAddressCandidates
+      >
+    >
+  >([]);
+
+  const [
+    lanAddressLoading,
+    setLanAddressLoading
+  ] = useState(false);
 
   const [
     sessionCreateDraft,
@@ -708,6 +744,13 @@ export function AdminConfigApp() {
   const [
     qrTeamAccessError,
     setQrTeamAccessError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    qrTeamAccessUrl,
+    setQrTeamAccessUrl
   ] = useState<string | null>(
     null
   );
@@ -1566,6 +1609,7 @@ export function AdminConfigApp() {
     );
     setQrTeamAccessPinDraft("");
     setQrTeamAccessError(null);
+    setQrTeamAccessUrl(null);
   }
 
   function cancelTeamAccessQr(): void {
@@ -1576,6 +1620,7 @@ export function AdminConfigApp() {
     setQrTeamAccessId(null);
     setQrTeamAccessPinDraft("");
     setQrTeamAccessError(null);
+    setQrTeamAccessUrl(null);
   }
 
   async function verifyTeamAccessQrPin():
@@ -1612,12 +1657,47 @@ export function AdminConfigApp() {
         setQrTeamAccessError(
           "PIN non corretto per questa squadra."
         );
+        setQrTeamAccessUrl(null);
         return;
       }
 
-      setQrTeamAccessError(
-        "PIN verificato."
-      );
+      const selectedSessionTeam =
+        sessionTeams.find(
+          (candidate) =>
+            candidate.id === qrTeamAccessId
+        );
+
+      if (!selectedSessionTeam) {
+        setQrTeamAccessError(
+          "Squadra della sessione non trovata."
+        );
+        setQrTeamAccessUrl(null);
+        return;
+      }
+
+      const remoteBaseUrl =
+        session?.remoteBaseUrl?.trim();
+
+      if (!remoteBaseUrl) {
+        setQrTeamAccessError(
+          "Configura prima l'indirizzo per smartphone."
+        );
+        setQrTeamAccessUrl(null);
+        return;
+      }
+
+      const qrUrl =
+        `${remoteBaseUrl.replace(/\/+$/, "")}/remote` +
+        `?team=${encodeURIComponent(
+          selectedSessionTeam.teamId
+        )}` +
+        "&role=OPERATOR" +
+        `&pin=${encodeURIComponent(
+          qrTeamAccessPinDraft
+        )}`;
+
+      setQrTeamAccessUrl(qrUrl);
+      setQrTeamAccessError(null);
     } catch (error) {
       setQrTeamAccessError(
         error instanceof Error
@@ -1626,6 +1706,141 @@ export function AdminConfigApp() {
       );
     } finally {
       setQrTeamAccessPending(false);
+    }
+  }
+
+  async function saveRemoteBaseUrl():
+    Promise<void> {
+    if (
+      !session ||
+      remoteBaseUrlPending
+    ) {
+      return;
+    }
+
+    const trimmed =
+      remoteBaseUrlDraft.trim();
+
+    let normalized:
+      string | null = null;
+
+    if (trimmed) {
+      try {
+        const parsed = new URL(trimmed);
+
+        if (
+          parsed.protocol !== "http:" &&
+          parsed.protocol !== "https:"
+        ) {
+          setRemoteBaseUrlError(
+            "L'indirizzo deve iniziare con http:// oppure https://."
+          );
+          return;
+        }
+
+        parsed.pathname =
+          parsed.pathname.replace(
+            /\/+$/,
+            ""
+          );
+
+        if (
+          parsed.pathname &&
+          parsed.pathname !== "/"
+        ) {
+          setRemoteBaseUrlError(
+            "Inserisci l'indirizzo base senza /remote o altri percorsi."
+          );
+          return;
+        }
+
+        parsed.pathname = "";
+        parsed.search = "";
+        parsed.hash = "";
+
+        normalized =
+          parsed.toString().replace(
+            /\/$/,
+            ""
+          );
+      } catch {
+        setRemoteBaseUrlError(
+          "Inserisci un indirizzo valido, ad esempio http://192.168.0.197:5173."
+        );
+        return;
+      }
+    }
+
+    setRemoteBaseUrlPending(true);
+    setRemoteBaseUrlError(null);
+
+    try {
+      const updatedSession =
+        await updateAuctionSession(
+          session.id,
+          {
+            remoteBaseUrl: normalized
+          }
+        );
+
+      setSession(updatedSession);
+
+      setSessions(
+        (currentSessions) =>
+          currentSessions.map(
+            (currentSession) =>
+              currentSession.id ===
+                updatedSession.id
+                ? updatedSession
+                : currentSession
+          )
+      );
+
+      setRemoteBaseUrlDraft(
+        updatedSession.remoteBaseUrl ?? ""
+      );
+    } catch (error) {
+      setRemoteBaseUrlError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il salvataggio dell'indirizzo telecomandi."
+      );
+    } finally {
+      setRemoteBaseUrlPending(false);
+    }
+  }
+
+  async function detectLanAddresses():
+    Promise<void> {
+    if (lanAddressLoading) {
+      return;
+    }
+
+    setLanAddressLoading(true);
+    setRemoteBaseUrlError(null);
+
+    try {
+      const candidates =
+        await fetchLanAddressCandidates();
+
+      setLanAddressCandidates(
+        candidates
+      );
+
+      if (candidates.length === 0) {
+        setRemoteBaseUrlError(
+          "Nessun indirizzo LAN privato rilevato dal server."
+        );
+      }
+    } catch (error) {
+      setLanAddressCandidates([]);
+      setRemoteBaseUrlError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante il rilevamento degli indirizzi LAN."
+      );
+    } finally {
+      setLanAddressLoading(false);
     }
   }
 
@@ -1660,6 +1875,17 @@ export function AdminConfigApp() {
     setSessionEditDraft(null);
     setSessionEditError(null);
   }
+
+  useEffect(() => {
+    setRemoteBaseUrlDraft(
+      session?.remoteBaseUrl ?? ""
+    );
+    setRemoteBaseUrlError(null);
+    setLanAddressCandidates([]);
+  }, [
+    session?.id,
+    session?.remoteBaseUrl
+  ]);
 
   useEffect(() => {
     if (!session) {
@@ -4224,6 +4450,13 @@ export function AdminConfigApp() {
               </span>
             )}
 
+            <span className="admin-config__teams-toggle-hint">
+              {
+                teamsSectionExpanded
+                  ? "Clicca per chiudere"
+                  : "Clicca per aprire"
+              }
+            </span>
           </span>
 
           <span
@@ -4255,6 +4488,159 @@ export function AdminConfigApp() {
                 + Nuova squadra
               </button>
             </div>
+
+            {managedLeagueMatchesSession &&
+              session && (
+              <div className="admin-config-remote-base">
+                <div className="admin-config-remote-base__heading">
+                  <div>
+                    <span className="admin-config__girotavolo-kicker">
+                      Accesso telecomandi
+                    </span>
+
+                    <strong>
+                      Indirizzo per smartphone
+                    </strong>
+                  </div>
+
+                  <span>
+                    Unico per questa sessione
+                  </span>
+                </div>
+
+                <div className="admin-config-remote-base__editor">
+                  <button
+                    type="button"
+                    className="admin-config-remote-base__detect"
+                    disabled={
+                      remoteBaseUrlPending ||
+                      lanAddressLoading
+                    }
+                    onClick={() => {
+                      void detectLanAddresses();
+                    }}
+                  >
+                    {
+                      lanAddressLoading
+                        ? "Rilevamento..."
+                        : "Rileva indirizzo LAN"
+                    }
+                  </button>
+
+                  <input
+                    type="url"
+                    inputMode="url"
+                    aria-label="Indirizzo per smartphone"
+                    placeholder="http://192.168.0.197:5173"
+                    value={remoteBaseUrlDraft}
+                    disabled={
+                      remoteBaseUrlPending
+                    }
+                    onChange={(event) => {
+                      setRemoteBaseUrlDraft(
+                        event.target.value
+                      );
+                      setRemoteBaseUrlError(
+                        null
+                      );
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    className="admin-config-remote-base__save"
+                    disabled={
+                      remoteBaseUrlPending ||
+                      lanAddressLoading
+                    }
+                    onClick={() => {
+                      void saveRemoteBaseUrl();
+                    }}
+                  >
+                    {
+                      remoteBaseUrlPending
+                        ? "Salvataggio..."
+                        : "Salva"
+                    }
+                  </button>
+                </div>
+
+                {lanAddressCandidates.length >
+                  0 && (
+                  <div className="admin-config-remote-base__candidates">
+                    <span>
+                      Indirizzi rilevati
+                    </span>
+
+                    <div>
+                      {lanAddressCandidates.map(
+                        (candidate) => (
+                          <button
+                            type="button"
+                            key={
+                              `${candidate.interfaceName}:${candidate.address}`
+                            }
+                            disabled={
+                              remoteBaseUrlPending
+                            }
+                            onClick={() => {
+                              const protocol =
+                                window.location.protocol ===
+                                  "https:"
+                                  ? "https:"
+                                  : "http:";
+
+                              const port =
+                                window.location.port
+                                  ? `:${window.location.port}`
+                                  : "";
+
+                              setRemoteBaseUrlDraft(
+                                `${protocol}//${candidate.address}${port}`
+                              );
+                              setRemoteBaseUrlError(
+                                null
+                              );
+                            }}
+                          >
+                            <strong>
+                              {candidate.address}
+                            </strong>
+
+                            <small>
+                              {
+                                candidate.interfaceName
+                              }
+                            </small>
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    <small>
+                      Se sono presenti più schede di rete,
+                      scegli quella collegata alla rete Wi-Fi
+                      o Ethernet usata dagli smartphone.
+                    </small>
+                  </div>
+                )}
+
+                {remoteBaseUrlError && (
+                  <p
+                    className="admin-config-remote-base__error"
+                    role="alert"
+                  >
+                    {remoteBaseUrlError}
+                  </p>
+                )}
+
+                <p className="admin-config-remote-base__note">
+                  Inserisci l'indirizzo base dell'app,
+                  senza /remote. Sarà usato per generare
+                  i QR Code delle squadre.
+                </p>
+              </div>
+            )}
 
         {managedLeagueMatchesSession &&
           teamAccessError && (
@@ -4353,6 +4739,20 @@ export function AdminConfigApp() {
         )}
 
         <div className="admin-config__teams">
+          {managedLeagueMatchesSession && (
+            <div
+              className="admin-config-team-columns"
+              aria-hidden="true"
+            >
+              <span>Ordine</span>
+              <span>Squadra</span>
+              <span>Presidente</span>
+              <span>Crediti</span>
+              <span>Gestione</span>
+              <span>Remote</span>
+            </div>
+          )}
+
           {orderedTeams.map(
             (team) => {
               const sessionTeam =
@@ -4922,10 +5322,6 @@ export function AdminConfigApp() {
                       </div>
 
                       <div className="admin-config-team__owners">
-                        <span>
-                          Presidente
-                        </span>
-
                         <strong>
                           {
                             primaryOwner
@@ -4963,10 +5359,6 @@ export function AdminConfigApp() {
                       </div>
 
                       <div className="admin-config-team__credits">
-                        <span>
-                          Crediti
-                        </span>
-
                         <strong>
                           {
                             sessionTeam
@@ -4996,10 +5388,6 @@ export function AdminConfigApp() {
                         {managedLeagueMatchesSession &&
                           sessionTeam && (
                           <div className="admin-config-team__remote-access">
-                            <span className="admin-config-team__remote-access-label">
-                              Remote
-                            </span>
-
                             <div className="admin-config-team__remote-access-main">
                               <span
                                 className={
@@ -5084,65 +5472,102 @@ export function AdminConfigApp() {
                                 </div>
                               ) : qrTeamAccessId ===
                                 sessionTeam.id ? (
-                                <div className="admin-config-team__remote-access-editor">
-                                  <input
-                                    type="password"
-                                    inputMode="numeric"
-                                    autoComplete="off"
-                                    maxLength={4}
-                                    placeholder="PIN QR"
-                                    aria-label={
-                                      `Verifica PIN QR ${team.name}`
-                                    }
-                                    value={
-                                      qrTeamAccessPinDraft
-                                    }
-                                    disabled={
-                                      qrTeamAccessPending
-                                    }
-                                    onChange={(event) => {
-                                      setQrTeamAccessPinDraft(
-                                        event.target.value
-                                          .replace(
-                                            /\D/g,
-                                            ""
-                                          )
-                                          .slice(0, 4)
-                                      );
-                                      setQrTeamAccessError(
-                                        null
-                                      );
-                                    }}
-                                  />
+                                qrTeamAccessUrl ? (
+                                  <div className="admin-config-team__qr-preview">
+                                    <div className="admin-config-team__qr-image">
+                                      <QRCode
+                                        value={qrTeamAccessUrl}
+                                        size={128}
+                                        level="M"
+                                        title={
+                                          `Accesso OPERATOR ${team.name}`
+                                        }
+                                      />
+                                    </div>
 
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      qrTeamAccessPending
-                                    }
-                                    onClick={() => {
-                                      void verifyTeamAccessQrPin();
-                                    }}
-                                  >
-                                    {
-                                      qrTeamAccessPending
-                                        ? "Verifica..."
-                                        : "Verifica"
-                                    }
-                                  </button>
+                                    <div className="admin-config-team__qr-copy">
+                                      <strong>
+                                        {team.name}
+                                      </strong>
 
-                                  <button
-                                    type="button"
-                                    disabled={
-                                      qrTeamAccessPending
-                                    }
-                                    onClick={
-                                      cancelTeamAccessQr
-                                    }
-                                  >
-                                    Annulla
-                                  </button>
-                                </div>
+                                      <span>
+                                        Accesso OPERATOR
+                                      </span>
+
+                                      <button
+                                        type="button"
+                                        onClick={
+                                          cancelTeamAccessQr
+                                        }
+                                      >
+                                        Chiudi
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="admin-config-team__remote-access-editor">
+                                    <input
+                                      type="password"
+                                      inputMode="numeric"
+                                      autoComplete="off"
+                                      maxLength={4}
+                                      placeholder="PIN QR"
+                                      aria-label={
+                                        `Verifica PIN QR ${team.name}`
+                                      }
+                                      value={
+                                        qrTeamAccessPinDraft
+                                      }
+                                      disabled={
+                                        qrTeamAccessPending
+                                      }
+                                      onChange={(event) => {
+                                        setQrTeamAccessPinDraft(
+                                          event.target.value
+                                            .replace(
+                                              /\D/g,
+                                              ""
+                                            )
+                                            .slice(0, 4)
+                                        );
+                                        setQrTeamAccessError(
+                                          null
+                                        );
+                                        setQrTeamAccessUrl(
+                                          null
+                                        );
+                                      }}
+                                    />
+
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        qrTeamAccessPending
+                                      }
+                                      onClick={() => {
+                                        void verifyTeamAccessQrPin();
+                                      }}
+                                    >
+                                      {
+                                        qrTeamAccessPending
+                                          ? "Verifica..."
+                                          : "Verifica"
+                                      }
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        qrTeamAccessPending
+                                      }
+                                      onClick={
+                                        cancelTeamAccessQr
+                                      }
+                                    >
+                                      Annulla
+                                    </button>
+                                  </div>
+                                )
                               ) : (
                                 <div className="admin-config-team__remote-access-editor">
                                   <button
@@ -6558,11 +6983,21 @@ export function AdminConfigApp() {
             </strong>
           </div>
 
-          <span
-            className="admin-config__backup-chevron"
-            aria-hidden="true"
-          >
-            {backupSectionExpanded ? "▲" : "▼"}
+          <span className="admin-config__backup-toggle-meta">
+            <span className="admin-config__backup-toggle-hint">
+              {
+                backupSectionExpanded
+                  ? "Clicca per chiudere"
+                  : "Clicca per aprire"
+              }
+            </span>
+
+            <span
+              className="admin-config__backup-chevron"
+              aria-hidden="true"
+            >
+              {backupSectionExpanded ? "▲" : "▼"}
+            </span>
           </span>
         </button>
 

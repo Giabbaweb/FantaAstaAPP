@@ -873,3 +873,15 @@ export async function uploadTeamLogo(
     }
   );
 }
+
+export type LanAddressCandidate = {
+  interfaceName: string;
+  address: string;
+};
+
+export function fetchLanAddressCandidates():
+  Promise<LanAddressCandidate[]> {
+  return apiRequest<LanAddressCandidate[]>(
+    "/api/system/lan-addresses"
+  );
+}

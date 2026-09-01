@@ -2970,20 +2970,31 @@ label:nth-of-type(5) {
 
 /*
  * Closed team rows:
- * keep all useful information grouped on the left instead of
- * distributing it across the complete available width.
+ * desktop uses one shared six-column geometry.
+ *
+ * 1 ordine
+ * 2 squadra
+ * 3 presidente
+ * 4 crediti
+ * 5 gestione
+ * 6 remote
  */
 
-.admin-config-team:not(.admin-config-team--editing) {
-  grid-template-columns:
-    76px
-    minmax(300px, 430px)
-    minmax(230px, 330px)
+.admin-config__teams {
+  --team-row-columns:
     90px
-    auto
-    1fr;
-  justify-content: start;
-  column-gap: 18px;
+    minmax(300px, 1.35fr)
+    minmax(240px, 1fr)
+    90px
+    170px
+    minmax(320px, 1.15fr);
+  --team-row-gap: 18px;
+}
+
+.admin-config-team:not(.admin-config-team--editing) {
+  grid-template-columns: var(--team-row-columns);
+  justify-content: stretch;
+  column-gap: var(--team-row-gap);
 }
 
 .admin-config-team:not(.admin-config-team--editing)
@@ -2994,33 +3005,39 @@ label:nth-of-type(5) {
 .admin-config-team:not(.admin-config-team--editing)
 .admin-config-team__owners {
   grid-column: 3;
-  justify-self: start;
+  justify-self: stretch;
   width: 100%;
 }
 
 .admin-config-team:not(.admin-config-team--editing)
 .admin-config-team__credits {
   grid-column: 4;
-  justify-self: start;
+  justify-self: stretch;
   text-align: left;
 }
 
 .admin-config-team:not(.admin-config-team--editing)
 .admin-config-team__actions {
   grid-column: 5;
-  justify-self: start;
+  justify-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .admin-config-team:not(.admin-config-team--editing)
 .admin-config-team__actions button {
-  min-height: 34px;
-  padding: 6px 12px;
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 0 12px;
   border: 1px solid #82b79a;
   border-radius: 7px;
   background: #ffffff;
   color: #22633a;
-  font: inherit;
-  font-weight: 700;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -3417,55 +3434,39 @@ label:nth-of-type(5) {
 
 /*
  * Riga chiusa:
- * 1 ordine
- * 2 squadra
- * 3 presidenti
- * 4 crediti
- * 5 modifica squadra
- * 6 accesso remote
+ * la colonna Remote è una sola riga orizzontale.
+ *
+ * ✓ PIN | Modifica PIN | QR
  */
 
 .admin-config-team:not(.admin-config-team--editing)
 .admin-config-team__remote-access {
   grid-column: 6;
-  display: grid;
-  grid-template-columns: auto auto;
-  grid-template-rows: auto auto;
-  align-items: center;
-  justify-content: start;
-  column-gap: 10px;
-  row-gap: 1px;
   min-width: 0;
-}
-
-.admin-config-team__remote-access-label {
-  grid-column: 1;
-  grid-row: 1;
-  align-self: end;
-  color: #64748b;
-  font-size: 0.68rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  align-self: center;
 }
 
 .admin-config-team__remote-access-main {
-  display: contents;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
 }
 
 .admin-config-team__remote-access-status {
-  grid-column: 1;
-  grid-row: 2;
-  align-self: start;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin: 0;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 850;
-  line-height: 1.1;
+  line-height: 1;
+  text-transform: none;
   white-space: nowrap;
 }
 
@@ -3479,28 +3480,31 @@ label:nth-of-type(5) {
   color: #9a5b12;
 }
 
-.admin-config-team__remote-access-edit {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  align-self: center;
-  min-height: 34px;
-  padding: 6px 12px;
-  border: 1px solid #82b79a;
+.admin-config-team__remote-access-edit,
+.admin-config-team__remote-access-main > button {
+  box-sizing: border-box;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid #c5d1db;
   border-radius: 7px;
   background: #ffffff;
-  color: #22633a;
-  font: inherit;
-  font-weight: 700;
+  color: #40566a;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.admin-config-team__remote-access-edit:hover:not(:disabled) {
-  background: #f2faf5;
+.admin-config-team__remote-access-edit:hover:not(:disabled),
+.admin-config-team__remote-access-main > button:hover:not(:disabled) {
+  background: #f5f8fa;
 }
 
-.admin-config-team__remote-access-edit:disabled {
+.admin-config-team__remote-access-edit:disabled,
+.admin-config-team__remote-access-main > button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -3955,7 +3959,7 @@ label:nth-of-type(5) {
   gap: 16px;
   padding: 14px 18px;
   border: 0;
-  background: #ffffff;
+  background: #f4f8fb;
   color: inherit;
   font: inherit;
   text-align: left;
@@ -3975,6 +3979,17 @@ label:nth-of-type(5) {
   flex: 0 0 auto;
   align-items: center;
   gap: 8px;
+}
+
+.admin-config__teams-toggle-hint {
+  color: #7b8c9a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-config__teams-toggle:hover {
+  background: #edf4f8;
 }
 
 .admin-config__teams-toggle-chevron {
@@ -4351,4 +4366,286 @@ label:nth-of-type(5) {
   .admin-config-league__error {
     grid-column: 1;
   }
+}
+
+
+/* ==========================================================
+   M14 — QR-5G
+   Remote base URL configuration
+   ========================================================== */
+
+.admin-config-remote-base {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid #d6e1e9;
+  border-radius: 10px;
+  background: #f8fbfd;
+}
+
+.admin-config-remote-base__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-config-remote-base__heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-config-remote-base__heading > div > strong {
+  color: #243b4d;
+  font-size: 0.92rem;
+}
+
+.admin-config-remote-base__heading > span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.admin-config-remote-base__editor {
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(260px, 1fr)
+    auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-config-remote-base__editor input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #b8c8d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #14283a;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-config-remote-base__detect,
+.admin-config-remote-base__save,
+.admin-config-remote-base__candidates button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #b7c5d1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #294257;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.admin-config-remote-base__save {
+  border-color: #82b79a;
+  color: #22633a;
+}
+
+.admin-config-remote-base__detect:disabled,
+.admin-config-remote-base__save:disabled,
+.admin-config-remote-base__candidates
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-config-remote-base__candidates {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-config-remote-base__candidates > span {
+  color: #52697b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.admin-config-remote-base__candidates > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.admin-config-remote-base__candidates button {
+  display: grid;
+  justify-items: start;
+  min-width: 150px;
+  text-align: left;
+}
+
+.admin-config-remote-base__candidates
+button strong {
+  font-size: 0.78rem;
+}
+
+.admin-config-remote-base__candidates
+button small,
+.admin-config-remote-base__candidates
+> small {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.admin-config-remote-base__error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.admin-config-remote-base__note {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 800px) {
+  .admin-config-remote-base__editor {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-config-remote-base__heading {
+    flex-direction: column;
+  }
+}
+
+
+/* ==========================================================
+   M14 — Girotavolo desktop headings
+   ========================================================== */
+
+.admin-config-team-columns {
+  display: grid;
+  grid-template-columns: var(--team-row-columns);
+  align-items: center;
+  column-gap: var(--team-row-gap);
+  box-sizing: border-box;
+  min-height: 34px;
+  padding: 0 14px;
+  border-top: 1px solid #e3e9ef;
+  border-bottom: 1px solid #dce5ec;
+  background: #f8fafc;
+}
+
+.admin-config-team-columns > span {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.admin-config__backup-toggle-meta {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-config__backup-toggle-hint {
+  color: #7b8c9a;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-config__backup-toggle:hover {
+  background: #edf4f8;
+}
+
+
+/* Per ora il layout tablet resta quello precedente. */
+
+@media (max-width: 1350px) {
+  .admin-config-team-columns {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-config__backup-toggle-hint {
+    display: none;
+  }
+}
+
+/* ==========================================================
+   M14 — QR-5H verified operator QR preview
+   ========================================================== */
+
+.admin-config-team__qr-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border: 1px solid #d6e0e8;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.admin-config-team__qr-image {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 6px;
+  border: 1px solid #e0e7ed;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.admin-config-team__qr-image svg {
+  display: block;
+  width: 128px;
+  height: 128px;
+}
+
+.admin-config-team__qr-copy {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 110px;
+}
+
+.admin-config-team__qr-copy strong {
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.admin-config-team__qr-copy span {
+  display: block;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.admin-config-team__qr-copy button {
+  min-height: 32px;
+  margin-top: 3px;
+  padding: 0 9px;
+  border: 1px solid #c5d1db;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #40566a;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
 }

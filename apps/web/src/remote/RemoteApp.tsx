@@ -55,6 +55,21 @@ type RemoteQrAccess = {
   role: "OPERATOR";
 };
 
+function clearRemoteQrAccessFromUrl(): void {
+  const url =
+    new URL(window.location.href);
+
+  url.searchParams.delete("team");
+  url.searchParams.delete("role");
+  url.searchParams.delete("pin");
+
+  window.history.replaceState(
+    null,
+    "",
+    `${url.pathname}${url.search}${url.hash}`
+  );
+}
+
 function readRemoteQrAccess(): RemoteQrAccess | null {
   const params =
     new URLSearchParams(
@@ -809,6 +824,8 @@ export function RemoteApp() {
               selected.sessionTeam.teamId,
             pin
           });
+
+          clearRemoteQrAccessFromUrl();
 
           setStatus("LIVE");
         },
