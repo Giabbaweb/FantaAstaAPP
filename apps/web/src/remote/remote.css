@@ -462,7 +462,9 @@
 .remote-free-bid {
   display: grid;
   grid-template-columns:
-    minmax(0, 1fr) auto;
+    minmax(72px, 0.85fr)
+    minmax(92px, 1fr)
+    minmax(82px, 0.9fr);
   gap: 8px;
   align-items: end;
 }
@@ -507,7 +509,7 @@
 
 .remote-pass {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 0;
   color: #a02020;
   background: #fff1f1;
   border: 2px solid #e9bcbc;
@@ -552,6 +554,146 @@
   letter-spacing: 0.04em;
 }
 
+
+@media (max-width: 640px) {
+  .remote-player__identity {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .remote-player__main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /*
+   * Il nome del giocatore non può consumare
+   * più di due righe del telecomando.
+   */
+  .remote-player__name {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 2.1em;
+    font-size: clamp(22px, 6.5vw, 32px);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+
+  /*
+   * Ruolo e squadra reale devono restare
+   * sulla stessa riga.
+   */
+  .remote-player__meta {
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .remote-player-role {
+    min-height: 24px;
+    padding: 0 7px;
+    flex: 0 0 auto;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .remote-player__meta > span:not(.remote-player-role) {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /*
+   * L'offerta conserva sempre il proprio spazio.
+   */
+  .remote-player__bid {
+    min-width: 68px;
+    padding: 8px;
+    flex: 0 0 68px;
+  }
+
+  /*
+   * Tre controlli operativi sulla stessa riga.
+   */
+  .remote-free-bid input {
+    padding-left: 8px;
+    padding-right: 8px;
+    text-align: center;
+  }
+
+  .remote-bid-submit {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
+
+/* ==========================================================
+   M14 — Remote mobile vertical space optimisation
+   ========================================================== */
+
+@media (max-width: 640px) {
+  /*
+   * Header applicazione compatto.
+   * Sul telecomando mobile basta FantaAstaAPP + stato ONLINE.
+   */
+  .remote-header {
+    min-height: 42px;
+    padding: 7px 14px;
+  }
+
+  .remote-header__brand {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .remote-header__app {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .remote-header__role {
+    display: none;
+  }
+
+  .remote-connection {
+    min-height: 26px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+
+  /*
+   * Indicatore turno più basso:
+   * resta molto evidente ma non consuma
+   * inutilmente spazio verticale.
+   */
+  .remote-turn {
+    min-height: 84px;
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 16px;
+  }
+
+  .remote-turn__owner {
+    margin-bottom: 3px;
+    font-size: 12px;
+  }
+
+  .remote-turn__message {
+    font-size: clamp(30px, 9vw, 42px);
+  }
+
+  .remote-turn--waiting .remote-turn__message {
+    font-size: clamp(27px, 8vw, 36px);
+  }
+}
+
 @media (max-width: 360px) {
   .remote-team-banner {
     padding-left: 12px;
@@ -568,13 +710,6 @@
     align-items: flex-start;
   }
 
-  .remote-free-bid {
-    grid-template-columns: 1fr;
-  }
-
-  .remote-bid-submit {
-    width: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -110,7 +110,7 @@ function getPlayerRoleLabel(
     case "D":
       return "DIFENSORE";
     case "C":
-      return "CENTROCAMPISTA";
+      return "CENTRO";
     case "A":
       return "ATTACCANTE";
   }
@@ -1356,17 +1356,17 @@ export function RemoteApp() {
               ? "Invio..."
               : "RILANCIA"}
           </button>
-        </div>
 
-        <button
-          className="remote-pass"
-          type="button"
-          onClick={() => {
-            void executePass();
-          }}
-        >
-          PASS
-        </button>
+          <button
+            className="remote-pass"
+            type="button"
+            onClick={() => {
+              void executePass();
+            }}
+          >
+            PASS
+          </button>
+        </div>
       </fieldset>
 
       {liveSessionStatus ===
