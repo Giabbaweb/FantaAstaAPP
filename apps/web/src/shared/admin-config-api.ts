@@ -704,6 +704,28 @@ export function setTeamAccessPin(
   );
 }
 
+export function verifyTeamAccessPin(
+  auctionSessionTeamId: string,
+  pin: string
+): Promise<boolean> {
+  return apiRequest<{
+    valid: boolean;
+  }>(
+    `/api/auction-session-teams/${auctionSessionTeamId}/access-pin/verify`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin
+      })
+    }
+  ).then(
+    (result) => result.valid
+  );
+}
+
 export function reorderAuctionSessionTeams(
   auctionSessionId: string,
   teamIds: string[]
