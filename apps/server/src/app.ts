@@ -107,6 +107,9 @@ import {
   teamAccessRoutes
 } from "./routes/team-access.routes.js";
 import {
+  systemRoutes
+} from "./routes/system.routes.js";
+import {
   teamLogoRoutes
 } from "./routes/team-logo.routes.js";
 import {
@@ -787,6 +790,7 @@ export async function buildApp(
 
   await app.register(runtimeAssetRoutes);
   await app.register(leagueLogoRoutes);
+  await app.register(systemRoutes);
   await app.register(teamAccessRoutes);
   await app.register(teamLogoRoutes);
   await app.register(teamRoutes);

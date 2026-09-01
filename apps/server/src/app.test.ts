@@ -75,6 +75,35 @@ describe("application integration", () => {
     });
   });
 
+  describe("GET /api/system/lan-addresses", () => {
+    it("returns LAN address candidates", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/system/lan-addresses"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        data: Array<{
+          interfaceName: string;
+          address: string;
+        }>;
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+      expect(Array.isArray(body.data)).toBe(true);
+
+      for (const candidate of body.data) {
+        expect(candidate).toEqual({
+          interfaceName: expect.any(String),
+          address: expect.any(String)
+        });
+      }
+    });
+  });
+
   describe("GET /api/db-health", () => {
     it("returns the database health status", async () => {
       const response = await app.inject({
