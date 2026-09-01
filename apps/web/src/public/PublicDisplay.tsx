@@ -96,6 +96,27 @@ function formatPublicTurnElapsed(
   ].join(":");
 }
 
+function formatPublicPlayerRole(
+  role: string
+): string {
+  switch (role) {
+    case "P":
+      return "PORTIERE";
+
+    case "D":
+      return "DIFENSORE";
+
+    case "C":
+      return "CENTROCAMPISTA";
+
+    case "A":
+      return "ATTACCANTE";
+
+    default:
+      return role;
+  }
+}
+
 function createPublicDisplayDeviceId(): string {
   const storageKey =
     "fantaastaapp.publicDisplay.deviceId";
@@ -487,10 +508,6 @@ export function PublicDisplay():
             alt="FantaAstaAPP"
           />
 
-          <h1 className="public-display__title">
-            Schermo Pubblico
-          </h1>
-
           <span className="public-display__mode-label">
             Mod. {displayModeLabel[displayMode]}
           </span>
@@ -556,7 +573,7 @@ export function PublicDisplay():
             </span>
 
             <small>
-              Stato #{snapshot.stateVersion}
+              Aggiornamento #{snapshot.stateVersion}
             </small>
           </div>
         </div>
@@ -621,7 +638,9 @@ export function PublicDisplay():
                     className="public-display__player-role"
                     data-role={currentPlayer.role}
                   >
-                    {currentPlayer.role}
+                    {formatPublicPlayerRole(
+                      currentPlayer.role
+                    )}
                   </span>
 
                   {currentPlayer.realTeamName && (
@@ -902,7 +921,10 @@ export function PublicDisplay():
                             <div
                               key={role}
                               className="public-display__team-role"
-                                data-role={role}
+                              data-role={role}
+                              data-complete={
+                                data.count >= data.limit
+                              }
                             >
                               <span>
                                 {role}
@@ -923,6 +945,15 @@ export function PublicDisplay():
           }
         </div>
       </section>
+
+      <footer className="public-display__signature">
+        <span>Powered by</span>
+
+        <img
+          src="/branding/arti-john-logo.png"
+          alt="Arti John"
+        />
+      </footer>
     </main>
   );
 }

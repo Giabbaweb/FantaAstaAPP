@@ -3268,3 +3268,183 @@ body {
   object-fit: contain;
   object-position: left center;
 }
+
+
+/* Public role colors — cockpit parity */
+
+/* Current called-player role: full Italian label */
+.public-display__player-role {
+  min-width: 0;
+  width: auto;
+  padding: 7px 12px;
+  font-size: clamp(13px, 1.15vw, 19px);
+  white-space: nowrap;
+}
+
+.public-display__player-role[data-role="P"] {
+  background: #1565c0;
+}
+
+.public-display__player-role[data-role="D"] {
+  background: #218838;
+}
+
+.public-display__player-role[data-role="C"] {
+  background: #795548;
+}
+
+.public-display__player-role[data-role="A"] {
+  background: #d32f2f;
+}
+
+/* Incomplete roster slots */
+.public-display__team-role[data-role="P"] {
+  background: #e3f0ff;
+}
+
+.public-display__team-role[data-role="P"] span,
+.public-display__team-role[data-role="P"] strong {
+  color: #1565c0;
+}
+
+.public-display__team-role[data-role="D"] {
+  background: #e6f5ea;
+}
+
+.public-display__team-role[data-role="D"] span,
+.public-display__team-role[data-role="D"] strong {
+  color: #218838;
+}
+
+.public-display__team-role[data-role="C"] {
+  background: #ffffc2;
+}
+
+.public-display__team-role[data-role="C"] span,
+.public-display__team-role[data-role="C"] strong {
+  color: #795548;
+}
+
+.public-display__team-role[data-role="A"] {
+  background: #fdeaea;
+}
+
+.public-display__team-role[data-role="A"] span,
+.public-display__team-role[data-role="A"] strong {
+  color: #d32f2f;
+}
+
+/* Completed roster slots: visually switched off */
+.public-display__team-role[data-complete="true"] {
+  background: #f8fafc;
+}
+
+.public-display__team-role[data-complete="true"] span,
+.public-display__team-role[data-complete="true"] strong {
+  color: #94a3b8;
+}
+
+
+/* Public final polish — mode label, completed slots, signature */
+
+/* Header: only the compact display-mode label remains */
+.public-display__app-brand {
+  align-items: center;
+}
+
+.public-display__mode-label {
+  margin-left: clamp(8px, 0.8vw, 14px);
+  font-size: clamp(10px, 0.7vw, 12px);
+  font-weight: 800;
+  color: #718095;
+  white-space: nowrap;
+}
+
+/*
+ * Completed roster roles must stay visually muted in every
+ * display mode. These rules intentionally come last so they
+ * win over STANDARD / DARK / OUTDOOR / COMPACT role colors.
+ */
+.public-display
+  .public-display__team-role[data-complete="true"] {
+  background: #f8fafc;
+}
+
+.public-display
+  .public-display__team-role[data-complete="true"] span,
+.public-display
+  .public-display__team-role[data-complete="true"] strong {
+  color: #94a3b8;
+}
+
+/* Preserve muted semantics also in DARK mode */
+.public-display--dark
+  .public-display__team-role[data-complete="true"] {
+  background: #202a36;
+}
+
+.public-display--dark
+  .public-display__team-role[data-complete="true"] span,
+.public-display--dark
+  .public-display__team-role[data-complete="true"] strong {
+  color: #7f8b99;
+}
+
+/* Outdoor stays high-contrast but clearly switched off */
+.public-display--high_contrast_outdoor
+  .public-display__team-role[data-complete="true"] {
+  background: #eef1f4;
+}
+
+.public-display--high_contrast_outdoor
+  .public-display__team-role[data-complete="true"] span,
+.public-display--high_contrast_outdoor
+  .public-display__team-role[data-complete="true"] strong {
+  color: #7c8794;
+}
+
+/* Compact mode follows the standard muted palette */
+.public-display--compact
+  .public-display__team-role[data-complete="true"] {
+  background: #f8fafc;
+}
+
+.public-display--compact
+  .public-display__team-role[data-complete="true"] span,
+.public-display--compact
+  .public-display__team-role[data-complete="true"] strong {
+  color: #94a3b8;
+}
+
+/* Discreet author signature */
+.public-display__signature {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 0.5vw, 9px);
+  min-height: 24px;
+  margin-top: 5px;
+  padding: 3px 8px 2px;
+  color: #8a96a6;
+  font-size: clamp(8px, 0.62vw, 11px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.public-display__signature img {
+  display: block;
+  width: auto;
+  height: clamp(28px, 2.2vw, 38px);
+  max-width: clamp(130px, 11vw, 190px);
+  object-fit: contain;
+}
+
+/* Signature must remain understated in alternate modes */
+.public-display--dark .public-display__signature {
+  color: #7f8b99;
+}
+
+.public-display--high_contrast_outdoor
+  .public-display__signature {
+  color: #59636f;
+}
