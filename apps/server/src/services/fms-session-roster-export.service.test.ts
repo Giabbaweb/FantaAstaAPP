@@ -83,6 +83,7 @@ function createService(input?: {
                 suspensionReason: null,
                 initialCredits: 300,
                 maximumInitialRosterEntries: 11,
+                remoteBaseUrl: null,
                 createdAt:
                   "2026-08-16 00:00:00",
                 updatedAt:

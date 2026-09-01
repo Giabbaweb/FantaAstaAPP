@@ -131,6 +131,8 @@ export class SqliteRealtimeSnapshotSessionReader
           auctionSessions.initialCredits,
         maximumInitialRosterEntries:
           auctionSessions.maximumInitialRosterEntries,
+        remoteBaseUrl:
+          auctionSessions.remoteBaseUrl,
         stateVersion:
           auctionSessions.stateVersion,
         createdAt: auctionSessions.createdAt,

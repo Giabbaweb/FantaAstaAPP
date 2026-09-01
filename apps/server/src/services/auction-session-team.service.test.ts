@@ -193,6 +193,7 @@ class InMemoryAuctionSessionRepository {
       suspensionReason: null,
       initialCredits: 300,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
       createdAt: "2026-08-24T00:00:00.000Z",
       updatedAt: "2026-08-24T00:00:00.000Z"
     };

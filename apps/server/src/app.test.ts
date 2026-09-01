@@ -578,6 +578,7 @@ describe("application integration", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -663,6 +664,7 @@ describe("application integration", () => {
       suspensionReason: null,
       initialCredits: 330,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });
@@ -755,6 +757,7 @@ describe("GET /api/auction-sessions", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -1118,6 +1121,7 @@ describe("GET /api/auction-sessions", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -1718,6 +1722,109 @@ describe("GET /api/auction-sessions", () => {
             status: "RUNNING"
           }),
           error: null
+        });
+      }
+    );
+
+    it(
+      "updates remote base URL while the session is RUNNING",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-running-remote-url",
+          name: "Patch Running Remote URL League",
+          normalizedName:
+            "patch running remote url league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-running-remote-url",
+          leagueId:
+            "league-patch-running-remote-url",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          maximumInitialRosterEntries: 11,
+          status: "RUNNING"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-running-remote-url",
+          payload: {
+            remoteBaseUrl:
+              "http://192.168.0.197:5173"
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            id:
+              "session-patch-running-remote-url",
+            remoteBaseUrl:
+              "http://192.168.0.197:5173",
+            status: "RUNNING"
+          }),
+          error: null
+        });
+
+        const stored =
+          await db.query.auctionSessions.findFirst({
+            where: (table, { eq }) =>
+              eq(
+                table.id,
+                "session-patch-running-remote-url"
+              )
+          });
+
+        expect(stored?.remoteBaseUrl).toBe(
+          "http://192.168.0.197:5173"
+        );
+      }
+    );
+
+    it(
+      "rejects remote base URL changes when the session is COMPLETED",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-completed-remote-url",
+          name:
+            "Patch Completed Remote URL League",
+          normalizedName:
+            "patch completed remote url league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id:
+            "session-patch-completed-remote-url",
+          leagueId:
+            "league-patch-completed-remote-url",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          maximumInitialRosterEntries: 11,
+          status: "COMPLETED"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-completed-remote-url",
+          payload: {
+            remoteBaseUrl:
+              "http://192.168.0.197:5173"
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "SESSION_READ_ONLY"
+          })
         });
       }
     );

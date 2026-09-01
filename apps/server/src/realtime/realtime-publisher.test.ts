@@ -51,6 +51,7 @@ describe("RealtimePublisher", () => {
         suspensionReason: null,
         initialCredits: 330,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
         createdAt:
           "2026-08-02T20:00:00.000Z",
         updatedAt:

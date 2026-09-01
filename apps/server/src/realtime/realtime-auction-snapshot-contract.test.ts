@@ -70,6 +70,7 @@ describe("realtime auction snapshot contracts", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt:
           "2026-08-02T19:00:00.000Z",
         updatedAt:
@@ -127,6 +128,7 @@ describe("realtime auction snapshot contracts", () => {
           suspensionReason: null,
           initialCredits: 330,
           maximumInitialRosterEntries: 11,
+          remoteBaseUrl: null,
           createdAt:
             "2026-08-02T19:00:00.000Z",
           updatedAt:
@@ -165,6 +167,7 @@ describe("realtime auction snapshot contracts", () => {
           suspensionReason: null,
           initialCredits: 330,
           maximumInitialRosterEntries: 11,
+          remoteBaseUrl: null,
           createdAt:
             "2026-08-02T19:00:00.000Z",
           updatedAt:

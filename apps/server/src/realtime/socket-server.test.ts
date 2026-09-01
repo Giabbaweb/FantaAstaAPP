@@ -680,6 +680,7 @@ describe("Socket.IO server", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });

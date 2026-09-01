@@ -26,6 +26,7 @@ describe("RealtimeSnapshotService", () => {
     suspensionReason: null,
     initialCredits: 330,
     maximumInitialRosterEntries: 11,
+    remoteBaseUrl: null,
     createdAt:
       "2026-08-02T18:00:00.000Z",
     updatedAt:

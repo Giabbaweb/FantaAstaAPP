@@ -261,6 +261,8 @@ export const auctionSessionSchema = z.object({
   initialCredits: z.number().int().nonnegative(),
   maximumInitialRosterEntries:
     z.number().int().min(0).max(24),
+  remoteBaseUrl:
+    z.string().url().nullable(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1)
 });
@@ -287,7 +289,9 @@ export const updateAuctionSessionSchema = z
     editionNumber: z.number().int().positive().optional(),
     initialCredits: z.number().int().nonnegative().optional(),
     maximumInitialRosterEntries:
-      z.number().int().min(0).max(24).optional()
+      z.number().int().min(0).max(24).optional(),
+    remoteBaseUrl:
+      z.string().url().nullable().optional()
   })
   .refine(
     (value) => Object.values(value).some((field) => field !== undefined),

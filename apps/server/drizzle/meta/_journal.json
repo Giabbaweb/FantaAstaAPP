@@ -169,6 +169,13 @@
       "when": 1787603668390,
       "tag": "0023_lyrical_blue_shield",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1788290905378,
+      "tag": "0024_melodic_doomsday",
+      "breakpoints": true
     }
   ]
 }

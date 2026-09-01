@@ -38,6 +38,7 @@ function createAuctionSession(
     suspensionReason: null,
     initialCredits: 300,
     maximumInitialRosterEntries: 11,
+    remoteBaseUrl: null,
     createdAt,
     updatedAt,
     ...overrides

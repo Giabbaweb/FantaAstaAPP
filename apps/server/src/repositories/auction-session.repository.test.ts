@@ -61,6 +61,7 @@ describe("SqliteAuctionSessionRepository", () => {
       suspensionReason: "PIZZA_BREAK",
       initialCredits: 330,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });

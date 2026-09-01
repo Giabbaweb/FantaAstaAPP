@@ -75,6 +75,8 @@ export const auctionSessions = sqliteTable(
         .notNull()
         .default(11),
 
+    remoteBaseUrl: text("remote_base_url"),
+
     stateVersion: integer("state_version")
       .notNull()
       .default(0),

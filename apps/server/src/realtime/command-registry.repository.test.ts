@@ -79,6 +79,7 @@ describe("SqliteCommandRegistryRepository", () => {
       editionNumber: 1,
       initialCredits: 330,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
       stateVersion: 1
     });
 
@@ -164,6 +165,7 @@ describe("SqliteCommandRegistryRepository", () => {
       suspensionReason: "PIZZA_BREAK" as const,
       initialCredits: 330,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
       createdAt:
         "2026-08-12T20:00:00.000Z",
       updatedAt:
@@ -218,6 +220,7 @@ describe("SqliteCommandRegistryRepository", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt:
           "2026-08-12T20:00:00.000Z",
         updatedAt:

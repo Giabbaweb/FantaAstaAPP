@@ -56,6 +56,8 @@ const sessionSelection = {
     auctionSessions.initialCredits,
   maximumInitialRosterEntries:
     auctionSessions.maximumInitialRosterEntries,
+  remoteBaseUrl:
+    auctionSessions.remoteBaseUrl,
   createdAt: auctionSessions.createdAt,
   updatedAt: auctionSessions.updatedAt
 };
