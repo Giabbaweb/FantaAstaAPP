@@ -49,6 +49,43 @@ type StoredRemoteAccess = {
   pin: string;
 };
 
+type RemoteQrAccess = {
+  teamId: string;
+  pin: string;
+  role: "OPERATOR";
+};
+
+function readRemoteQrAccess(): RemoteQrAccess | null {
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const teamId =
+    params.get("team")?.trim() ?? "";
+
+  const pin =
+    params.get("pin")?.trim() ?? "";
+
+  const role =
+    params.get("role")?.trim().toUpperCase() ??
+    "";
+
+  if (
+    !teamId ||
+    !/^\d{4}$/.test(pin) ||
+    role !== "OPERATOR"
+  ) {
+    return null;
+  }
+
+  return {
+    teamId,
+    pin,
+    role: "OPERATOR"
+  };
+}
+
 function getPlayerRoleLabel(
   role: "P" | "D" | "C" | "A"
 ): string {
@@ -267,28 +304,46 @@ export function RemoteApp() {
         setTeams(loadedTeams);
         setOwners(loadedOwners);
 
-        const storedAccess =
-          readStoredRemoteAccess();
+        const qrAccess =
+          readRemoteQrAccess();
 
-        if (
-          storedAccess &&
-          storedAccess.auctionSessionId ===
-            activeSession.id &&
+        const qrTeamIsValid =
+          qrAccess !== null &&
           loadedSessionTeams.some(
             (sessionTeam) =>
               sessionTeam.teamId ===
-              storedAccess.teamId
-          )
-        ) {
+              qrAccess.teamId
+          );
+
+        if (qrAccess && qrTeamIsValid) {
           setSelectedTeamId(
-            storedAccess.teamId
+            qrAccess.teamId
           );
-          setPin(
-            storedAccess.pin
-          );
-          setRestorePending(true);
-        } else if (storedAccess) {
-          clearStoredRemoteAccess();
+          setPin(qrAccess.pin);
+        } else {
+          const storedAccess =
+            readStoredRemoteAccess();
+
+          if (
+            storedAccess &&
+            storedAccess.auctionSessionId ===
+              activeSession.id &&
+            loadedSessionTeams.some(
+              (sessionTeam) =>
+                sessionTeam.teamId ===
+                storedAccess.teamId
+            )
+          ) {
+            setSelectedTeamId(
+              storedAccess.teamId
+            );
+            setPin(
+              storedAccess.pin
+            );
+            setRestorePending(true);
+          } else if (storedAccess) {
+            clearStoredRemoteAccess();
+          }
         }
 
         setStatus("LOGIN");
@@ -884,80 +939,108 @@ export function RemoteApp() {
           {session.editionNumber}
         </p>
 
-        <label>
-          Squadra
-          <select
-            value={selectedTeamId}
-            disabled={
-              status === "CONNECTING"
-            }
-            onChange={(event) => {
-              setSelectedTeamId(
-                event.target.value
-              );
-              setErrorMessage(null);
-            }}
-          >
-            <option value="">
-              Seleziona squadra
-            </option>
+        {selected &&
+        readRemoteQrAccess()?.teamId ===
+          selected.sessionTeam.teamId ? (
+          <>
+            <p>
+              Accesso telecomando pronto
+            </p>
 
-            {selectableTeams.map(
-              ({
-                sessionTeam,
-                team
-              }) => (
-                <option
-                  key={team.id}
-                  value={team.id}
-                >
-                  {sessionTeam.tableOrder}.{" "}
-                  {team.name}
+            <h3>
+              Connetti come {selected.team.name}
+            </h3>
+
+            <button
+              type="button"
+              disabled={
+                status === "CONNECTING"
+              }
+              onClick={connect}
+            >
+              {status === "CONNECTING"
+                ? "Connessione..."
+                : `Connetti come ${selected.team.name}`}
+            </button>
+          </>
+        ) : (
+          <>
+            <label>
+              Squadra
+              <select
+                value={selectedTeamId}
+                disabled={
+                  status === "CONNECTING"
+                }
+                onChange={(event) => {
+                  setSelectedTeamId(
+                    event.target.value
+                  );
+                  setErrorMessage(null);
+                }}
+              >
+                <option value="">
+                  Seleziona squadra
                 </option>
-              )
-            )}
-          </select>
-        </label>
 
-        <br />
+                {selectableTeams.map(
+                  ({
+                    sessionTeam,
+                    team
+                  }) => (
+                    <option
+                      key={team.id}
+                      value={team.id}
+                    >
+                      {sessionTeam.tableOrder}.{" "}
+                      {team.name}
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
 
-        <label>
-          PIN
-          <input
-            type="password"
-            inputMode="numeric"
-            autoComplete="off"
-            maxLength={4}
-            value={pin}
-            disabled={
-              status === "CONNECTING"
-            }
-            onChange={(event) => {
-              setPin(
-                event.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, 4)
-              );
-              setErrorMessage(null);
-            }}
-          />
-        </label>
+            <br />
 
-        <br />
+            <label>
+              PIN
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={4}
+                value={pin}
+                disabled={
+                  status === "CONNECTING"
+                }
+                onChange={(event) => {
+                  setPin(
+                    event.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 4)
+                  );
+                  setErrorMessage(null);
+                }}
+              />
+            </label>
 
-        <button
-          type="button"
-          disabled={
-            status === "CONNECTING" ||
-            !selected ||
-            pin.length !== 4
-          }
-          onClick={connect}
-        >
-          {status === "CONNECTING"
-            ? "Connessione..."
-            : "Accedi"}
-        </button>
+            <br />
+
+            <button
+              type="button"
+              disabled={
+                status === "CONNECTING" ||
+                !selected ||
+                pin.length !== 4
+              }
+              onClick={connect}
+            >
+              {status === "CONNECTING"
+                ? "Connessione..."
+                : "Accedi"}
+            </button>
+          </>
+        )}
 
         {errorMessage && (
           <p>{errorMessage}</p>
