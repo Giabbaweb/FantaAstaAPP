@@ -1,4 +1,5 @@
 import {
+  and,
   eq,
   inArray
 } from "drizzle-orm";
@@ -141,10 +142,16 @@ export class SqliteAuctionSessionReadinessRepository
             })
             .from(rosterEntries)
             .where(
-              inArray(
-                rosterEntries
-                  .auctionSessionTeamId,
-                sessionTeamIds
+              and(
+                inArray(
+                  rosterEntries
+                    .auctionSessionTeamId,
+                  sessionTeamIds
+                ),
+                eq(
+                  rosterEntries.source,
+                  "INITIAL_ROSTER"
+                )
               )
             )
         : [];
