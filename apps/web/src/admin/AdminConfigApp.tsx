@@ -53,6 +53,7 @@ import {
   restoreRecoveryPoint,
   resetSetupData,
   setTeamAccessPin,
+  verifyTeamAccessPin,
   updateAuctionSession,
   updateLeague,
   updateTeam,
@@ -688,6 +689,30 @@ export function AdminConfigApp() {
   );
 
   const [
+    qrTeamAccessId,
+    setQrTeamAccessId
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    qrTeamAccessPinDraft,
+    setQrTeamAccessPinDraft
+  ] = useState("");
+
+  const [
+    qrTeamAccessPending,
+    setQrTeamAccessPending
+  ] = useState(false);
+
+  const [
+    qrTeamAccessError,
+    setQrTeamAccessError
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
     tableOrderPending,
     setTableOrderPending
   ] = useState(false);
@@ -1173,6 +1198,9 @@ export function AdminConfigApp() {
     setEditingTeamAccessId(null);
     setTeamAccessPinDraft("");
     setTeamAccessPinError(null);
+    setQrTeamAccessId(null);
+    setQrTeamAccessPinDraft("");
+    setQrTeamAccessError(null);
 
     if (!session) {
       setTeamAccessConfigured({});
@@ -1516,6 +1544,88 @@ export function AdminConfigApp() {
       );
     } finally {
       setTeamAccessPinPending(false);
+    }
+  }
+
+  function beginTeamAccessQr(
+    auctionSessionTeamId: string
+  ): void {
+    if (
+      teamAccessPinPending ||
+      qrTeamAccessPending
+    ) {
+      return;
+    }
+
+    setEditingTeamAccessId(null);
+    setTeamAccessPinDraft("");
+    setTeamAccessPinError(null);
+
+    setQrTeamAccessId(
+      auctionSessionTeamId
+    );
+    setQrTeamAccessPinDraft("");
+    setQrTeamAccessError(null);
+  }
+
+  function cancelTeamAccessQr(): void {
+    if (qrTeamAccessPending) {
+      return;
+    }
+
+    setQrTeamAccessId(null);
+    setQrTeamAccessPinDraft("");
+    setQrTeamAccessError(null);
+  }
+
+  async function verifyTeamAccessQrPin():
+    Promise<void> {
+    if (
+      !qrTeamAccessId ||
+      qrTeamAccessPending
+    ) {
+      return;
+    }
+
+    if (
+      !/^\d{4}$/.test(
+        qrTeamAccessPinDraft
+      )
+    ) {
+      setQrTeamAccessError(
+        "Il PIN deve contenere esattamente 4 cifre."
+      );
+      return;
+    }
+
+    setQrTeamAccessPending(true);
+    setQrTeamAccessError(null);
+
+    try {
+      const valid =
+        await verifyTeamAccessPin(
+          qrTeamAccessId,
+          qrTeamAccessPinDraft
+        );
+
+      if (!valid) {
+        setQrTeamAccessError(
+          "PIN non corretto per questa squadra."
+        );
+        return;
+      }
+
+      setQrTeamAccessError(
+        "PIN verificato."
+      );
+    } catch (error) {
+      setQrTeamAccessError(
+        error instanceof Error
+          ? error.message
+          : "Errore durante la verifica del PIN."
+      );
+    } finally {
+      setQrTeamAccessPending(false);
     }
   }
 
