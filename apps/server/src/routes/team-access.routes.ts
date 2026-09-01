@@ -37,6 +37,13 @@ type TeamAccessStatusListResponse = {
   error: null;
 };
 
+type TeamAccessVerificationResponse = {
+  data: {
+    valid: boolean;
+  };
+  error: null;
+};
+
 type InvalidRequestResponse = {
   data: null;
   error: {
@@ -69,6 +76,65 @@ export const teamAccessRoutes:
             data: status,
             error: null
           });
+        }
+      );
+
+      fastify.post<{
+        Params: TeamAccessParams;
+        Body: SetTeamAccessPinInput;
+        Reply:
+          | TeamAccessVerificationResponse
+          | InvalidRequestResponse
+          | TeamAccessNotFoundResponse;
+      }>(
+        "/api/auction-session-teams/:id/access-pin/verify",
+        async (request, reply) => {
+          const validation =
+            setTeamAccessPinSchema.safeParse(
+              request.body
+            );
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  validation.error.issues
+                    .map(
+                      (issue) =>
+                        issue.message
+                    )
+                    .join("; ")
+              }
+            });
+          }
+
+          try {
+            const valid =
+              await service.verifyAccessPin(
+                request.params.id,
+                validation.data.pin
+              );
+
+            return reply.code(200).send({
+              data: {
+                valid
+              },
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapTeamAccessError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
         }
       );
 
