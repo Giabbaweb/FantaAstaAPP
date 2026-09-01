@@ -5082,28 +5082,113 @@ export function AdminConfigApp() {
                                     Annulla
                                   </button>
                                 </div>
+                              ) : qrTeamAccessId ===
+                                sessionTeam.id ? (
+                                <div className="admin-config-team__remote-access-editor">
+                                  <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    autoComplete="off"
+                                    maxLength={4}
+                                    placeholder="PIN QR"
+                                    aria-label={
+                                      `Verifica PIN QR ${team.name}`
+                                    }
+                                    value={
+                                      qrTeamAccessPinDraft
+                                    }
+                                    disabled={
+                                      qrTeamAccessPending
+                                    }
+                                    onChange={(event) => {
+                                      setQrTeamAccessPinDraft(
+                                        event.target.value
+                                          .replace(
+                                            /\D/g,
+                                            ""
+                                          )
+                                          .slice(0, 4)
+                                      );
+                                      setQrTeamAccessError(
+                                        null
+                                      );
+                                    }}
+                                  />
+
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      qrTeamAccessPending
+                                    }
+                                    onClick={() => {
+                                      void verifyTeamAccessQrPin();
+                                    }}
+                                  >
+                                    {
+                                      qrTeamAccessPending
+                                        ? "Verifica..."
+                                        : "Verifica"
+                                    }
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      qrTeamAccessPending
+                                    }
+                                    onClick={
+                                      cancelTeamAccessQr
+                                    }
+                                  >
+                                    Annulla
+                                  </button>
+                                </div>
                               ) : (
-                                <button
-                                  type="button"
-                                  className="admin-config-team__remote-access-edit"
-                                  disabled={
-                                    teamAccessPinPending ||
-                                    teamAccessLoading
-                                  }
-                                  onClick={() => {
-                                    beginTeamAccessEdit(
-                                      sessionTeam.id
-                                    );
-                                  }}
-                                >
-                                  {
-                                    teamAccessConfigured[
-                                      sessionTeam.id
-                                    ] === true
-                                      ? "Modifica PIN"
-                                      : "Imposta PIN"
-                                  }
-                                </button>
+                                <div className="admin-config-team__remote-access-editor">
+                                  <button
+                                    type="button"
+                                    className="admin-config-team__remote-access-edit"
+                                    disabled={
+                                      teamAccessPinPending ||
+                                      qrTeamAccessPending ||
+                                      teamAccessLoading
+                                    }
+                                    onClick={() => {
+                                      beginTeamAccessEdit(
+                                        sessionTeam.id
+                                      );
+                                    }}
+                                  >
+                                    {
+                                      teamAccessConfigured[
+                                        sessionTeam.id
+                                      ] === true
+                                        ? "Modifica PIN"
+                                        : "Imposta PIN"
+                                    }
+                                  </button>
+
+                                  {teamAccessConfigured[
+                                    sessionTeam.id
+                                  ] === true && (
+                                    <button
+                                      type="button"
+                                      className="admin-config-team__remote-access-edit"
+                                      disabled={
+                                        teamAccessPinPending ||
+                                        qrTeamAccessPending ||
+                                        teamAccessLoading
+                                      }
+                                      onClick={() => {
+                                        beginTeamAccessQr(
+                                          sessionTeam.id
+                                        );
+                                      }}
+                                    >
+                                      QR
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
 
@@ -5112,6 +5197,14 @@ export function AdminConfigApp() {
                               teamAccessPinError && (
                               <p className="admin-config-team__remote-access-error">
                                 {teamAccessPinError}
+                              </p>
+                            )}
+
+                            {qrTeamAccessId ===
+                              sessionTeam.id &&
+                              qrTeamAccessError && (
+                              <p className="admin-config-team__remote-access-error">
+                                {qrTeamAccessError}
                               </p>
                             )}
                           </div>
