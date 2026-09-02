@@ -48,7 +48,8 @@ export type RegisteredAuctionSessionCommandType =
 export type RegisteredManualRosterCommandType =
   | "ADD_MANUAL_INITIAL_ROSTER_ENTRY"
   | "ADD_MANUAL_ROSTER_ASSIGNMENT"
-  | "TECHNICAL_ROSTER_CORRECTION";
+  | "TECHNICAL_ROSTER_CORRECTION"
+  | "REMOVE_ROSTER_ASSIGNMENT";
 
 export type RegisteredManualInitialRosterCommandType =
   Extract<
@@ -66,6 +67,12 @@ export type RegisteredTechnicalRosterCorrectionCommandType =
   Extract<
     RegisteredManualRosterCommandType,
     "TECHNICAL_ROSTER_CORRECTION"
+  >;
+
+export type RegisteredRosterAssignmentRemovalCommandType =
+  Extract<
+    RegisteredManualRosterCommandType,
+    "REMOVE_ROSTER_ASSIGNMENT"
   >;
 
 type RegisteredCommandBase = {
@@ -136,12 +143,36 @@ export type RegisteredTechnicalRosterCorrectionCommand =
       RegisteredTechnicalRosterCorrectionResult;
   };
 
+export type RegisteredRosterAssignmentRemovalSnapshot = {
+  rosterEntry: RosterEntry;
+  auctionSessionTeamId: string;
+  playerId: string;
+  acquisitionCost: number;
+};
+
+export type RegisteredRosterAssignmentRemovalResult = {
+  removed:
+    RegisteredRosterAssignmentRemovalSnapshot;
+  remainingCreditsAfterRemoval: number;
+};
+
+export type RegisteredRosterAssignmentRemovalCommand =
+  RegisteredCommandBase & {
+    commandScope: "AUCTION_SESSION";
+    auctionCallId: null;
+    commandType:
+      RegisteredRosterAssignmentRemovalCommandType;
+    result:
+      RegisteredRosterAssignmentRemovalResult;
+  };
+
 export type RegisteredCommand =
   | RegisteredAuctionCommand
   | RegisteredAuctionSessionCommand
   | RegisteredManualInitialRosterCommand
   | RegisteredManualRosterAssignmentCommand
-  | RegisteredTechnicalRosterCorrectionCommand;
+  | RegisteredTechnicalRosterCorrectionCommand
+  | RegisteredRosterAssignmentRemovalCommand;
 
 export type RegisterAuctionCommandInput = {
   auctionSessionId: string;
@@ -197,6 +228,18 @@ export type RegisterTechnicalRosterCorrectionCommandInput = {
   requestFingerprint: string;
   result:
     RegisteredTechnicalRosterCorrectionResult;
+};
+
+export type RegisterRosterAssignmentRemovalCommandInput = {
+  auctionSessionId: string;
+  commandId: string;
+  commandType:
+    RegisteredRosterAssignmentRemovalCommandType;
+  expectedStateVersion: number;
+  resultStateVersion: number;
+  requestFingerprint: string;
+  result:
+    RegisteredRosterAssignmentRemovalResult;
 };
 
 function parseTechnicalRosterCorrectionSnapshot(
@@ -291,6 +334,93 @@ function parseTechnicalRosterCorrectionResult(
   };
 }
 
+function parseRosterAssignmentRemovalSnapshot(
+  payload: unknown
+): RegisteredRosterAssignmentRemovalSnapshot | null {
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    return null;
+  }
+
+  const candidate =
+    payload as Record<string, unknown>;
+
+  const parsedRosterEntry =
+    rosterEntrySchema.safeParse(
+      candidate.rosterEntry
+    );
+
+  if (!parsedRosterEntry.success) {
+    return null;
+  }
+
+  if (
+    typeof candidate.auctionSessionTeamId !==
+      "string" ||
+    candidate.auctionSessionTeamId.length === 0 ||
+    typeof candidate.playerId !== "string" ||
+    candidate.playerId.length === 0 ||
+    typeof candidate.acquisitionCost !==
+      "number" ||
+    !Number.isInteger(
+      candidate.acquisitionCost
+    ) ||
+    candidate.acquisitionCost <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    rosterEntry:
+      parsedRosterEntry.data,
+    auctionSessionTeamId:
+      candidate.auctionSessionTeamId,
+    playerId:
+      candidate.playerId,
+    acquisitionCost:
+      candidate.acquisitionCost
+  };
+}
+
+function parseRosterAssignmentRemovalResult(
+  payload: unknown
+): RegisteredRosterAssignmentRemovalResult | null {
+  if (
+    typeof payload !== "object" ||
+    payload === null
+  ) {
+    return null;
+  }
+
+  const candidate =
+    payload as Record<string, unknown>;
+
+  const removed =
+    parseRosterAssignmentRemovalSnapshot(
+      candidate.removed
+    );
+
+  if (
+    !removed ||
+    typeof candidate.remainingCreditsAfterRemoval !==
+      "number" ||
+    !Number.isInteger(
+      candidate.remainingCreditsAfterRemoval
+    ) ||
+    candidate.remainingCreditsAfterRemoval < 0
+  ) {
+    return null;
+  }
+
+  return {
+    removed,
+    remainingCreditsAfterRemoval:
+      candidate.remainingCreditsAfterRemoval
+  };
+}
+
 export interface CommandRegistryRepository {
   findByCommandId(
     auctionSessionId: string,
@@ -347,6 +477,15 @@ export interface CommandRegistryRepository {
     executor: DatabaseWriteExecutor,
     input: RegisterTechnicalRosterCorrectionCommandInput
   ): RegisteredTechnicalRosterCorrectionCommand;
+
+  createRosterAssignmentRemovalCommand(
+    input: RegisterRosterAssignmentRemovalCommandInput
+  ): Promise<RegisteredRosterAssignmentRemovalCommand>;
+
+  createRosterAssignmentRemovalCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterRosterAssignmentRemovalCommandInput
+  ): RegisteredRosterAssignmentRemovalCommand;
 }
 
 export class SqliteCommandRegistryRepository
@@ -695,6 +834,66 @@ export class SqliteCommandRegistryRepository
     return mapped;
   }
 
+  async createRosterAssignmentRemovalCommand(
+    input: RegisterRosterAssignmentRemovalCommandInput
+  ): Promise<RegisteredRosterAssignmentRemovalCommand> {
+    return this.createRosterAssignmentRemovalCommandWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createRosterAssignmentRemovalCommandWithExecutor(
+    executor: DatabaseWriteExecutor,
+    input: RegisterRosterAssignmentRemovalCommandInput
+  ): RegisteredRosterAssignmentRemovalCommand {
+    const [record] = executor
+      .insert(commandRegistry)
+      .values({
+        id: randomUUID(),
+        auctionSessionId:
+          input.auctionSessionId,
+        commandScope:
+          "AUCTION_SESSION",
+        auctionCallId: null,
+        commandId:
+          input.commandId,
+        commandType:
+          input.commandType,
+        expectedStateVersion:
+          input.expectedStateVersion,
+        resultStateVersion:
+          input.resultStateVersion,
+        requestFingerprint:
+          input.requestFingerprint,
+        resultPayload:
+          JSON.stringify(input.result)
+      })
+      .returning()
+      .all();
+
+    if (!record) {
+      throw new Error(
+        `Failed to register roster assignment removal command "${input.commandId}"`
+      );
+    }
+
+    const mapped = this.mapRecord(record);
+
+    if (
+      mapped.commandScope !==
+        "AUCTION_SESSION" ||
+      mapped.commandType !==
+        "REMOVE_ROSTER_ASSIGNMENT"
+    ) {
+      throw new Error(
+        `Command "${input.commandId}" has an invalid command type`
+      );
+    }
+
+    return mapped;
+  }
+
   private mapRecord(
     record: typeof commandRegistry.$inferSelect
   ): RegisteredCommand {
@@ -864,6 +1063,45 @@ export class SqliteCommandRegistryRepository
         if (!parsedResult) {
           throw new Error(
             `Command "${record.commandId}" has an invalid technical roster correction result`
+          );
+        }
+
+        return {
+          id: record.id,
+          auctionSessionId:
+            record.auctionSessionId,
+          commandScope:
+            "AUCTION_SESSION",
+          auctionCallId: null,
+          commandId:
+            record.commandId,
+          commandType:
+            record.commandType,
+          expectedStateVersion:
+            record.expectedStateVersion,
+          resultStateVersion:
+            record.resultStateVersion,
+          requestFingerprint:
+            record.requestFingerprint,
+          result:
+            parsedResult,
+          createdAt:
+            record.createdAt
+        };
+      }
+
+      if (
+        record.commandType ===
+          "REMOVE_ROSTER_ASSIGNMENT"
+      ) {
+        const parsedResult =
+          parseRosterAssignmentRemovalResult(
+            payload
+          );
+
+        if (!parsedResult) {
+          throw new Error(
+            `Command "${record.commandId}" has an invalid roster assignment removal result`
           );
         }
 
