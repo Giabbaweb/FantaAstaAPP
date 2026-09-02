@@ -74,6 +74,23 @@ export class AuctionSessionCompletionService {
       >
   ) {}
 
+  async assertCanForceComplete(
+    auctionSessionId: string
+  ): Promise<void> {
+    const operationalAuctionCall =
+      await this.auctionCallRepository
+        .findOperationalByAuctionSessionId(
+          auctionSessionId
+        );
+
+    if (operationalAuctionCall) {
+      throw new AuctionSessionCompletionError(
+        "OPERATIONAL_AUCTION_CALL_EXISTS",
+        "An operational auction call exists"
+      );
+    }
+  }
+
   async assertCanComplete(
     auctionSessionId: string
   ): Promise<void> {

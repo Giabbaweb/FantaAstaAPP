@@ -217,6 +217,44 @@ describe(
     );
 
     it(
+      "allows forced completion with incomplete rosters when no operational call exists",
+      async () => {
+        const {
+          service
+        } = createService({
+          incompleteTeamIndex: 4
+        });
+
+        await expect(
+          service.assertCanForceComplete(
+            "session-1"
+          )
+        ).resolves.toBeUndefined();
+      }
+    );
+
+    it(
+      "rejects forced completion when an operational auction call exists",
+      async () => {
+        const {
+          service
+        } = createService({
+          operationalCall: true,
+          incompleteTeamIndex: 4
+        });
+
+        await expect(
+          service.assertCanForceComplete(
+            "session-1"
+          )
+        ).rejects.toMatchObject({
+          code:
+            "OPERATIONAL_AUCTION_CALL_EXISTS"
+        });
+      }
+    );
+
+    it(
       "uses the dedicated completion error type",
       () => {
         const error =

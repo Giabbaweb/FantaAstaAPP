@@ -302,7 +302,8 @@ type RosterAssignmentRemovalCommandPort = Pick<
 
 type AuctionSessionCompletionPort = Pick<
   AuctionSessionCompletionService,
-  "assertCanComplete"
+  | "assertCanComplete"
+  | "assertCanForceComplete"
 >;
 
 type CompletedSessionBackupRequesterPort = Pick<
@@ -628,6 +629,62 @@ fastify.post<{
           );
 
           return reply.code(204).send();
+        } catch (error) {
+          const mapped =
+            mapAuctionSessionError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
+    fastify.post<{
+      Params: {
+        id: string;
+      };
+    }>(
+      "/api/auction-sessions/:id/force-complete",
+      async (request, reply) => {
+        const { id } = request.params;
+
+        try {
+          await completionService
+            .assertCanForceComplete(id);
+
+          const session =
+            await service.executeCommand(
+              id,
+              "complete"
+            );
+
+          try {
+            await completedSessionBackupRequester
+              .requestCompletedSessionBackup({
+                auctionSessionId: id
+              });
+          } catch (error) {
+            fastify.log.error(
+              {
+                module: "backup",
+                auctionSessionId: id,
+                backupType:
+                  "SESSION_COMPLETED",
+                error
+              },
+              "Post-commit forced session completion backup failed"
+            );
+          }
+
+          return reply.code(200).send({
+            data: session,
+            error: null
+          });
         } catch (error) {
           const mapped =
             mapAuctionSessionError(error);

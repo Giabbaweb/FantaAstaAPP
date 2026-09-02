@@ -2598,6 +2598,177 @@ describe("GET /api/auction-sessions", () => {
       );
 
       it(
+        "force-completes a running session with incomplete rosters",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-force-complete",
+            name: "Force Complete League",
+            normalizedName:
+              "force complete league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: "session-force-complete",
+            leagueId: "league-force-complete",
+            season: "2026/2027",
+            editionNumber: 1,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 0,
+            status: "RUNNING"
+          });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-force-complete/" +
+                "force-complete"
+            });
+
+          expect(response.statusCode).toBe(200);
+          expect(response.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-force-complete",
+              status: "COMPLETED"
+            }),
+            error: null
+          });
+
+          const storedSession =
+            await db.query.auctionSessions
+              .findFirst({
+                where: (
+                  auctionSession,
+                  { eq }
+                ) =>
+                  eq(
+                    auctionSession.id,
+                    "session-force-complete"
+                  )
+              });
+
+          expect(
+            storedSession?.status
+          ).toBe("COMPLETED");
+        }
+      );
+
+      it(
+        "rejects forced completion when an operational auction call exists",
+        async () => {
+          await db.insert(leagues).values({
+            id:
+              "league-force-complete-call",
+            name:
+              "Force Complete Call League",
+            normalizedName:
+              "force complete call league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id:
+              "session-force-complete-call",
+            leagueId:
+              "league-force-complete-call",
+            season: "2026/2027",
+            editionNumber: 1,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 0,
+            status: "RUNNING"
+          });
+
+          await db.insert(teams).values({
+            id: "team-force-complete-call",
+            leagueId:
+              "league-force-complete-call",
+            name:
+              "Force Complete Call Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id:
+                "session-team-force-complete-call",
+              auctionSessionId:
+                "session-force-complete-call",
+              teamId:
+                "team-force-complete-call",
+              tableOrder: 1,
+              renewalCredits: 0,
+              remainingCredits: 300
+            });
+
+          await db.insert(players).values({
+            id:
+              "player-force-complete-call",
+            auctionSessionId:
+              "session-force-complete-call",
+            fmsCode: "FORCE-CALL-001",
+            name:
+              "Force Complete Call Player",
+            normalizedName:
+              "force complete call player",
+            role: "A",
+            availabilityStatus:
+              "AVAILABLE"
+          });
+
+          await db
+            .insert(auctionCalls)
+            .values({
+              id:
+                "call-force-complete",
+              auctionSessionId:
+                "session-force-complete-call",
+              playerId:
+                "player-force-complete-call",
+              callerAuctionSessionTeamId:
+                "session-team-force-complete-call",
+              status: "OPEN",
+              openingBid: 1,
+              currentBid: 1
+            });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-force-complete-call/" +
+                "force-complete"
+            });
+
+          expect(response.statusCode).toBe(409);
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code:
+                "OPERATIONAL_AUCTION_CALL_EXISTS"
+            })
+          });
+
+          const storedSession =
+            await db.query.auctionSessions
+              .findFirst({
+                where: (
+                  auctionSession,
+                  { eq }
+                ) =>
+                  eq(
+                    auctionSession.id,
+                    "session-force-complete-call"
+                  )
+              });
+
+          expect(
+            storedSession?.status
+          ).toBe("RUNNING");
+        }
+      );
+
+      it(
         "returns 400 for an invalid start payload",
         async () => {
           const response =
