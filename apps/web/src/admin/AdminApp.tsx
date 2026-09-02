@@ -40,6 +40,11 @@ import {
 } from "../shared/auction-session-command-api.js";
 
 import {
+  completeAuctionSession,
+  forceCompleteAuctionSession
+} from "../shared/auction-closing-api.js";
+
+import {
   removeRosterAssignment
 } from "../shared/roster-assignment-removal-api.js";
 
@@ -434,6 +439,16 @@ export function AdminApp() {
   const [
     sessionCommandError,
     setSessionCommandError
+  ] = useState<string | null>(null);
+
+  const [
+    completeSessionPending,
+    setCompleteSessionPending
+  ] = useState(false);
+
+  const [
+    completeSessionError,
+    setCompleteSessionError
   ] = useState<string | null>(null);
 
   const [
@@ -1552,6 +1567,152 @@ export function AdminApp() {
         );
       } finally {
         setSessionCommandPending(false);
+      }
+    };
+
+  const executeCompleteSession =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        !snapshot ||
+        session.status !== "RUNNING" ||
+        snapshot.operationalAuctionCall ||
+        remainingRoleSlots.P !== 0 ||
+        remainingRoleSlots.D !== 0 ||
+        remainingRoleSlots.C !== 0 ||
+        remainingRoleSlots.A !== 0
+      ) {
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          "TERMINARE L'ASTA?\n\n" +
+          "La sessione passerà allo stato COMPLETATA. " +
+          "Non sarà più possibile effettuare normali chiamate d'asta.\n\n" +
+          "Dopo il completamento potrai preparare ed esportare le rose per FMS ReVo."
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setCompleteSessionPending(true);
+      setCompleteSessionError(null);
+
+      try {
+        const completedSession =
+          await completeAuctionSession(
+            session.id
+          );
+
+        /*
+         * Il comando complete usa ancora il percorso
+         * HTTP legacy e non pubblica lo snapshot
+         * realtime atomico. Aggiorniamo quindi subito
+         * lo stato locale della sessione.
+         */
+        setSession(completedSession);
+
+        setSnapshot(
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  session:
+                    completedSession
+                }
+              : current
+        );
+      } catch (error) {
+        setCompleteSessionError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante il completamento dell'asta."
+        );
+      } finally {
+        setCompleteSessionPending(false);
+      }
+    };
+
+  const executeForceCompleteSession =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        !snapshot ||
+        session.status !== "RUNNING" ||
+        snapshot.operationalAuctionCall
+      ) {
+        return;
+      }
+
+      const missingSlots =
+        remainingRoleSlots.P +
+        remainingRoleSlots.D +
+        remainingRoleSlots.C +
+        remainingRoleSlots.A;
+
+      if (missingSlots === 0) {
+        return;
+      }
+
+      const missingSummary =
+        `P ${remainingRoleSlots.P} · ` +
+        `D ${remainingRoleSlots.D} · ` +
+        `C ${remainingRoleSlots.C} · ` +
+        `A ${remainingRoleSlots.A}`;
+
+      const confirmed =
+        window.confirm(
+          "INTERROMPERE L'ASTA?\n\n" +
+          "Questa è una chiusura di emergenza. " +
+          "La sessione passerà allo stato COMPLETATA " +
+          "anche se alcune rose sono incomplete.\n\n" +
+          `Posti ancora da coprire: ${missingSummary}.\n\n` +
+          "Dopo l'interruzione non sarà più possibile effettuare " +
+          "normali chiamate d'asta. " +
+          "Gli eventuali posti mancanti potranno essere completati " +
+          "tramite assegnazioni manuali prima dell'export FMS ReVo."
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setCompleteSessionPending(true);
+      setCompleteSessionError(null);
+
+      try {
+        const completedSession =
+          await forceCompleteAuctionSession(
+            session.id
+          );
+
+        /*
+         * Anche force-complete usa il percorso
+         * HTTP legacy della sessione e non pubblica
+         * uno snapshot realtime atomico.
+         */
+        setSession(completedSession);
+
+        setSnapshot(
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  session:
+                    completedSession
+                }
+              : current
+        );
+      } catch (error) {
+        setCompleteSessionError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante l'interruzione dell'asta."
+        );
+      } finally {
+        setCompleteSessionPending(false);
       }
     };
 
@@ -3265,6 +3426,125 @@ export function AdminApp() {
                         : "Sospendi sessione"
                 }
               </button>
+            </div>
+
+            <div className="admin-session-completion">
+              <div className="admin-session-completion__actions">
+                <button
+                  type="button"
+                disabled={
+                  completeSessionPending ||
+                  sessionCommandPending ||
+                  session.status !== "RUNNING" ||
+                  Boolean(
+                    snapshot?.operationalAuctionCall
+                  ) ||
+                  remainingRoleSlots.P !== 0 ||
+                  remainingRoleSlots.D !== 0 ||
+                  remainingRoleSlots.C !== 0 ||
+                  remainingRoleSlots.A !== 0
+                }
+                title={
+                  snapshot?.operationalAuctionCall
+                    ? "Annulla prima la chiamata corrente"
+                    : session.status !== "RUNNING"
+                      ? "Disponibile durante l'asta"
+                      : (
+                            remainingRoleSlots.P !== 0 ||
+                            remainingRoleSlots.D !== 0 ||
+                            remainingRoleSlots.C !== 0 ||
+                            remainingRoleSlots.A !== 0
+                          )
+                        ? "Completa tutte le rose prima di terminare l'asta"
+                        : "Termina l'asta"
+                }
+                onClick={() => {
+                  void executeCompleteSession();
+                }}
+              >
+                {
+                  completeSessionPending
+                    ? "Completamento..."
+                    : "Termina asta"
+                }
+              </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    completeSessionPending ||
+                    sessionCommandPending ||
+                    session.status !== "RUNNING" ||
+                    Boolean(
+                      snapshot?.operationalAuctionCall
+                    ) ||
+                    (
+                      remainingRoleSlots.P === 0 &&
+                      remainingRoleSlots.D === 0 &&
+                      remainingRoleSlots.C === 0 &&
+                      remainingRoleSlots.A === 0
+                    )
+                  }
+                  title={
+                    snapshot?.operationalAuctionCall
+                      ? "Annulla prima la chiamata corrente"
+                      : session.status !== "RUNNING"
+                        ? "Disponibile durante l'asta"
+                        : (
+                              remainingRoleSlots.P === 0 &&
+                              remainingRoleSlots.D === 0 &&
+                              remainingRoleSlots.C === 0 &&
+                              remainingRoleSlots.A === 0
+                            )
+                          ? "Le rose sono complete: usa Termina asta"
+                          : "Interrompi eccezionalmente l'asta con rose incomplete"
+                  }
+                  className="admin-session-completion__emergency"
+                  onClick={() => {
+                    void executeForceCompleteSession();
+                  }}
+                >
+                  {
+                    completeSessionPending
+                      ? "Completamento..."
+                      : "Interrompi asta…"
+                  }
+                </button>
+
+                <details className="admin-session-completion__info">
+                  <summary
+                    aria-label="Informazioni sulla chiusura dell'asta"
+                    title="Informazioni sulla chiusura dell'asta"
+                  >
+                    i
+                  </summary>
+
+                  <div className="admin-session-completion__popover">
+                    {
+                      snapshot?.operationalAuctionCall &&
+                      session.status === "RUNNING"
+                        ? "Annulla prima la chiamata corrente."
+                        : session.status === "RUNNING" &&
+                            (
+                              remainingRoleSlots.P !== 0 ||
+                              remainingRoleSlots.D !== 0 ||
+                              remainingRoleSlots.C !== 0 ||
+                              remainingRoleSlots.A !== 0
+                            )
+                          ? "Completa tutte le rose prima di terminare l'asta."
+                          : session.status === "RUNNING"
+                            ? "L'asta può essere terminata normalmente."
+                            : "I comandi di chiusura sono disponibili durante l'asta."
+                    }
+                  </div>
+                </details>
+              </div>
+
+              {completeSessionError && (
+                <small className="admin-extraordinary-control__error">
+                  {completeSessionError}
+                </small>
+              )}
             </div>
 
             <div className="admin-controls-dashboard">
