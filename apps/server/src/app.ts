@@ -158,6 +158,12 @@ import {
   AtomicTechnicalRosterCorrectionCommandService
 } from "./realtime/atomic-technical-roster-correction-command.service.js";
 import {
+  AtomicRosterAssignmentRemovalCommandExecutor
+} from "./realtime/atomic-roster-assignment-removal-command.executor.js";
+import {
+  AtomicRosterAssignmentRemovalCommandService
+} from "./realtime/atomic-roster-assignment-removal-command.service.js";
+import {
   FmsRosterExportService
 } from "./services/fms-roster-export.service.js";
 import {
@@ -268,6 +274,9 @@ import {
 import {
   TechnicalRosterCorrectionService
 } from "./services/technical-roster-correction.service.js";
+import {
+  RosterAssignmentRemovalService
+} from "./services/roster-assignment-removal.service.js";
 
 export type BuildAppOptions = {
   backupRecoveryTechnicalLogger?:
@@ -564,6 +573,43 @@ export async function buildApp(
       }
     );
 
+  const rosterAssignmentRemovalService =
+    new RosterAssignmentRemovalService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicRosterAssignmentRemovalCommandExecutor =
+    new AtomicRosterAssignmentRemovalCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      rosterAssignmentRemovalService,
+      new SqliteAuctionEventRepository()
+    );
+
+  const atomicRosterAssignmentRemovalCommandService =
+    new AtomicRosterAssignmentRemovalCommandService(
+      atomicRosterAssignmentRemovalCommandExecutor,
+      auctionBackupRequester,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "backup",
+            auctionSessionId,
+            backupType:
+              "TECHNICAL_CORRECTION",
+            error
+          },
+          "Post-commit roster assignment removal backup failed"
+        );
+      }
+    );
+
   const technicalRosterCorrectionService =
     new TechnicalRosterCorrectionService(
       auctionSessionRepository,
@@ -771,6 +817,7 @@ export async function buildApp(
       atomicManualInitialRosterCommandService,
       atomicManualRosterAssignmentCommandService,
       atomicTechnicalRosterCorrectionCommandService,
+      atomicRosterAssignmentRemovalCommandService,
       auctionBackupRequester
     )
   );

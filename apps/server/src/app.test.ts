@@ -4486,6 +4486,303 @@ describe("GET /api/auction-sessions", () => {
   );
 
   describe(
+    "POST /api/auction-sessions/:id/commands/remove-roster-assignment",
+    () => {
+      it(
+        "removes a roster assignment atomically and replays the same command idempotently",
+        async () => {
+          const leagueId =
+            "league-roster-removal-http";
+          const sessionId =
+            "session-roster-removal-http";
+          const teamId =
+            "team-roster-removal-http";
+          const sessionTeamId =
+            "session-team-roster-removal-http";
+          const playerId =
+            "player-roster-removal-http";
+          const rosterEntryId =
+            "roster-entry-roster-removal-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Roster Removal HTTP League",
+            normalizedName:
+              "roster removal http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 45,
+            initialCredits: 330,
+            status: "SUSPENDED",
+            suspensionReason:
+              "TECHNICAL_BREAK",
+            stateVersion: 0
+          });
+
+          await db.insert(teams).values({
+            id: teamId,
+            leagueId,
+            name:
+              "Roster Removal HTTP Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id: sessionTeamId,
+              auctionSessionId:
+                sessionId,
+              teamId,
+              tableOrder: 1,
+              remainingCredits: 80,
+              renewalCredits: 0
+            });
+
+          await db.insert(players).values({
+            id: playerId,
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "roster-removal-http-001",
+            name:
+              "Roster Removal HTTP Player",
+            normalizedName:
+              "roster removal http player",
+            role: "C",
+            availabilityStatus:
+              "ROSTERED"
+          });
+
+          await db.insert(rosterEntries).values({
+            id: rosterEntryId,
+            auctionSessionTeamId:
+              sessionTeamId,
+            playerId,
+            acquisitionCost: 20,
+            contractYear: 1,
+            source: "AUCTION"
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/remove-roster-assignment",
+            payload: {
+              commandId:
+                "roster-removal-http-command",
+              stateVersion: 0,
+              rosterEntryId,
+              actor: {
+                name:
+                  "Integration Tester",
+                role:
+                  "ADMINISTRATOR"
+              },
+              comment:
+                "Rimozione amministrativa"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            firstResponse.json()
+          ).toEqual({
+            data: {
+              removed: {
+                rosterEntry:
+                  expect.objectContaining({
+                    id:
+                      rosterEntryId,
+                    auctionSessionTeamId:
+                      sessionTeamId,
+                    playerId,
+                    acquisitionCost: 20,
+                    contractYear: 1,
+                    source:
+                      "AUCTION"
+                  }),
+                auctionSessionTeamId:
+                  sessionTeamId,
+                playerId,
+                acquisitionCost: 20
+              },
+              remainingCreditsAfterRemoval:
+                100
+            },
+            stateVersion: 1,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(
+            retryResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            retryResponse.json()
+          ).toEqual({
+            data:
+              firstResponse.json().data,
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const [storedEntry] =
+            await db
+              .select()
+              .from(rosterEntries)
+              .where(
+                eq(
+                  rosterEntries.id,
+                  rosterEntryId
+                )
+              );
+
+          expect(storedEntry).toBeUndefined();
+
+          const [storedSessionTeam] =
+            await db
+              .select()
+              .from(auctionSessionTeams)
+              .where(
+                eq(
+                  auctionSessionTeams.id,
+                  sessionTeamId
+                )
+              );
+
+          expect(
+            storedSessionTeam
+              ?.remainingCredits
+          ).toBe(100);
+
+          const [storedPlayer] =
+            await db
+              .select()
+              .from(players)
+              .where(
+                eq(
+                  players.id,
+                  playerId
+                )
+              );
+
+          expect(
+            storedPlayer
+              ?.availabilityStatus
+          ).toBe("AVAILABLE");
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "ROSTER_ASSIGNMENT_REMOVED"
+            );
+
+          expect(
+            matchingEvents
+          ).toHaveLength(1);
+
+          expect(
+            matchingEvents[0]
+          ).toEqual(
+            expect.objectContaining({
+              actorName:
+                "Integration Tester",
+              actorRole:
+                "ADMINISTRATOR",
+              comment:
+                "Rimozione amministrativa",
+              beforeAuctionSessionTeamId:
+                sessionTeamId,
+              beforePlayerId:
+                playerId,
+              beforeAmount: 20,
+              beforeContractYear: 1,
+              afterAuctionSessionTeamId:
+                null,
+              afterPlayerId:
+                null,
+              afterAmount:
+                null,
+              afterContractYear:
+                null
+            })
+          );
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "roster-removal-http-command"
+            );
+
+          expect(
+            matchingCommands
+          ).toHaveLength(1);
+
+          expect(
+            matchingCommands[0]
+          ).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "REMOVE_ROSTER_ASSIGNMENT",
+              expectedStateVersion: 0,
+              resultStateVersion: 1
+            })
+          );
+
+          const [updatedSession] =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.id,
+                  sessionId
+                )
+              );
+
+          expect(
+            updatedSession?.stateVersion
+          ).toBe(1);
+        }
+      );
+    }
+  );
+
+  describe(
     "POST /api/auction-sessions/:id/commands/technical-roster-correction",
     () => {
       it(

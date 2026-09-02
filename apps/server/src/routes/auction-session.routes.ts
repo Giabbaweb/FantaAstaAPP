@@ -1,6 +1,7 @@
 import {
   addManualInitialRosterEntryCommandSchema,
   addManualRosterAssignmentCommandSchema,
+  removeRosterAssignmentCommandSchema,
   technicalRosterCorrectionCommandSchema,
   createAuctionSessionSchema,
   realtimeCommandMetadataSchema,
@@ -55,6 +56,12 @@ import type {
   TechnicalRosterCorrectionErrorMapping
 } from "../http/technical-roster-correction-errors.js";
 import {
+  mapRosterAssignmentRemovalError
+} from "../http/roster-assignment-removal-errors.js";
+import type {
+  RosterAssignmentRemovalErrorMapping
+} from "../http/roster-assignment-removal-errors.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import {
@@ -72,6 +79,9 @@ import type {
 import type {
   AtomicTechnicalRosterCorrectionCommandService
 } from "../realtime/atomic-technical-roster-correction-command.service.js";
+import type {
+  AtomicRosterAssignmentRemovalCommandService
+} from "../realtime/atomic-roster-assignment-removal-command.service.js";
 import type {
   AuctionBackupRequester
 } from "../services/auction-backup-requester.js";
@@ -217,6 +227,21 @@ type ExecuteTechnicalRosterCorrectionCommandResponse = {
   error: null;
 };
 
+type ExecuteRosterAssignmentRemovalCommandResponse = {
+  data: {
+    removed: {
+      rosterEntry: RosterEntry;
+      auctionSessionTeamId: string;
+      playerId: string;
+      acquisitionCost: number;
+    };
+    remainingCreditsAfterRemoval: number;
+  };
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
 type InvalidRequestResponse = {
   data: null;
   error: {
@@ -267,6 +292,11 @@ type TechnicalRosterCorrectionCommandPort = Pick<
   "correct"
 >;
 
+type RosterAssignmentRemovalCommandPort = Pick<
+  AtomicRosterAssignmentRemovalCommandService,
+  "remove"
+>;
+
 type CompletedSessionBackupRequesterPort = Pick<
   AuctionBackupRequester,
   "requestCompletedSessionBackup"
@@ -281,6 +311,8 @@ export function auctionSessionRoutes(
     ManualRosterAssignmentCommandPort,
   technicalRosterCorrectionCommandService:
     TechnicalRosterCorrectionCommandPort,
+  rosterAssignmentRemovalCommandService:
+    RosterAssignmentRemovalCommandPort,
   completedSessionBackupRequester:
     CompletedSessionBackupRequesterPort
 ): FastifyPluginAsync {
@@ -617,7 +649,9 @@ fastify.post<{
         | ExecuteManualRosterAssignmentCommandResponse
         | ManualRosterAssignmentErrorMapping["body"]
         | ExecuteTechnicalRosterCorrectionCommandResponse
-        | TechnicalRosterCorrectionErrorMapping["body"];
+        | TechnicalRosterCorrectionErrorMapping["body"]
+        | ExecuteRosterAssignmentRemovalCommandResponse
+        | RosterAssignmentRemovalErrorMapping["body"];
     }>(
       "/api/auction-sessions/:id/commands/:command",
       async (request, reply) => {
@@ -1040,6 +1074,67 @@ fastify.post<{
           } catch (error) {
             const mapped =
               mapManualRosterAssignmentError(
+                error
+              );
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
+            "remove-roster-assignment"
+        ) {
+          const validation =
+            removeRosterAssignmentCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Roster assignment removal command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await rosterAssignmentRemovalCommandService.remove(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  rosterEntryId:
+                    validation.data.rosterEntryId
+                },
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.removal,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapRosterAssignmentRemovalError(
                 error
               );
 
