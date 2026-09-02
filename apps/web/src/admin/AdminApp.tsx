@@ -72,6 +72,24 @@ type AdminStatus =
   | "READY"
   | "ERROR";
 
+function getManualAssignmentReasonLabel(
+  reason: ManualRosterAssignmentReason
+): string {
+  switch (reason) {
+    case "OPTION_EXERCISED_MANUALLY":
+      return "Giocatore precedentemente opzionato";
+
+    case "OPTION_NO_EXTERNAL_BID":
+      return "Assegnazione manuale per mancanza di concorrenti";
+
+    case "TECHNICAL_CORRECTION":
+      return "Correzione tecnica";
+
+    case "OTHER":
+      return "Altro";
+  }
+}
+
 function getPlayerRoleLabel(
   role: "P" | "D" | "C" | "A"
 ): string {
@@ -1618,6 +1636,7 @@ export function AdminApp() {
       if (
         !session ||
         !snapshot ||
+        snapshot.operationalAuctionCall ||
         !correctionTeamId ||
         !correctionRosterEntryId ||
         !correctionComment.trim()
@@ -1725,10 +1744,10 @@ export function AdminApp() {
       if (
         !session ||
         !snapshot ||
+        snapshot.operationalAuctionCall ||
         !manualAssignmentTeamId ||
         !manualAssignmentPlayerId ||
-        !manualAssignmentReason ||
-        !manualAssignmentComment.trim()
+        !manualAssignmentReason
       ) {
         return;
       }
@@ -1808,7 +1827,10 @@ export function AdminApp() {
             role: "ADMINISTRATOR"
           },
           manualAssignmentReason,
-          manualAssignmentComment.trim()
+          manualAssignmentComment.trim() ||
+            getManualAssignmentReasonLabel(
+              manualAssignmentReason
+            )
         );
 
         /*
@@ -1897,6 +1919,7 @@ export function AdminApp() {
 
   const administrativeCorrectionAllowed =
     session !== null &&
+    !snapshot?.operationalAuctionCall &&
     (
       session.status === "SETUP" ||
       session.status === "READY" ||
@@ -2748,7 +2771,9 @@ export function AdminApp() {
                     title={
                       administrativeCorrectionAllowed
                         ? "Rimuovi un giocatore da una rosa"
-                        : "Disponibile solo a sessione non in corso"
+                        : snapshot?.operationalAuctionCall
+                          ? "Annulla prima la chiamata corrente"
+                          : "Disponibile solo a sessione non in corso"
                     }
                     onClick={() => {
                       setAdministrativeCorrectionOpen(
@@ -2765,9 +2790,11 @@ export function AdminApp() {
                     {
                       administrativeCorrectionAllowed
                         ? "Rimozione dalla rosa"
-                        : session.status === "RUNNING"
-                          ? "Sospendi prima l'asta"
-                          : "Non disponibile"
+                        : snapshot?.operationalAuctionCall
+                          ? "Annulla prima la chiamata corrente"
+                          : session.status === "RUNNING"
+                            ? "Sospendi prima l'asta"
+                            : "Non disponibile"
                     }
                   </small>
                 </div>
@@ -2782,7 +2809,9 @@ export function AdminApp() {
                     title={
                       manualAssignmentAllowed
                         ? "Assegna direttamente un giocatore a una rosa"
-                        : "Disponibile solo a sessione non in corso"
+                        : snapshot?.operationalAuctionCall
+                          ? "Annulla prima la chiamata corrente"
+                          : "Disponibile solo a sessione non in corso"
                     }
                     onClick={() => {
                       setManualAssignmentOpen(
@@ -2799,9 +2828,11 @@ export function AdminApp() {
                     {
                       manualAssignmentAllowed
                         ? "Inserimento diretto in rosa"
-                        : session.status === "RUNNING"
-                          ? "Sospendi prima l'asta"
-                          : "Non disponibile"
+                        : snapshot?.operationalAuctionCall
+                          ? "Annulla prima la chiamata corrente"
+                          : session.status === "RUNNING"
+                            ? "Sospendi prima l'asta"
+                            : "Non disponibile"
                     }
                   </small>
                 </div>
@@ -2876,7 +2907,7 @@ export function AdminApp() {
                   </label>
 
                   <label>
-                    Motivo
+                    Note (facoltative)
                     <input
                       type="text"
                       value={correctionComment}
@@ -3051,11 +3082,11 @@ export function AdminApp() {
                       </option>
 
                       <option value="OPTION_EXERCISED_MANUALLY">
-                        Opzione esercitata manualmente
+                        Giocatore precedentemente opzionato
                       </option>
 
                       <option value="OPTION_NO_EXTERNAL_BID">
-                        Opzione senza offerta esterna
+                        Assegnazione manuale per mancanza di concorrenti
                       </option>
 
                       <option value="TECHNICAL_CORRECTION">
@@ -3075,7 +3106,7 @@ export function AdminApp() {
                       value={manualAssignmentComment}
                       disabled={manualAssignmentPending}
                       maxLength={500}
-                      placeholder="Motivo dell'assegnazione"
+                      placeholder="Eventuali note aggiuntive"
                       onChange={(event) => {
                         setManualAssignmentComment(
                           event.target.value
@@ -3120,8 +3151,7 @@ export function AdminApp() {
                       !manualAssignmentSelectedTeam ||
                       !manualAssignmentSelectedPlayer ||
                       !manualAssignmentCostValid ||
-                      !manualAssignmentReason ||
-                      !manualAssignmentComment.trim()
+                      !manualAssignmentReason
                     }
                     onClick={() => {
                       if (
