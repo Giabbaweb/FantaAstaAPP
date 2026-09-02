@@ -128,6 +128,27 @@ function createFixture(): void {
           "PIZZA_BREAK",
         createdAt:
           "2026-09-16 21:00:00"
+      },
+      {
+        id: "activity-route-event-3",
+        auctionSessionId:
+          sessionId,
+        eventType:
+          "ROSTER_ASSIGNMENT_REMOVED",
+        actorName:
+          "Gianfranco",
+        actorRole:
+          "ADMINISTRATOR",
+        comment:
+          "Rimozione di test",
+        beforeAuctionSessionTeamId:
+          sessionTeamId,
+        beforePlayerId:
+          playerId,
+        beforeAmount: 10,
+        beforeContractYear: 1,
+        createdAt:
+          "2026-09-16 22:00:00"
       }
     ])
     .run();
@@ -183,6 +204,18 @@ describe(
                   string | null;
                 suspensionReason:
                   string | null;
+                actorName:
+                  string | null;
+                comment:
+                  string | null;
+                beforePlayerName:
+                  string | null;
+                beforeTeamName:
+                  string | null;
+                beforeAmount:
+                  number | null;
+                beforeContractYear:
+                  number | null;
               }>;
               error: null;
             }>();
@@ -193,10 +226,29 @@ describe(
 
           expect(
             body.data
-          ).toHaveLength(2);
+          ).toHaveLength(3);
 
           expect(
             body.data[0]
+          ).toMatchObject({
+            eventId:
+              "activity-route-event-3",
+            eventType:
+              "ROSTER_ASSIGNMENT_REMOVED",
+            actorName:
+              "Gianfranco",
+            comment:
+              "Rimozione di test",
+            beforePlayerName:
+              "Test Player",
+            beforeTeamName:
+              "Atletico Milano",
+            beforeAmount: 10,
+            beforeContractYear: 1
+          });
+
+          expect(
+            body.data[1]
           ).toMatchObject({
             eventId:
               "activity-route-event-2",
@@ -207,7 +259,7 @@ describe(
           });
 
           expect(
-            body.data[1]
+            body.data[2]
           ).toMatchObject({
             eventId:
               "activity-route-event-1",
