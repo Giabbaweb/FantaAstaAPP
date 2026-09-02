@@ -44,6 +44,13 @@ import {
 } from "../shared/roster-assignment-removal-api.js";
 
 import {
+  addManualRosterAssignment
+} from "../shared/manual-roster-assignment-api.js";
+import type {
+  ManualRosterAssignmentReason
+} from "../shared/manual-roster-assignment-api.js";
+
+import {
   cancelAuctionCall,
   openAuctionCall,
   confirmAuctionCall,
@@ -509,6 +516,48 @@ export function AdminApp() {
   const [
     correctionError,
     setCorrectionError
+  ] = useState<string | null>(null);
+
+  const [
+    manualAssignmentOpen,
+    setManualAssignmentOpen
+  ] = useState(false);
+
+  const [
+    manualAssignmentTeamId,
+    setManualAssignmentTeamId
+  ] = useState("");
+
+  const [
+    manualAssignmentPlayerId,
+    setManualAssignmentPlayerId
+  ] = useState("");
+
+  const [
+    manualAssignmentCost,
+    setManualAssignmentCost
+  ] = useState("1");
+
+  const [
+    manualAssignmentReason,
+    setManualAssignmentReason
+  ] = useState<
+    ManualRosterAssignmentReason | ""
+  >("");
+
+  const [
+    manualAssignmentComment,
+    setManualAssignmentComment
+  ] = useState("");
+
+  const [
+    manualAssignmentPending,
+    setManualAssignmentPending
+  ] = useState(false);
+
+  const [
+    manualAssignmentError,
+    setManualAssignmentError
   ] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1671,6 +1720,141 @@ export function AdminApp() {
       }
     };
 
+  const executeManualAssignment =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        !snapshot ||
+        !manualAssignmentTeamId ||
+        !manualAssignmentPlayerId ||
+        !manualAssignmentReason ||
+        !manualAssignmentComment.trim()
+      ) {
+        return;
+      }
+
+      const allowedStatuses = [
+        "SETUP",
+        "READY",
+        "SUSPENDED",
+        "COMPLETED"
+      ] as const;
+
+      if (
+        !allowedStatuses.includes(
+          session.status as
+            typeof allowedStatuses[number]
+        )
+      ) {
+        return;
+      }
+
+      const selectedTeam =
+        snapshot.publicDisplay.teams.find(
+          (team) =>
+            team.auctionSessionTeamId ===
+            manualAssignmentTeamId
+        );
+
+      const selectedPlayer =
+        players.find(
+          (player) =>
+            player.id ===
+              manualAssignmentPlayerId &&
+            player.availabilityStatus ===
+              "AVAILABLE"
+        );
+
+      const acquisitionCost =
+        Number(manualAssignmentCost);
+
+      if (!selectedTeam) {
+        setManualAssignmentError(
+          "Squadra non più disponibile per l'assegnazione."
+        );
+        return;
+      }
+
+      if (!selectedPlayer) {
+        setManualAssignmentError(
+          "Giocatore non più disponibile per l'assegnazione."
+        );
+        return;
+      }
+
+      if (
+        !Number.isInteger(acquisitionCost) ||
+        acquisitionCost <= 0
+      ) {
+        setManualAssignmentError(
+          "Il costo deve essere un numero intero positivo."
+        );
+        return;
+      }
+
+      setManualAssignmentPending(true);
+      setManualAssignmentError(null);
+
+      try {
+        await addManualRosterAssignment(
+          session.id,
+          snapshot.stateVersion,
+          selectedTeam.auctionSessionTeamId,
+          selectedPlayer.id,
+          acquisitionCost,
+          1,
+          {
+            name: "Admin",
+            role: "ADMINISTRATOR"
+          },
+          manualAssignmentReason,
+          manualAssignmentComment.trim()
+        );
+
+        /*
+         * Rosa, crediti, massimo rilancio e
+         * stateVersion arriveranno dallo snapshot
+         * realtime autorevole.
+         *
+         * L'archivio players non fa parte dello
+         * snapshot: il giocatore assegnato deve
+         * diventare ROSTERED anche nella selezione
+         * locale.
+         */
+        try {
+          const refreshedPlayers =
+            await fetchPlayers(
+              session.id
+            );
+
+          setPlayers(
+            refreshedPlayers
+          );
+        } catch {
+          /*
+           * L'assegnazione è già stata confermata dal
+           * server: un errore nel refresh players non
+           * deve trasformarla in un falso errore.
+           */
+        }
+
+        setManualAssignmentTeamId("");
+        setManualAssignmentPlayerId("");
+        setManualAssignmentCost("1");
+        setManualAssignmentReason("");
+        setManualAssignmentComment("");
+        setManualAssignmentOpen(false);
+      } catch (error) {
+        setManualAssignmentError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante l'assegnazione manuale."
+        );
+      } finally {
+        setManualAssignmentPending(false);
+      }
+    };
+
   const changePublicDisplay =
     async (
       next:
@@ -1733,6 +1917,41 @@ export function AdminApp() {
         entry.rosterEntryId ===
         correctionRosterEntryId
     ) ?? null;
+
+  const manualAssignmentAllowed =
+    administrativeCorrectionAllowed;
+
+  const manualAssignmentSelectedTeam =
+    snapshot?.publicDisplay.teams.find(
+      (team) =>
+        team.auctionSessionTeamId ===
+        manualAssignmentTeamId
+    ) ?? null;
+
+  const manualAssignmentSelectedPlayer =
+    players.find(
+      (player) =>
+        player.id ===
+          manualAssignmentPlayerId &&
+        player.availabilityStatus ===
+          "AVAILABLE"
+    ) ?? null;
+
+  const manualAssignmentAvailablePlayers =
+    players.filter(
+      (player) =>
+        player.availabilityStatus ===
+        "AVAILABLE"
+    );
+
+  const manualAssignmentNumericCost =
+    Number(manualAssignmentCost);
+
+  const manualAssignmentCostValid =
+    Number.isInteger(
+      manualAssignmentNumericCost
+    ) &&
+    manualAssignmentNumericCost > 0;
 
   if (
     status === "LOADING" ||
@@ -2669,37 +2888,74 @@ export function AdminApp() {
                 Operazioni straordinarie
               </span>
 
-              <div className="admin-extraordinary-control__action">
-                <button
-                  type="button"
-                  disabled={
-                    correctionPending ||
-                    !administrativeCorrectionAllowed
-                  }
-                  title={
-                    administrativeCorrectionAllowed
-                      ? "Rimuovi un giocatore da una rosa"
-                      : "Disponibile solo a sessione non in corso"
-                  }
-                  onClick={() => {
-                    setAdministrativeCorrectionOpen(
-                      (current) => !current
-                    );
-                    setCorrectionError(null);
-                  }}
-                >
-                  Correzione amministrativa
-                </button>
+              <div className="admin-extraordinary-control__actions">
+                <div className="admin-extraordinary-control__action">
+                  <button
+                    type="button"
+                    disabled={
+                      correctionPending ||
+                      !administrativeCorrectionAllowed
+                    }
+                    title={
+                      administrativeCorrectionAllowed
+                        ? "Rimuovi un giocatore da una rosa"
+                        : "Disponibile solo a sessione non in corso"
+                    }
+                    onClick={() => {
+                      setAdministrativeCorrectionOpen(
+                        (current) => !current
+                      );
+                      setManualAssignmentOpen(false);
+                      setCorrectionError(null);
+                    }}
+                  >
+                    Correzione amministrativa
+                  </button>
 
-                <small>
-                  {
-                    administrativeCorrectionAllowed
-                      ? "Rimozione dalla rosa"
-                      : session.status === "RUNNING"
-                        ? "Sospendi prima l'asta"
-                        : "Non disponibile"
-                  }
-                </small>
+                  <small>
+                    {
+                      administrativeCorrectionAllowed
+                        ? "Rimozione dalla rosa"
+                        : session.status === "RUNNING"
+                          ? "Sospendi prima l'asta"
+                          : "Non disponibile"
+                    }
+                  </small>
+                </div>
+
+                <div className="admin-extraordinary-control__action">
+                  <button
+                    type="button"
+                    disabled={
+                      manualAssignmentPending ||
+                      !manualAssignmentAllowed
+                    }
+                    title={
+                      manualAssignmentAllowed
+                        ? "Assegna direttamente un giocatore a una rosa"
+                        : "Disponibile solo a sessione non in corso"
+                    }
+                    onClick={() => {
+                      setManualAssignmentOpen(
+                        (current) => !current
+                      );
+                      setAdministrativeCorrectionOpen(false);
+                      setManualAssignmentError(null);
+                    }}
+                  >
+                    Assegnazione manuale
+                  </button>
+
+                  <small>
+                    {
+                      manualAssignmentAllowed
+                        ? "Inserimento diretto in rosa"
+                        : session.status === "RUNNING"
+                          ? "Sospendi prima l'asta"
+                          : "Non disponibile"
+                    }
+                  </small>
+                </div>
               </div>
 
               {administrativeCorrectionOpen && (
@@ -2840,6 +3096,213 @@ export function AdminApp() {
                   {correctionError && (
                     <small className="admin-extraordinary-control__error">
                       {correctionError}
+                    </small>
+                  )}
+                </div>
+              )}
+
+              {manualAssignmentOpen && (
+                <div className="admin-extraordinary-control__panel admin-extraordinary-control__panel--manual">
+                  <label>
+                    Squadra
+                    <select
+                      value={manualAssignmentTeamId}
+                      disabled={manualAssignmentPending}
+                      onChange={(event) => {
+                        setManualAssignmentTeamId(
+                          event.target.value
+                        );
+                        setManualAssignmentError(null);
+                      }}
+                    >
+                      <option value="">
+                        Seleziona squadra
+                      </option>
+
+                      {snapshot?.publicDisplay.teams.map(
+                        (team) => (
+                          <option
+                            key={team.auctionSessionTeamId}
+                            value={team.auctionSessionTeamId}
+                          >
+                            {team.teamName}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Giocatore
+                    <select
+                      value={manualAssignmentPlayerId}
+                      disabled={manualAssignmentPending}
+                      onChange={(event) => {
+                        setManualAssignmentPlayerId(
+                          event.target.value
+                        );
+                        setManualAssignmentError(null);
+                      }}
+                    >
+                      <option value="">
+                        Seleziona giocatore
+                      </option>
+
+                      {manualAssignmentAvailablePlayers.map(
+                        (player) => (
+                          <option
+                            key={player.id}
+                            value={player.id}
+                          >
+                            {player.name}
+                            {" · "}
+                            {player.role}
+                            {" · "}
+                            {player.realTeamName ?? "-"}
+                            {" · FMS "}
+                            {player.fmsCode}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Costo
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={manualAssignmentCost}
+                      disabled={manualAssignmentPending}
+                      onChange={(event) => {
+                        setManualAssignmentCost(
+                          event.target.value
+                        );
+                        setManualAssignmentError(null);
+                      }}
+                    />
+                  </label>
+
+                  <label>
+                    Causale
+                    <select
+                      value={manualAssignmentReason}
+                      disabled={manualAssignmentPending}
+                      onChange={(event) => {
+                        setManualAssignmentReason(
+                          event.target.value as
+                            ManualRosterAssignmentReason | ""
+                        );
+                        setManualAssignmentError(null);
+                      }}
+                    >
+                      <option value="">
+                        Seleziona causale
+                      </option>
+
+                      <option value="OPTION_EXERCISED_MANUALLY">
+                        Opzione esercitata manualmente
+                      </option>
+
+                      <option value="OPTION_NO_EXTERNAL_BID">
+                        Opzione senza offerta esterna
+                      </option>
+
+                      <option value="TECHNICAL_CORRECTION">
+                        Correzione tecnica
+                      </option>
+
+                      <option value="OTHER">
+                        Altro
+                      </option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Motivo
+                    <input
+                      type="text"
+                      value={manualAssignmentComment}
+                      disabled={manualAssignmentPending}
+                      maxLength={500}
+                      placeholder="Motivo dell'assegnazione"
+                      onChange={(event) => {
+                        setManualAssignmentComment(
+                          event.target.value
+                        );
+                        setManualAssignmentError(null);
+                      }}
+                    />
+                  </label>
+
+                  {
+                    manualAssignmentSelectedPlayer &&
+                    manualAssignmentSelectedTeam &&
+                    manualAssignmentCostValid && (
+                      <p className="admin-extraordinary-control__summary">
+                        Assegna{" "}
+                        <strong>
+                          {manualAssignmentSelectedPlayer.name}
+                        </strong>
+                        {" "}(
+                        {manualAssignmentSelectedPlayer.role}
+                        {" · "}
+                        {manualAssignmentSelectedPlayer.realTeamName ?? "-"}
+                        {" · FMS "}
+                        {manualAssignmentSelectedPlayer.fmsCode}
+                        ) a{" "}
+                        <strong>
+                          {manualAssignmentSelectedTeam.teamName}
+                        </strong>
+                        {" · Costo "}
+                        <strong>
+                          {manualAssignmentNumericCost} cr
+                        </strong>
+                      </p>
+                    )
+                  }
+
+                  <button
+                    type="button"
+                    disabled={
+                      manualAssignmentPending ||
+                      !manualAssignmentAllowed ||
+                      !manualAssignmentSelectedTeam ||
+                      !manualAssignmentSelectedPlayer ||
+                      !manualAssignmentCostValid ||
+                      !manualAssignmentReason ||
+                      !manualAssignmentComment.trim()
+                    }
+                    onClick={() => {
+                      if (
+                        !manualAssignmentSelectedPlayer ||
+                        !manualAssignmentSelectedTeam ||
+                        !manualAssignmentCostValid
+                      ) {
+                        return;
+                      }
+
+                      const confirmed =
+                        window.confirm(
+                          `Confermi l'assegnazione di ${manualAssignmentSelectedPlayer.name} alla rosa di ${manualAssignmentSelectedTeam.teamName} al costo di ${manualAssignmentNumericCost} crediti?`
+                        );
+
+                      if (confirmed) {
+                        void executeManualAssignment();
+                      }
+                    }}
+                  >
+                    {
+                      manualAssignmentPending
+                        ? "Assegnazione..."
+                        : "Conferma assegnazione"
+                    }
+                  </button>
+
+                  {manualAssignmentError && (
+                    <small className="admin-extraordinary-control__error">
+                      {manualAssignmentError}
                     </small>
                   )}
                 </div>
