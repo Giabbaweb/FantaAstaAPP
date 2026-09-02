@@ -88,6 +88,32 @@ export class FmsExportGoalkeeperSelectionService {
       FmsExportGoalkeeperRepository
   ) {}
 
+  getSelected(
+    auctionSessionTeamId: string
+  ): FmsExportGoalkeeperPersistenceRecord | null {
+    return db.transaction((tx) => {
+      const auctionSessionTeam =
+        this.auctionSessionTeamRepository
+          .findByIdWithExecutor(
+            tx,
+            auctionSessionTeamId
+          );
+
+      if (!auctionSessionTeam) {
+        throw new FmsExportGoalkeeperSelectionServiceError(
+          "AUCTION_SESSION_TEAM_NOT_FOUND",
+          `Auction session team "${auctionSessionTeamId}" was not found`
+        );
+      }
+
+      return this.goalkeeperRepository
+        .findByAuctionSessionTeamIdWithExecutor(
+          tx,
+          auctionSessionTeamId
+        );
+    });
+  }
+
   select(
     auctionSessionTeamId: string,
     playerId: string

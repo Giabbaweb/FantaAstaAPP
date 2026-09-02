@@ -24,7 +24,8 @@ type FmsExportGoalkeeperBody =
 
 type FmsExportGoalkeeperSelectionPort = Pick<
   FmsExportGoalkeeperSelectionService,
-  "select"
+  | "getSelected"
+  | "select"
 >;
 
 export function fmsExportGoalkeeperRoutes(
@@ -32,6 +33,38 @@ export function fmsExportGoalkeeperRoutes(
     FmsExportGoalkeeperSelectionPort
 ): FastifyPluginAsync {
   return async (fastify) => {
+    fastify.get<{
+      Params: FmsExportGoalkeeperParams;
+    }>(
+      "/api/auction-session-teams/:id/fms-export-goalkeeper",
+      async (request, reply) => {
+        try {
+          const selection =
+            selectionService.getSelected(
+              request.params.id
+            );
+
+          return reply.code(200).send({
+            data: selection,
+            error: null
+          });
+        } catch (error) {
+          const mapped =
+            mapFmsExportGoalkeeperSelectionError(
+              error
+            );
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
     fastify.put<{
       Params: FmsExportGoalkeeperParams;
       Body: FmsExportGoalkeeperBody;
