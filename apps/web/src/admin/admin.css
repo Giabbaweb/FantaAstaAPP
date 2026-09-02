@@ -2640,3 +2640,115 @@ input {
     padding-inline: 9px;
   }
 }
+/* Auctioneer primary-action refinement */
+
+
+/* Auctioneer primary-action refinement */
+
+/*
+ * PREZZO / LEADER / TURNO
+ * Allineamento verticale uniforme.
+ */
+.admin-call-metrics article {
+  min-height: 94px;
+}
+
+.admin-call-metrics article > span,
+.admin-leader-info > span,
+.admin-turn-team > span {
+  margin-bottom: 7px;
+  line-height: 1;
+}
+
+.admin-call-metrics article:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.admin-call-metric--leader {
+  align-items: center;
+}
+
+.admin-leader-info {
+  align-self: center;
+}
+
+.admin-call-metric--turn {
+  align-items: center;
+}
+
+.admin-turn-team {
+  align-self: center;
+}
+
+/*
+ * Prezzo: il numero deve essere immediatamente leggibile.
+ */
+.admin-call-metrics article:first-child > strong {
+  color: #1565c0;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * PREPARA CHIAMATA
+ * Azione primaria blu, senza glow né doppio bordo.
+ */
+.admin-new-call .admin-prepare-call:not(:disabled) {
+  border: 1px solid #1565c0;
+  background: #1976d2;
+  color: #ffffff;
+  font-weight: 850;
+  box-shadow: none;
+  outline: none;
+}
+
+.admin-new-call .admin-prepare-call:hover:not(:disabled) {
+  border-color: #0d5fb8;
+  background: #1565c0;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.admin-new-call .admin-prepare-call:active:not(:disabled) {
+  background: #0d5fb8;
+  box-shadow: none;
+}
+
+.admin-new-call .admin-prepare-call:disabled {
+  box-shadow: none;
+}
+
+/*
+ * CONFERMA AGGIUDICAZIONE
+ * Quando è abilitato diventa chiaramente la prossima
+ * azione del banditore.
+ */
+.admin-confirm-award:not(:disabled) {
+  border-color: #218838;
+  background: #d9f3df;
+  color: #176b2c;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.admin-confirm-award:hover:not(:disabled) {
+  border-color: #176b2c;
+  background: #c7ebd0;
+  color: #125923;
+  box-shadow: none;
+}
+
+.admin-confirm-award:active:not(:disabled) {
+  background: #b9e4c4;
+  box-shadow: none;
+}
+
+.admin-confirm-award:disabled {
+  box-shadow: none;
+}

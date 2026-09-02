@@ -3236,6 +3236,7 @@ export function AdminApp() {
               </label>
 
               <button
+                className="admin-prepare-call"
                 type="button"
                 disabled={
                   createCallPending ||
