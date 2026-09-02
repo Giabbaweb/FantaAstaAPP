@@ -15,6 +15,9 @@ import type {
   AtomicRosterAssignmentRemovalCommandExecutor,
   ExecuteAtomicRosterAssignmentRemovalCommandResult
 } from "./atomic-roster-assignment-removal-command.executor.js";
+import type {
+  AuctionSnapshotDispatcher
+} from "./auction-snapshot-dispatcher.js";
 
 type AtomicRosterAssignmentRemovalCommandExecutorPort =
   Pick<
@@ -28,7 +31,19 @@ type RosterAssignmentRemovalBackupRequesterPort =
     "requestTechnicalCorrectionBackup"
   >;
 
+type RosterAssignmentRemovalSnapshotDispatcherPort =
+  Pick<
+    AuctionSnapshotDispatcher,
+    "dispatch"
+  >;
+
 export type RosterAssignmentRemovalBackupErrorHandler =
+  (input: {
+    auctionSessionId: string;
+    error: unknown;
+  }) => void;
+
+export type RosterAssignmentRemovalSnapshotErrorHandler =
   (input: {
     auctionSessionId: string;
     error: unknown;
@@ -50,6 +65,11 @@ export class AtomicRosterAssignmentRemovalCommandService {
         new NoopAuctionBackupRequester(),
     private readonly onBackupError:
       RosterAssignmentRemovalBackupErrorHandler =
+        () => undefined,
+    private readonly snapshotDispatcher?:
+      RosterAssignmentRemovalSnapshotDispatcherPort,
+    private readonly onSnapshotError:
+      RosterAssignmentRemovalSnapshotErrorHandler =
         () => undefined
   ) {}
 
@@ -94,6 +114,21 @@ export class AtomicRosterAssignmentRemovalCommandService {
       });
 
     if (!result.idempotentReplay) {
+      if (this.snapshotDispatcher) {
+        try {
+          await this.snapshotDispatcher
+            .dispatch(
+              removal.auctionSessionId
+            );
+        } catch (error) {
+          this.onSnapshotError({
+            auctionSessionId:
+              removal.auctionSessionId,
+            error
+          });
+        }
+      }
+
       try {
         await this.backupRequester
           .requestTechnicalCorrectionBackup({

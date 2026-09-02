@@ -607,6 +607,23 @@ export async function buildApp(
           },
           "Post-commit roster assignment removal backup failed"
         );
+      },
+      auctionSnapshotDispatcher,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: "SNAPSHOT",
+            eventType:
+              "ROSTER_ASSIGNMENT_REMOVED",
+            error
+          },
+          "Failed to publish roster assignment removal snapshot"
+        );
       }
     );
 

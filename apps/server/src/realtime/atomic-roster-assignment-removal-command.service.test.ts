@@ -26,19 +26,42 @@ describe(
       const onBackupError =
         vi.fn();
 
+      const snapshotDispatcher = {
+        dispatch:
+          vi.fn(
+            async () =>
+              ({} as Awaited<
+                ReturnType<
+                  import(
+                    "./auction-snapshot-dispatcher.js"
+                  ).AuctionSnapshotDispatcher[
+                    "dispatch"
+                  ]
+                >
+              >)
+          )
+      };
+
+      const onSnapshotError =
+        vi.fn();
+
       const service =
         new AtomicRosterAssignmentRemovalCommandService(
           {
             execute
           },
           backupRequester,
-          onBackupError
+          onBackupError,
+          snapshotDispatcher,
+          onSnapshotError
         );
 
       return {
         execute,
         backupRequester,
         onBackupError,
+        snapshotDispatcher,
+        onSnapshotError,
         service
       };
     }
@@ -292,5 +315,169 @@ describe(
         });
       }
     );
+
+    it(
+      "dispatches a fresh auction snapshot after a non-replayed removal",
+      async () => {
+        const {
+          execute,
+          snapshotDispatcher,
+          service
+        } = createFixture();
+
+        execute.mockResolvedValue({
+          removal: {
+            removed: {},
+            remainingCreditsAfterRemoval: 100
+          },
+          stateVersion: 4,
+          idempotentReplay: false
+        });
+
+        await service.remove(
+          {
+            commandId:
+              "roster-removal-snapshot-1",
+            stateVersion: 3
+          },
+          {
+            name: "Gianfranco",
+            role: "AUCTIONEER"
+          },
+          {
+            auctionSessionId:
+              "session-1",
+            rosterEntryId:
+              "roster-entry-1"
+          },
+          "Snapshot removal"
+        );
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).toHaveBeenCalledWith(
+          "session-1"
+        );
+      }
+    );
+
+    it(
+      "does not dispatch a snapshot for an idempotent replay",
+      async () => {
+        const {
+          execute,
+          snapshotDispatcher,
+          service
+        } = createFixture();
+
+        execute.mockResolvedValue({
+          removal: {
+            removed: {},
+            remainingCreditsAfterRemoval: 100
+          },
+          stateVersion: 4,
+          idempotentReplay: true
+        });
+
+        await service.remove(
+          {
+            commandId:
+              "roster-removal-snapshot-replay-1",
+            stateVersion: 3
+          },
+          {
+            name: "Gianfranco",
+            role: "AUCTIONEER"
+          },
+          {
+            auctionSessionId:
+              "session-1",
+            rosterEntryId:
+              "roster-entry-1"
+          },
+          "Snapshot replay"
+        );
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "keeps a committed roster removal successful when snapshot dispatch fails",
+      async () => {
+        const {
+          execute,
+          snapshotDispatcher,
+          onSnapshotError,
+          service
+        } = createFixture();
+
+        const executorResult = {
+          removal: {
+            removed: {},
+            remainingCreditsAfterRemoval: 100
+          },
+          stateVersion: 4,
+          idempotentReplay: false
+        };
+
+        const snapshotError =
+          new Error(
+            "snapshot dispatch failed"
+          );
+
+        execute.mockResolvedValue(
+          executorResult
+        );
+
+        snapshotDispatcher.dispatch
+          .mockRejectedValue(
+            snapshotError
+          );
+
+        await expect(
+          service.remove(
+            {
+              commandId:
+                "roster-removal-snapshot-error-1",
+              stateVersion: 3
+            },
+            {
+              name: "Gianfranco",
+              role: "AUCTIONEER"
+            },
+            {
+              auctionSessionId:
+                "session-1",
+              rosterEntryId:
+                "roster-entry-1"
+            },
+            "Snapshot failure"
+          )
+        ).resolves.toBe(
+          executorResult
+        );
+
+        expect(
+          onSnapshotError
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          onSnapshotError
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-1",
+          error:
+            snapshotError
+        });
+      }
+    );
+
   }
 );
