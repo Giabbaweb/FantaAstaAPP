@@ -176,6 +176,13 @@
       "when": 1788290905378,
       "tag": "0024_melodic_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1788339902694,
+      "tag": "0025_stiff_maximus",
+      "breakpoints": true
     }
   ]
 }

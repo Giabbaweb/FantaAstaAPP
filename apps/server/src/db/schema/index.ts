@@ -651,6 +651,7 @@ export const auctionEvents = sqliteTable(
         "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
         "MANUAL_ROSTER_ASSIGNMENT_ADDED",
         "TECHNICAL_ROSTER_CORRECTION",
+        "ROSTER_ASSIGNMENT_REMOVED",
         "SESSION_STARTED",
         "SESSION_SUSPENDED",
         "SESSION_RESUMED",
@@ -874,6 +875,31 @@ export const auctionEvents = sqliteTable(
           AND ${table.afterPlayerId} IS NOT NULL
           AND ${table.afterAmount} IS NOT NULL
           AND ${table.afterContractYear} IS NOT NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'ROSTER_ASSIGNMENT_REMOVED'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NULL
+          AND ${table.playerId} IS NULL
+          AND ${table.amount} IS NULL
+          AND ${table.creditsBefore} IS NULL
+          AND ${table.creditsAfter} IS NULL
+          AND ${table.contractYear} IS NULL
+          AND ${table.actorName} IS NOT NULL
+          AND ${table.actorRole} IS NOT NULL
+          AND ${table.comment} IS NOT NULL
+          AND length(trim(${table.comment})) > 0
+          AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NOT NULL
+          AND ${table.beforePlayerId} IS NOT NULL
+          AND ${table.beforeAmount} IS NOT NULL
+          AND ${table.beforeContractYear} IS NOT NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR
