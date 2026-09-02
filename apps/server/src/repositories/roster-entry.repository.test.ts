@@ -333,4 +333,103 @@ describe("SqliteRosterEntryRepository", () => {
       });
     }
   );
+  it(
+    "deletes a roster entry by id inside a transaction",
+    () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name:
+            "Roster Repository Test League",
+          normalizedName:
+            "roster repository test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 98,
+          initialCredits: 330
+        })
+        .run();
+
+      db.insert(teams)
+        .values({
+          id: teamId,
+          leagueId,
+          name:
+            "Roster Repository Test Team"
+        })
+        .run();
+
+      db.insert(auctionSessionTeams)
+        .values({
+          id: auctionSessionTeamId,
+          auctionSessionId,
+          teamId,
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 330
+        })
+        .run();
+
+      db.insert(players)
+        .values({
+          id: playerId,
+          auctionSessionId,
+          fmsCode:
+            "ROSTER-TEST-001",
+          name:
+            "Roster Test Player",
+          normalizedName:
+            "roster test player",
+          role: "A",
+          availabilityStatus:
+            "ROSTERED"
+        })
+        .run();
+
+      const repository =
+        new SqliteRosterEntryRepository();
+
+      db.transaction((tx) => {
+        const created =
+          repository.createWithExecutor(
+            tx,
+            {
+              auctionSessionTeamId,
+              playerId,
+              acquisitionCost: 25,
+              contractYear: 1,
+              source: "AUCTION"
+            }
+          );
+
+        expect(
+          repository.deleteByIdWithExecutor(
+            tx,
+            created.id
+          )
+        ).toBe(true);
+
+        expect(
+          repository.findByIdWithExecutor(
+            tx,
+            created.id
+          )
+        ).toBeNull();
+
+        expect(
+          repository.deleteByIdWithExecutor(
+            tx,
+            created.id
+          )
+        ).toBe(false);
+      });
+    }
+  );
+
 });
