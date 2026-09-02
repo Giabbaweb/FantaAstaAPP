@@ -41,6 +41,10 @@ import {
   SqliteTeamRepository
 } from "./repositories/team.repository.js";
 import {
+  AuctionSessionCompletionService
+} from "./services/auction-session-completion.service.js";
+
+import {
   adminActivityRoutes
 } from "./routes/admin-activity.routes.js";
 import {
@@ -847,6 +851,14 @@ export async function buildApp(
     )
   );
 
+  const auctionSessionCompletionService =
+    new AuctionSessionCompletionService(
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository(),
+      auctionCallRepository
+    );
+
   await app.register(
     auctionSessionRoutes(
       auctionSessionOperationalCommandCoordinator,
@@ -854,6 +866,7 @@ export async function buildApp(
       atomicManualRosterAssignmentCommandService,
       atomicTechnicalRosterCorrectionCommandService,
       atomicRosterAssignmentRemovalCommandService,
+      auctionSessionCompletionService,
       auctionBackupRequester
     )
   );

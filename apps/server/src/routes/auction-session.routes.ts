@@ -85,6 +85,9 @@ import type {
 import type {
   AuctionBackupRequester
 } from "../services/auction-backup-requester.js";
+import type {
+  AuctionSessionCompletionService
+} from "../services/auction-session-completion.service.js";
 import {
   AuctionSessionReadinessService
 } from "../services/auction-session-readiness.service.js";
@@ -297,6 +300,11 @@ type RosterAssignmentRemovalCommandPort = Pick<
   "remove"
 >;
 
+type AuctionSessionCompletionPort = Pick<
+  AuctionSessionCompletionService,
+  "assertCanComplete"
+>;
+
 type CompletedSessionBackupRequesterPort = Pick<
   AuctionBackupRequester,
   "requestCompletedSessionBackup"
@@ -313,6 +321,8 @@ export function auctionSessionRoutes(
     TechnicalRosterCorrectionCommandPort,
   rosterAssignmentRemovalCommandService:
     RosterAssignmentRemovalCommandPort,
+  completionService:
+    AuctionSessionCompletionPort,
   completedSessionBackupRequester:
     CompletedSessionBackupRequesterPort
 ): FastifyPluginAsync {
@@ -1263,6 +1273,11 @@ fastify.post<{
         }
 
         try {
+          if (command === "complete") {
+            await completionService
+              .assertCanComplete(id);
+          }
+
           const session =
             await service.executeCommand(
               id,

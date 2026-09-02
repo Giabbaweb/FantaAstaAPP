@@ -2507,6 +2507,70 @@ describe("GET /api/auction-sessions", () => {
             error: null
           });
 
+          /*
+           * Normal completion is allowed only when
+           * every ordinary roster is complete:
+           * 2P / 8D / 8C / 6A.
+           */
+          const lifecycleRosterRoles = [
+            "P", "P",
+            "D", "D", "D", "D",
+            "D", "D", "D", "D",
+            "C", "C", "C", "C",
+            "C", "C", "C", "C",
+            "A", "A", "A",
+            "A", "A", "A"
+          ] as const;
+
+          const lifecycleRosterPlayers =
+            lifecycleTeams.flatMap(
+              (_team, teamIndex) =>
+                lifecycleRosterRoles.map(
+                  (role, playerIndex) => ({
+                    id:
+                      `player-command-lifecycle-${teamIndex + 1}-${playerIndex + 1}`,
+                    auctionSessionId:
+                      "session-command-lifecycle",
+                    fmsCode:
+                      `LIFECYCLE-${teamIndex + 1}-${playerIndex + 1}`,
+                    name:
+                      `Lifecycle Player ${teamIndex + 1}-${playerIndex + 1}`,
+                    normalizedName:
+                      `lifecycle player ${teamIndex + 1}-${playerIndex + 1}`,
+                    role,
+                    availabilityStatus:
+                      "ROSTERED" as const
+                  })
+                )
+            );
+
+          await db
+            .insert(players)
+            .values(lifecycleRosterPlayers);
+
+          const lifecycleRosterEntries =
+            lifecycleTeams.flatMap(
+              (_team, teamIndex) =>
+                lifecycleRosterRoles.map(
+                  (_role, playerIndex) => ({
+                    id:
+                      `roster-command-lifecycle-${teamIndex + 1}-${playerIndex + 1}`,
+                    auctionSessionTeamId:
+                      `session-team-command-lifecycle-${teamIndex + 1}`,
+                    playerId:
+                      `player-command-lifecycle-${teamIndex + 1}-${playerIndex + 1}`,
+                    acquisitionCost: 1,
+                    contractYear: 1,
+                    source:
+                      "AUCTION" as const
+                  })
+                )
+            );
+
+          await db
+            .insert(rosterEntries)
+            .values(lifecycleRosterEntries);
+
           const completeResponse =
             await executeCommand("complete");
 

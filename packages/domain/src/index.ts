@@ -117,6 +117,7 @@ export {
   assertRosterRoleLimitAllowed,
   assertRosterSizeLimitAllowed,
   assertSufficientCredits,
+  isRosterComplete,
   contractYears,
   rosterEntrySources,
   rosterRoleLimits,
@@ -137,5 +138,6 @@ export type {
   RosterAcquisitionValidationInput,
   RosterEntry,
   RosterEntryDomainErrorCode,
-  RosterEntrySource
+  RosterEntrySource,
+  RosterRoleCounts
 } from "./roster-entries/index.js";

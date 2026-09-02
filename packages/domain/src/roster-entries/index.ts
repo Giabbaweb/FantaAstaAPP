@@ -68,3 +68,10 @@ export type {
   RosterEntryDomainErrorCode,
   RosterEntrySource
 } from "./roster-entry.js";
+
+export {
+  isRosterComplete
+} from "./roster-completion.js";
+export type {
+  RosterRoleCounts
+} from "./roster-completion.js";
