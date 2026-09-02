@@ -40,6 +40,10 @@ import {
 } from "../shared/auction-session-command-api.js";
 
 import {
+  removeRosterAssignment
+} from "../shared/roster-assignment-removal-api.js";
+
+import {
   cancelAuctionCall,
   openAuctionCall,
   confirmAuctionCall,
@@ -202,6 +206,9 @@ function getActivityLabel(
     case "TECHNICAL_ROSTER_CORRECTION":
       return "Correzione";
 
+    case "ROSTER_ASSIGNMENT_REMOVED":
+      return "Rimozione dalla rosa";
+
     case "SESSION_STARTED":
       return "Avvio asta";
 
@@ -271,6 +278,18 @@ function getActivityDescription(
 
       return `${before} → ${after}`;
     }
+
+    case "ROSTER_ASSIGNMENT_REMOVED":
+      return [
+        item.beforePlayerName,
+        item.beforeTeamName,
+        item.beforeAmount !== null
+          ? `${item.beforeAmount} cr`
+          : null,
+        item.actorName
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
     case "SESSION_STARTED":
       return "Sessione avviata";
@@ -460,6 +479,36 @@ export function AdminApp() {
   const [
     createCallError,
     setCreateCallError
+  ] = useState<string | null>(null);
+
+  const [
+    administrativeCorrectionOpen,
+    setAdministrativeCorrectionOpen
+  ] = useState(false);
+
+  const [
+    correctionTeamId,
+    setCorrectionTeamId
+  ] = useState("");
+
+  const [
+    correctionRosterEntryId,
+    setCorrectionRosterEntryId
+  ] = useState("");
+
+  const [
+    correctionComment,
+    setCorrectionComment
+  ] = useState("");
+
+  const [
+    correctionPending,
+    setCorrectionPending
+  ] = useState(false);
+
+  const [
+    correctionError,
+    setCorrectionError
   ] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1515,6 +1564,113 @@ export function AdminApp() {
       }
     };
 
+  const executeAdministrativeCorrection =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        !snapshot ||
+        !correctionTeamId ||
+        !correctionRosterEntryId ||
+        !correctionComment.trim()
+      ) {
+        return;
+      }
+
+      const allowedStatuses = [
+        "SETUP",
+        "READY",
+        "SUSPENDED",
+        "COMPLETED"
+      ] as const;
+
+      if (
+        !allowedStatuses.includes(
+          session.status as
+            typeof allowedStatuses[number]
+        )
+      ) {
+        return;
+      }
+
+      const selectedTeam =
+        snapshot.publicDisplay.teams.find(
+          (team) =>
+            team.auctionSessionTeamId ===
+            correctionTeamId
+        );
+
+      const selectedEntry =
+        selectedTeam?.roster.entries.find(
+          (entry) =>
+            entry.rosterEntryId ===
+            correctionRosterEntryId
+        );
+
+      if (!selectedTeam || !selectedEntry) {
+        setCorrectionError(
+          "Giocatore della rosa non più disponibile per la correzione."
+        );
+        return;
+      }
+
+      setCorrectionPending(true);
+      setCorrectionError(null);
+
+      try {
+        await removeRosterAssignment(
+          session.id,
+          snapshot.stateVersion,
+          selectedEntry.rosterEntryId,
+          {
+            name: "Admin",
+            role: "ADMINISTRATOR"
+          },
+          correctionComment.trim()
+        );
+
+        /*
+         * Rosa, crediti, massimo rilancio e
+         * stateVersion arriveranno dallo snapshot
+         * realtime autorevole.
+         *
+         * L'archivio players non fa parte dello
+         * snapshot: il giocatore rimosso deve tornare
+         * AVAILABLE anche nella selezione locale.
+         */
+        try {
+          const refreshedPlayers =
+            await fetchPlayers(
+              session.id
+            );
+
+          setPlayers(
+            refreshedPlayers
+          );
+        } catch {
+          /*
+           * La rimozione è già stata confermata dal
+           * server: un errore nel refresh players non
+           * deve trasformarla in un falso errore.
+           */
+        }
+
+        setCorrectionTeamId("");
+        setCorrectionRosterEntryId("");
+        setCorrectionComment("");
+        setAdministrativeCorrectionOpen(
+          false
+        );
+      } catch (error) {
+        setCorrectionError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante la correzione amministrativa."
+        );
+      } finally {
+        setCorrectionPending(false);
+      }
+    };
+
   const changePublicDisplay =
     async (
       next:
@@ -1554,6 +1710,29 @@ export function AdminApp() {
         );
       }
     };
+
+  const administrativeCorrectionAllowed =
+    session !== null &&
+    (
+      session.status === "SETUP" ||
+      session.status === "READY" ||
+      session.status === "SUSPENDED" ||
+      session.status === "COMPLETED"
+    );
+
+  const correctionSelectedTeam =
+    snapshot?.publicDisplay.teams.find(
+      (team) =>
+        team.auctionSessionTeamId ===
+        correctionTeamId
+    ) ?? null;
+
+  const correctionSelectedEntry =
+    correctionSelectedTeam?.roster.entries.find(
+      (entry) =>
+        entry.rosterEntryId ===
+        correctionRosterEntryId
+    ) ?? null;
 
   if (
     status === "LOADING" ||
@@ -2493,14 +2672,178 @@ export function AdminApp() {
               <div className="admin-extraordinary-control__action">
                 <button
                   type="button"
-                  disabled
-                  title="Funzione non ancora disponibile"
+                  disabled={
+                    correctionPending ||
+                    !administrativeCorrectionAllowed
+                  }
+                  title={
+                    administrativeCorrectionAllowed
+                      ? "Rimuovi un giocatore da una rosa"
+                      : "Disponibile solo a sessione non in corso"
+                  }
+                  onClick={() => {
+                    setAdministrativeCorrectionOpen(
+                      (current) => !current
+                    );
+                    setCorrectionError(null);
+                  }}
                 >
                   Correzione amministrativa
                 </button>
 
-                <small>Non disponibile</small>
+                <small>
+                  {
+                    administrativeCorrectionAllowed
+                      ? "Rimozione dalla rosa"
+                      : session.status === "RUNNING"
+                        ? "Sospendi prima l'asta"
+                        : "Non disponibile"
+                  }
+                </small>
               </div>
+
+              {administrativeCorrectionOpen && (
+                <div className="admin-extraordinary-control__panel">
+                  <label>
+                    Squadra
+                    <select
+                      value={correctionTeamId}
+                      disabled={correctionPending}
+                      onChange={(event) => {
+                        setCorrectionTeamId(
+                          event.target.value
+                        );
+                        setCorrectionRosterEntryId("");
+                        setCorrectionError(null);
+                      }}
+                    >
+                      <option value="">
+                        Seleziona squadra
+                      </option>
+
+                      {snapshot?.publicDisplay.teams.map(
+                        (team) => (
+                          <option
+                            key={team.auctionSessionTeamId}
+                            value={team.auctionSessionTeamId}
+                          >
+                            {team.teamName}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Giocatore
+                    <select
+                      value={correctionRosterEntryId}
+                      disabled={
+                        correctionPending ||
+                        !correctionSelectedTeam
+                      }
+                      onChange={(event) => {
+                        setCorrectionRosterEntryId(
+                          event.target.value
+                        );
+                        setCorrectionError(null);
+                      }}
+                    >
+                      <option value="">
+                        Seleziona giocatore
+                      </option>
+
+                      {correctionSelectedTeam?.roster.entries.map(
+                        (entry) => (
+                          <option
+                            key={entry.rosterEntryId}
+                            value={entry.rosterEntryId}
+                          >
+                            {entry.playerName}
+                            {" · "}
+                            {entry.role}
+                            {" · "}
+                            {entry.acquisitionCost} cr
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Motivo
+                    <input
+                      type="text"
+                      value={correctionComment}
+                      disabled={correctionPending}
+                      maxLength={500}
+                      placeholder="Motivo della correzione"
+                      onChange={(event) => {
+                        setCorrectionComment(
+                          event.target.value
+                        );
+                        setCorrectionError(null);
+                      }}
+                    />
+                  </label>
+
+                  {correctionSelectedEntry && (
+                    <p className="admin-extraordinary-control__summary">
+                      Rimuovi{" "}
+                      <strong>
+                        {correctionSelectedEntry.playerName}
+                      </strong>
+                      {" "}da{" "}
+                      <strong>
+                        {correctionSelectedTeam?.teamName}
+                      </strong>
+                      {" · Rimborso "}
+                      <strong>
+                        {correctionSelectedEntry.acquisitionCost} cr
+                      </strong>
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={
+                      correctionPending ||
+                      !administrativeCorrectionAllowed ||
+                      !correctionSelectedEntry ||
+                      !correctionComment.trim()
+                    }
+                    onClick={() => {
+                      if (
+                        !correctionSelectedEntry ||
+                        !correctionSelectedTeam
+                      ) {
+                        return;
+                      }
+
+                      const confirmed =
+                        window.confirm(
+                          `Confermi la rimozione di ${correctionSelectedEntry.playerName} dalla rosa di ${correctionSelectedTeam.teamName} con rimborso di ${correctionSelectedEntry.acquisitionCost} crediti?`
+                        );
+
+                      if (confirmed) {
+                        void executeAdministrativeCorrection();
+                      }
+                    }}
+                  >
+                    {
+                      correctionPending
+                        ? "Correzione..."
+                        : "Conferma correzione"
+                    }
+                  </button>
+
+                  {correctionError && (
+                    <small className="admin-extraordinary-control__error">
+                      {correctionError}
+                    </small>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
