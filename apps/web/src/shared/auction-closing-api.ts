@@ -123,6 +123,39 @@ export function closeAuctionSession(
   );
 }
 
+export type FmsExportGoalkeeperSelection = {
+  id: string;
+  auctionSessionTeamId: string;
+  playerId: string;
+};
+
+export async function loadFmsExportGoalkeeperSelection(
+  auctionSessionTeamId: string
+): Promise<FmsExportGoalkeeperSelection | null> {
+  const response = await fetch(
+    `/api/auction-session-teams/${auctionSessionTeamId}/fms-export-goalkeeper`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(
+        response,
+        "Lettura terzo portiere FMS fallita"
+      )
+    );
+  }
+
+  const payload =
+    await response.json() as {
+      data:
+        FmsExportGoalkeeperSelection |
+        null;
+      error: null;
+    };
+
+  return payload.data;
+}
+
 export async function selectFmsExportGoalkeeper(
   auctionSessionTeamId: string,
   playerId: string

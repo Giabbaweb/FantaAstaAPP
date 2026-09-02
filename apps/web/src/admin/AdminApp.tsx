@@ -40,8 +40,12 @@ import {
 } from "../shared/auction-session-command-api.js";
 
 import {
+  closeAuctionSession,
   completeAuctionSession,
-  forceCompleteAuctionSession
+  forceCompleteAuctionSession,
+  loadFmsExportGoalkeeperSelection,
+  loadFmsSessionRosterExport,
+  selectFmsExportGoalkeeper
 } from "../shared/auction-closing-api.js";
 
 import {
@@ -450,6 +454,47 @@ export function AdminApp() {
     completeSessionError,
     setCompleteSessionError
   ] = useState<string | null>(null);
+
+  const [
+    fmsGoalkeeperSelections,
+    setFmsGoalkeeperSelections
+  ] = useState<Record<string, string | null>>({});
+
+  const [
+    fmsGoalkeeperSelectionsLoading,
+    setFmsGoalkeeperSelectionsLoading
+  ] = useState(false);
+
+  const [
+    fmsGoalkeeperSelectionPendingTeamId,
+    setFmsGoalkeeperSelectionPendingTeamId
+  ] = useState<string | null>(null);
+
+  const [
+    fmsGoalkeeperSelectionError,
+    setFmsGoalkeeperSelectionError
+  ] = useState<string | null>(null);
+
+  const [
+    fmsExportPending,
+    setFmsExportPending
+  ] = useState(false);
+
+  const [
+    fmsExportCompleted,
+    setFmsExportCompleted
+  ] = useState(false);
+
+  const [
+    fmsClosingPending,
+    setFmsClosingPending
+  ] = useState(false);
+
+  const [
+    fmsClosingError,
+    setFmsClosingError
+  ] = useState<string | null>(null);
+
 
   const [
     confirmAwardPending,
@@ -1570,6 +1615,251 @@ export function AdminApp() {
       }
     };
 
+  useEffect(() => {
+    if (
+      !session ||
+      !snapshot ||
+      (
+        session.status !== "COMPLETED" &&
+        session.status !== "CLOSED"
+      )
+    ) {
+      setFmsGoalkeeperSelections({});
+      setFmsGoalkeeperSelectionError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSelections =
+      async (): Promise<void> => {
+        setFmsGoalkeeperSelectionsLoading(true);
+        setFmsGoalkeeperSelectionError(null);
+        setFmsExportCompleted(false);
+        setFmsClosingError(null);
+
+        try {
+          const selections =
+            await Promise.all(
+              snapshot.publicDisplay.teams.map(
+                async (team) => {
+                  const selection =
+                    await loadFmsExportGoalkeeperSelection(
+                      team.auctionSessionTeamId
+                    );
+
+                  return [
+                    team.auctionSessionTeamId,
+                    selection?.playerId ?? null
+                  ] as const;
+                }
+              )
+            );
+
+          if (!cancelled) {
+            setFmsGoalkeeperSelections(
+              Object.fromEntries(
+                selections
+              )
+            );
+          }
+        } catch (error) {
+          if (!cancelled) {
+            setFmsGoalkeeperSelectionError(
+              error instanceof Error
+                ? error.message
+                : "Errore durante il caricamento dei terzi portieri FMS."
+            );
+          }
+        } finally {
+          if (!cancelled) {
+            setFmsGoalkeeperSelectionsLoading(false);
+          }
+        }
+      };
+
+    void loadSelections();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    session?.id,
+    session?.status
+  ]);
+
+  const executeSelectFmsExportGoalkeeper =
+    async (
+      auctionSessionTeamId: string,
+      playerId: string
+    ): Promise<void> => {
+      if (
+        !session ||
+        session.status !== "COMPLETED" ||
+        !playerId
+      ) {
+        return;
+      }
+
+      setFmsGoalkeeperSelectionPendingTeamId(
+        auctionSessionTeamId
+      );
+      setFmsGoalkeeperSelectionError(null);
+
+      try {
+        await selectFmsExportGoalkeeper(
+          auctionSessionTeamId,
+          playerId
+        );
+
+        setFmsGoalkeeperSelections(
+          (current) => ({
+            ...current,
+            [auctionSessionTeamId]:
+              playerId
+          })
+        );
+
+        setFmsExportCompleted(false);
+        setFmsClosingError(null);
+      } catch (error) {
+        setFmsGoalkeeperSelectionError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante la selezione del terzo portiere FMS."
+        );
+      } finally {
+        setFmsGoalkeeperSelectionPendingTeamId(
+          null
+        );
+      }
+    };
+
+  const executeFmsSessionExport =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        session.status !== "COMPLETED"
+      ) {
+        return;
+      }
+
+      setFmsExportPending(true);
+      setFmsGoalkeeperSelectionError(null);
+      setFmsClosingError(null);
+
+      try {
+        const files =
+          await loadFmsSessionRosterExport(
+            session.id
+          );
+
+        for (const file of files) {
+          const blob =
+            new Blob(
+              [file.content],
+              {
+                type:
+                  "text/plain;charset=utf-8"
+              }
+            );
+
+          const url =
+            URL.createObjectURL(blob);
+
+          const anchor =
+            document.createElement("a");
+
+          anchor.href = url;
+          anchor.download = file.filename;
+          anchor.style.display = "none";
+
+          document.body.appendChild(
+            anchor
+          );
+
+          anchor.click();
+          anchor.remove();
+
+          URL.revokeObjectURL(url);
+        }
+
+        setFmsExportCompleted(true);
+      } catch (error) {
+        setFmsExportCompleted(false);
+
+        setFmsGoalkeeperSelectionError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante l'export delle rose FMS ReVo."
+        );
+      } finally {
+        setFmsExportPending(false);
+      }
+    };
+
+  const executeCloseAuctionSession =
+    async (): Promise<void> => {
+      if (
+        !session ||
+        !snapshot ||
+        session.status !== "COMPLETED" ||
+        !fmsExportCompleted
+      ) {
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          [
+            "CHIUDERE DEFINITIVAMENTE LA SESSIONE?",
+            "",
+            "La sessione passerà allo stato CHIUSA.",
+            "",
+            "Hai già esportato le rose finali per FMS ReVo.",
+            "Dopo la chiusura il normale lavoro d'asta è terminato."
+          ].join("\n")
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setFmsClosingPending(true);
+      setFmsClosingError(null);
+
+      try {
+        const closedSession =
+          await closeAuctionSession(
+            session.id
+          );
+
+        setSession(closedSession);
+
+        setSnapshot(
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  session: {
+                    ...current.session,
+                    status:
+                      closedSession.status
+                  }
+                }
+              : current
+        );
+      } catch (error) {
+        setFmsClosingError(
+          error instanceof Error
+            ? error.message
+            : "Errore durante la chiusura definitiva della sessione."
+        );
+      } finally {
+        setFmsClosingPending(false);
+      }
+    };
+
   const executeCompleteSession =
     async (): Promise<void> => {
       if (
@@ -2318,6 +2608,93 @@ export function AdminApp() {
         };
 
   const latestActivity = activity[0];
+
+  const completedFmsTeams =
+    session.status === "COMPLETED" &&
+    snapshot
+      ? cockpit?.teams.map((team) => {
+          const publicTeam =
+            snapshot.publicDisplay.teams.find(
+              (candidate) =>
+                candidate.auctionSessionTeamId ===
+                team.auctionSessionTeamId
+            );
+
+          const ordinaryGoalkeepers =
+            publicTeam?.roster.entries.filter(
+              (entry) =>
+                entry.role === "P"
+            ) ?? [];
+
+          const eligibleRealTeams =
+            new Set(
+              ordinaryGoalkeepers
+                .map(
+                  (entry) =>
+                    entry.realTeamName
+                )
+                .filter(
+                  (
+                    realTeamName
+                  ): realTeamName is string =>
+                    Boolean(
+                      realTeamName?.trim()
+                    )
+                )
+            );
+
+          const selectedPlayerId =
+            fmsGoalkeeperSelections[
+              team.auctionSessionTeamId
+            ] ?? null;
+
+          const candidateGoalkeepers =
+            players
+              .filter(
+                (player) =>
+                  player.role === "P" &&
+                  player.availabilityStatus ===
+                    "AVAILABLE" &&
+                  Boolean(
+                    player.realTeamName &&
+                    eligibleRealTeams.has(
+                      player.realTeamName
+                    )
+                  )
+              )
+              .sort(
+                (left, right) =>
+                  left.name.localeCompare(
+                    right.name,
+                    "it"
+                  )
+              );
+
+          return {
+            ...team,
+            ordinaryGoalkeepers,
+            candidateGoalkeepers,
+            selectedPlayerId
+          };
+        }) ?? []
+      : [];
+
+  const completedFmsSelectionCount =
+    completedFmsTeams.filter(
+      (team) =>
+        Boolean(team.selectedPlayerId)
+    ).length;
+
+  const completedOrdinaryRostersReady =
+    remainingRoleSlots.P === 0 &&
+    remainingRoleSlots.D === 0 &&
+    remainingRoleSlots.C === 0 &&
+    remainingRoleSlots.A === 0;
+
+  const completedFmsGoalkeepersReady =
+    completedFmsTeams.length > 0 &&
+    completedFmsSelectionCount ===
+      completedFmsTeams.length;
 
   return (
     <main className="admin-cockpit">
@@ -3546,6 +3923,226 @@ export function AdminApp() {
                 </small>
               )}
             </div>
+
+            {session.status === "COMPLETED" && (
+              <section className="admin-fms-closing">
+                <div className="admin-fms-closing__header">
+                  <div>
+                    <strong>
+                      Preparazione export FMS ReVo
+                    </strong>
+                    <small>
+                      Seleziona il terzo portiere
+                      per ogni fantasquadra.
+                    </small>
+                  </div>
+
+                  <span className="admin-fms-closing__progress">
+                    {
+                      completedFmsSelectionCount
+                    }/{completedFmsTeams.length}
+                  </span>
+                </div>
+
+                {fmsGoalkeeperSelectionsLoading ? (
+                  <p className="admin-fms-closing__message">
+                    Caricamento selezioni…
+                  </p>
+                ) : (
+                  <div className="admin-fms-closing__teams">
+                    {completedFmsTeams.map(
+                      (team) => {
+                        const pending =
+                          fmsGoalkeeperSelectionPendingTeamId ===
+                          team.auctionSessionTeamId;
+
+                        return (
+                          <div
+                            className="admin-fms-closing-team"
+                            key={
+                              team.auctionSessionTeamId
+                            }
+                          >
+                            <div className="admin-fms-closing-team__identity">
+                              <strong>
+                                {team.teamName}
+                              </strong>
+
+                              <small>
+                                {
+                                  team.ordinaryGoalkeepers
+                                    .map(
+                                      (goalkeeper) =>
+                                        `${goalkeeper.playerName} (${goalkeeper.realTeamName ?? "—"})`
+                                    )
+                                    .join(" · ") ||
+                                  "Portieri ordinari non disponibili"
+                                }
+                              </small>
+                            </div>
+
+                            <select
+                              aria-label={
+                                `Terzo portiere FMS ${team.teamName}`
+                              }
+                              disabled={
+                                pending ||
+                                team.ordinaryGoalkeepers.length !==
+                                  2
+                              }
+                              value={
+                                team.selectedPlayerId ??
+                                ""
+                              }
+                              onChange={(event) => {
+                                const playerId =
+                                  event.target.value;
+
+                                if (!playerId) {
+                                  return;
+                                }
+
+                                void executeSelectFmsExportGoalkeeper(
+                                  team.auctionSessionTeamId,
+                                  playerId
+                                );
+                              }}
+                            >
+                              <option value="">
+                                {
+                                  team.ordinaryGoalkeepers.length !==
+                                  2
+                                    ? "Rosa portieri incompleta"
+                                    : "Seleziona terzo portiere…"
+                                }
+                              </option>
+
+                              {team.candidateGoalkeepers.map(
+                                (player) => (
+                                  <option
+                                    key={player.id}
+                                    value={player.id}
+                                  >
+                                    {player.name}
+                                    {
+                                      player.realTeamName
+                                        ? ` · ${player.realTeamName}`
+                                        : ""
+                                    }
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                )}
+
+                {fmsGoalkeeperSelectionError && (
+                  <small className="admin-extraordinary-control__error">
+                    {fmsGoalkeeperSelectionError}
+                  </small>
+                )}
+
+                <div className="admin-fms-closing__checklist">
+                  <span
+                    data-ready={
+                      completedOrdinaryRostersReady
+                    }
+                  >
+                    {
+                      completedOrdinaryRostersReady
+                        ? "✓"
+                        : "○"
+                    }
+                    Rose ordinarie complete
+                  </span>
+
+                  <span
+                    data-ready={
+                      completedFmsGoalkeepersReady
+                    }
+                  >
+                    {
+                      completedFmsGoalkeepersReady
+                        ? "✓"
+                        : "○"
+                    }
+                    Terzi portieri {
+                      completedFmsSelectionCount
+                    }/{completedFmsTeams.length}
+                  </span>
+
+                  <span
+                    data-ready={
+                      fmsExportCompleted
+                    }
+                  >
+                    {
+                      fmsExportCompleted
+                        ? "✓"
+                        : "○"
+                    }
+                    Export FMS ReVo
+                  </span>
+                </div>
+
+                <div className="admin-fms-closing__actions">
+                  <button
+                    type="button"
+                    disabled={
+                      fmsExportPending ||
+                      fmsClosingPending ||
+                      !completedOrdinaryRostersReady ||
+                      !completedFmsGoalkeepersReady
+                    }
+                    onClick={() => {
+                      void executeFmsSessionExport();
+                    }}
+                  >
+                    {
+                      fmsExportPending
+                        ? "Esportazione..."
+                        : fmsExportCompleted
+                          ? "Esporta nuovamente"
+                          : "Esporta rose FMS ReVo"
+                    }
+                  </button>
+
+                  <button
+                    type="button"
+                    className="admin-fms-closing__close"
+                    disabled={
+                      fmsExportPending ||
+                      fmsClosingPending ||
+                      !fmsExportCompleted
+                    }
+                    title={
+                      fmsExportCompleted
+                        ? "Chiudi definitivamente la sessione"
+                        : "Esegui prima l'export FMS ReVo"
+                    }
+                    onClick={() => {
+                      void executeCloseAuctionSession();
+                    }}
+                  >
+                    {
+                      fmsClosingPending
+                        ? "Chiusura..."
+                        : "Chiudi sessione"
+                    }
+                  </button>
+                </div>
+
+                {fmsClosingError && (
+                  <small className="admin-extraordinary-control__error">
+                    {fmsClosingError}
+                  </small>
+                )}
+              </section>
+            )}
 
             <div className="admin-controls-dashboard">
               <div className="admin-role-needs">
