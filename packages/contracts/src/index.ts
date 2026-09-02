@@ -646,6 +646,21 @@ export type TechnicalRosterCorrectionCommand =
     typeof technicalRosterCorrectionCommandSchema
   >;
 
+export const removeRosterAssignmentCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    rosterEntryId:
+      z.string().trim().min(1).max(100),
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().min(1).max(500)
+  });
+
+export type RemoveRosterAssignmentCommand =
+  z.infer<
+    typeof removeRosterAssignmentCommandSchema
+  >;
+
 export const auctionCommandTypeSchema = z.enum([
   "OPEN",
   "BID",
