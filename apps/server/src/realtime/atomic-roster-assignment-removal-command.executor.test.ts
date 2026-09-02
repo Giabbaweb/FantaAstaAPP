@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../db/client.js";
 import {
+  auctionCalls,
   auctionEvents,
   auctionSessions,
   auctionSessionTeams,
@@ -20,6 +21,9 @@ import {
 import {
   SqliteAuctionEventRepository
 } from "../repositories/auction-event.repository.js";
+import {
+  SqliteAuctionCallRepository
+} from "../repositories/auction-call.repository.js";
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
@@ -76,6 +80,7 @@ describe(
     beforeEach(() => {
       db.delete(commandRegistry).run();
       db.delete(auctionEvents).run();
+      db.delete(auctionCalls).run();
       db.delete(rosterEntries).run();
       db.delete(players).run();
       db.delete(auctionSessionTeams).run();
@@ -159,6 +164,7 @@ describe(
           new SqliteAuctionSessionStateRepository(),
           new SqliteCommandRegistryRepository(),
           createRemovalService(),
+          new SqliteAuctionCallRepository(),
           new SqliteAuctionEventRepository()
         );
     });
@@ -193,6 +199,111 @@ describe(
         }
       };
     }
+
+    it(
+      "rejects roster removal while an operational auction call exists without mutating state",
+      async () => {
+        db.insert(auctionCalls)
+          .values({
+            id:
+              "operational-call-roster-removal",
+            auctionSessionId,
+            playerId,
+            callerAuctionSessionTeamId:
+              auctionSessionTeamId,
+            status: "OPEN",
+            openingBid: 1,
+            currentBid: 1,
+            currentLeaderAuctionSessionTeamId:
+              auctionSessionTeamId,
+            currentTurnAuctionSessionTeamId:
+              auctionSessionTeamId
+          })
+          .run();
+
+        await expect(
+          executor.execute(
+            createInput()
+          )
+        ).rejects.toMatchObject({
+          code:
+            "OPERATIONAL_AUCTION_CALL_EXISTS"
+        });
+
+        const storedEntry = db
+          .select()
+          .from(rosterEntries)
+          .where(
+            eq(
+              rosterEntries.id,
+              rosterEntryId
+            )
+          )
+          .get();
+
+        expect(storedEntry).toMatchObject({
+          id: rosterEntryId,
+          acquisitionCost: 20
+        });
+
+        const storedTeam = db
+          .select()
+          .from(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams.id,
+              auctionSessionTeamId
+            )
+          )
+          .get();
+
+        expect(
+          storedTeam?.remainingCredits
+        ).toBe(80);
+
+        const storedPlayer = db
+          .select()
+          .from(players)
+          .where(
+            eq(
+              players.id,
+              playerId
+            )
+          )
+          .get();
+
+        expect(
+          storedPlayer?.availabilityStatus
+        ).toBe("ROSTERED");
+
+        const storedSession = db
+          .select()
+          .from(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              auctionSessionId
+            )
+          )
+          .get();
+
+        expect(
+          storedSession?.stateVersion
+        ).toBe(0);
+
+        expect(
+          db.select()
+            .from(auctionEvents)
+            .all()
+        ).toHaveLength(0);
+
+        expect(
+          db.select()
+            .from(commandRegistry)
+            .all()
+        ).toHaveLength(0);
+      }
+    );
 
     it(
       "removes the assignment, refunds credits, records audit and increments stateVersion atomically",
@@ -526,6 +637,7 @@ describe(
             new SqliteAuctionSessionStateRepository(),
             new FailingCommandRegistryRepository(),
             createRemovalService(),
+            new SqliteAuctionCallRepository(),
             new SqliteAuctionEventRepository()
           );
 

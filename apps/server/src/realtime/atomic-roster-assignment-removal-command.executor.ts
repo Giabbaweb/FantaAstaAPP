@@ -11,6 +11,9 @@ import type {
   AuctionEventRepository
 } from "../repositories/auction-event.repository.js";
 import type {
+  AuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import type {
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
 import type {
@@ -20,6 +23,7 @@ import type {
 
 export type AtomicRosterAssignmentRemovalCommandExecutorErrorCode =
   | "AUCTION_SESSION_NOT_FOUND"
+  | "OPERATIONAL_AUCTION_CALL_EXISTS"
   | "STALE_STATE"
   | "COMMAND_ID_CONFLICT";
 
@@ -72,6 +76,11 @@ export class AtomicRosterAssignmentRemovalCommandExecutor {
       CommandRegistryRepository,
     private readonly rosterAssignmentRemovalService:
       RosterAssignmentRemovalService,
+    private readonly auctionCallRepository:
+      Pick<
+        AuctionCallRepository,
+        "findOperationalByAuctionSessionIdWithExecutor"
+      >,
     private readonly auctionEventRepository:
       AuctionEventRepository
   ) {}
@@ -142,6 +151,20 @@ export class AtomicRosterAssignmentRemovalCommandExecutor {
         throw new AtomicRosterAssignmentRemovalCommandExecutorError(
           "STALE_STATE",
           `Auction session "${auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentStateVersion}`
+        );
+      }
+
+      const operationalAuctionCall =
+        this.auctionCallRepository
+          .findOperationalByAuctionSessionIdWithExecutor(
+            tx,
+            auctionSessionId
+          );
+
+      if (operationalAuctionCall) {
+        throw new AtomicRosterAssignmentRemovalCommandExecutorError(
+          "OPERATIONAL_AUCTION_CALL_EXISTS",
+          `Auction session "${auctionSessionId}" has an operational auction call`
         );
       }
 

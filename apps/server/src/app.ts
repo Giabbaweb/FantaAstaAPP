@@ -548,6 +548,7 @@ export async function buildApp(
       new SqliteAuctionSessionStateRepository(),
       new SqliteCommandRegistryRepository(),
       manualRosterAssignmentService,
+      auctionCallRepository,
       new SqliteAuctionSessionTeamRepository(),
       new SqliteAuctionEventRepository()
     );
@@ -603,6 +604,7 @@ export async function buildApp(
       new SqliteAuctionSessionStateRepository(),
       new SqliteCommandRegistryRepository(),
       rosterAssignmentRemovalService,
+      auctionCallRepository,
       new SqliteAuctionEventRepository()
     );
 
