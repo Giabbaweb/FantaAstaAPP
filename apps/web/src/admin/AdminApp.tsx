@@ -2732,158 +2732,7 @@ export function AdminApp() {
               </button>
             </div>
             </div>
-        </section>
-
-        <section className="admin-panel admin-panel--controls">
-          <p className="admin-panel__label">
-            Controlli asta
-          </p>
-
-          <div className="admin-controls">
-            <div className="admin-session-control">
-              {session.status === "RUNNING" && (
-                <select
-                  value={suspensionReason}
-                  disabled={sessionCommandPending}
-                  aria-label="Causale sospensione"
-                  onChange={(event) => {
-                    setSuspensionReason(
-                      event.target.value as
-                        Exclude<
-                          AuctionSessionSuspensionReason,
-                          "RECOVERY_RESTART"
-                        >
-                    );
-                  }}
-                >
-                  <option value="PIZZA_BREAK">
-                    Pizza break
-                  </option>
-
-                  <option value="TECHNICAL_BREAK">
-                    Pausa tecnica
-                  </option>
-
-                  <option value="ORGANIZATIONAL_BREAK">
-                    Pausa organizzativa
-                  </option>
-
-                  <option value="NETWORK_ISSUE">
-                    Problema rete
-                  </option>
-
-                  <option value="OTHER">
-                    Altro
-                  </option>
-                </select>
-              )}
-
-              <button
-                type="button"
-                disabled={
-                  sessionCommandPending ||
-                  (
-                    session.status !== "READY" &&
-                    session.status !== "RUNNING" &&
-                    session.status !== "SUSPENDED"
-                  )
-                }
-                data-action={
-                  session.status === "READY"
-                    ? "start"
-                    : session.status === "SUSPENDED"
-                      ? "resume"
-                      : "suspend"
-                }
-                onClick={() => {
-                  void executeSessionOperationalCommand();
-                }}
-              >
-                {
-                  sessionCommandPending
-                    ? "Operazione..."
-                    : session.status === "READY"
-                      ? "Avvia asta"
-                      : session.status === "SUSPENDED"
-                        ? "Riprendi sessione"
-                        : "Sospendi sessione"
-                }
-              </button>
-            </div>
-
-            <div className="admin-controls-dashboard">
-              <div className="admin-role-needs">
-                <span className="admin-controls-section__label">
-                  Posti ancora da coprire
-                </span>
-
-                <div className="admin-role-needs__grid">
-                  {(["P", "D", "C", "A"] as const).map(
-                    (role) => (
-                      <div
-                        key={role}
-                        data-role={role}
-                      >
-                        <strong>{role}</strong>
-                        <span>
-                          {remainingRoleSlots[role]}
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="admin-recent-awards">
-                <span className="admin-controls-section__label">
-                  Ultime aggiudicazioni
-                </span>
-
-                <div className="admin-recent-awards__list">
-                  {
-                    snapshot?.publicDisplay
-                      .recentAwards.length ? (
-                      snapshot.publicDisplay
-                        .recentAwards.map(
-                          (award) => (
-                            <article
-                              key={award.eventId}
-                              className="admin-recent-award"
-                            >
-                              <span
-                                className="admin-recent-award__role"
-                                data-role={award.role}
-                              >
-                                {award.role}
-                              </span>
-
-                              <div className="admin-recent-award__copy">
-                                <strong title={award.playerName}>
-                                  {award.playerName}
-                                </strong>
-
-                                <span title={award.teamName}>
-                                  {award.teamName}
-                                </span>
-                              </div>
-
-                              <strong className="admin-recent-award__amount">
-                                {award.amount}
-                              </strong>
-                            </article>
-                          )
-                        )
-                    ) : (
-                      <p className="admin-recent-awards__empty">
-                        Nessuna aggiudicazione.
-                      </p>
-                    )
-                  }
-                </div>
-              </div>
-            </div>
-
-            <div className="admin-extraordinary-control">
+          <div className="admin-extraordinary-control">
               <span className="admin-extraordinary-control__label">
                 Operazioni straordinarie
               </span>
@@ -3308,6 +3157,159 @@ export function AdminApp() {
                 </div>
               )}
             </div>
+
+        </section>
+
+        <section className="admin-panel admin-panel--controls">
+          <p className="admin-panel__label">
+            Controlli asta
+          </p>
+
+          <div className="admin-controls">
+            <div className="admin-session-control">
+              {session.status === "RUNNING" && (
+                <select
+                  value={suspensionReason}
+                  disabled={sessionCommandPending}
+                  aria-label="Causale sospensione"
+                  onChange={(event) => {
+                    setSuspensionReason(
+                      event.target.value as
+                        Exclude<
+                          AuctionSessionSuspensionReason,
+                          "RECOVERY_RESTART"
+                        >
+                    );
+                  }}
+                >
+                  <option value="PIZZA_BREAK">
+                    Pizza break
+                  </option>
+
+                  <option value="TECHNICAL_BREAK">
+                    Pausa tecnica
+                  </option>
+
+                  <option value="ORGANIZATIONAL_BREAK">
+                    Pausa organizzativa
+                  </option>
+
+                  <option value="NETWORK_ISSUE">
+                    Problema rete
+                  </option>
+
+                  <option value="OTHER">
+                    Altro
+                  </option>
+                </select>
+              )}
+
+              <button
+                type="button"
+                disabled={
+                  sessionCommandPending ||
+                  (
+                    session.status !== "READY" &&
+                    session.status !== "RUNNING" &&
+                    session.status !== "SUSPENDED"
+                  )
+                }
+                data-action={
+                  session.status === "READY"
+                    ? "start"
+                    : session.status === "SUSPENDED"
+                      ? "resume"
+                      : "suspend"
+                }
+                onClick={() => {
+                  void executeSessionOperationalCommand();
+                }}
+              >
+                {
+                  sessionCommandPending
+                    ? "Operazione..."
+                    : session.status === "READY"
+                      ? "Avvia asta"
+                      : session.status === "SUSPENDED"
+                        ? "Riprendi sessione"
+                        : "Sospendi sessione"
+                }
+              </button>
+            </div>
+
+            <div className="admin-controls-dashboard">
+              <div className="admin-role-needs">
+                <span className="admin-controls-section__label">
+                  Posti ancora da coprire
+                </span>
+
+                <div className="admin-role-needs__grid">
+                  {(["P", "D", "C", "A"] as const).map(
+                    (role) => (
+                      <div
+                        key={role}
+                        data-role={role}
+                      >
+                        <strong>{role}</strong>
+                        <span>
+                          {remainingRoleSlots[role]}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="admin-recent-awards">
+                <span className="admin-controls-section__label">
+                  Ultime aggiudicazioni
+                </span>
+
+                <div className="admin-recent-awards__list">
+                  {
+                    snapshot?.publicDisplay
+                      .recentAwards.length ? (
+                      snapshot.publicDisplay
+                        .recentAwards.map(
+                          (award) => (
+                            <article
+                              key={award.eventId}
+                              className="admin-recent-award"
+                            >
+                              <span
+                                className="admin-recent-award__role"
+                                data-role={award.role}
+                              >
+                                {award.role}
+                              </span>
+
+                              <div className="admin-recent-award__copy">
+                                <strong title={award.playerName}>
+                                  {award.playerName}
+                                </strong>
+
+                                <span title={award.teamName}>
+                                  {award.teamName}
+                                </span>
+                              </div>
+
+                              <strong className="admin-recent-award__amount">
+                                {award.amount}
+                              </strong>
+                            </article>
+                          )
+                        )
+                    ) : (
+                      <p className="admin-recent-awards__empty">
+                        Nessuna aggiudicazione.
+                      </p>
+                    )
+                  }
+                </div>
+              </div>
+            </div>
+
+
           </div>
 
           {sessionCommandError && (
