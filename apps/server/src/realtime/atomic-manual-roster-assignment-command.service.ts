@@ -16,6 +16,9 @@ import type {
   AtomicManualRosterAssignmentCommandExecutor,
   ExecuteAtomicManualRosterAssignmentCommandResult
 } from "./atomic-manual-roster-assignment-command.executor.js";
+import type {
+  AuctionSnapshotDispatcher
+} from "./auction-snapshot-dispatcher.js";
 
 type AtomicManualRosterAssignmentCommandExecutorPort =
   Pick<
@@ -29,7 +32,19 @@ type ManualAssignmentBackupRequesterPort =
     "requestManualAssignmentBackup"
   >;
 
+type ManualAssignmentSnapshotDispatcherPort =
+  Pick<
+    AuctionSnapshotDispatcher,
+    "dispatch"
+  >;
+
 export type ManualAssignmentBackupErrorHandler =
+  (input: {
+    auctionSessionId: string;
+    error: unknown;
+  }) => void;
+
+export type ManualAssignmentSnapshotErrorHandler =
   (input: {
     auctionSessionId: string;
     error: unknown;
@@ -51,6 +66,11 @@ export class AtomicManualRosterAssignmentCommandService {
         new NoopAuctionBackupRequester(),
     private readonly onBackupError:
       ManualAssignmentBackupErrorHandler =
+        () => undefined,
+    private readonly snapshotDispatcher?:
+      ManualAssignmentSnapshotDispatcherPort,
+    private readonly onSnapshotError:
+      ManualAssignmentSnapshotErrorHandler =
         () => undefined
   ) {}
 
@@ -105,6 +125,21 @@ export class AtomicManualRosterAssignmentCommandService {
     });
 
     if (!result.idempotentReplay) {
+      if (this.snapshotDispatcher) {
+        try {
+          await this.snapshotDispatcher
+            .dispatch(
+              assignment.auctionSessionId
+            );
+        } catch (error) {
+          this.onSnapshotError({
+            auctionSessionId:
+              assignment.auctionSessionId,
+            error
+          });
+        }
+      }
+
       try {
         await this.backupRequester
           .requestManualAssignmentBackup({

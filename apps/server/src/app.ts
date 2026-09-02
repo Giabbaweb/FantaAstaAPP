@@ -570,6 +570,23 @@ export async function buildApp(
           },
           "Post-commit manual assignment backup failed"
         );
+      },
+      auctionSnapshotDispatcher,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: "SNAPSHOT",
+            eventType:
+              "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+            error
+          },
+          "Failed to publish manual assignment snapshot"
+        );
       }
     );
 
