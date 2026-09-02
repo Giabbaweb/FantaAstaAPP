@@ -8,6 +8,8 @@ import {
   db
 } from "../db/client.js";
 import {
+  auctionCalls,
+  auctionEvents,
   auctionSessions,
   auctionSessionTeams,
   leagues,
@@ -390,4 +392,216 @@ describe("realtime snapshot SQLite readers", () => {
       reader.findPlayerById("missing-player")
     ).resolves.toBeNull();
   });
+
+  it(
+    "returns only currently effective auction awards and keeps only the latest award per player",
+    async () => {
+      await db.insert(leagues).values({
+        id: "league-awards",
+        name: "League Awards",
+        normalizedName:
+          "league awards"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-awards",
+        leagueId: "league-awards",
+        season: "2026/2027",
+        editionNumber: 35,
+        initialCredits: 300
+      });
+
+      await db.insert(teams).values({
+        id: "team-awards",
+        leagueId: "league-awards",
+        name: "Team Awards"
+      });
+
+      await db.insert(auctionSessionTeams)
+        .values({
+          id: "session-team-awards",
+          auctionSessionId:
+            "session-awards",
+          teamId: "team-awards",
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 280
+        });
+
+      await db.insert(players).values([
+        {
+          id: "player-current-award",
+          auctionSessionId:
+            "session-awards",
+          fmsCode: "AWARD-001",
+          name: "Current Award",
+          normalizedName:
+            "current award",
+          role: "A",
+          availabilityStatus:
+            "ROSTERED"
+        },
+        {
+          id: "player-removed-award",
+          auctionSessionId:
+            "session-awards",
+          fmsCode: "AWARD-002",
+          name: "Removed Award",
+          normalizedName:
+            "removed award",
+          role: "A",
+          availabilityStatus:
+            "AVAILABLE"
+        }
+      ]);
+
+      await db.insert(rosterEntries).values({
+        id: "roster-current-award",
+        auctionSessionTeamId:
+          "session-team-awards",
+        playerId:
+          "player-current-award",
+        acquisitionCost: 20,
+        contractYear: 1,
+        source: "AUCTION"
+      });
+
+      await db.insert(auctionCalls).values([
+        {
+          id: "call-current-old",
+          auctionSessionId:
+            "session-awards",
+          playerId:
+            "player-current-award",
+          callerAuctionSessionTeamId:
+            "session-team-awards",
+          status: "CONFIRMED",
+          openingBid: 1,
+          currentBid: 20,
+          currentLeaderAuctionSessionTeamId:
+            "session-team-awards",
+          currentTurnAuctionSessionTeamId:
+            null,
+          provisionalWinnerAuctionSessionTeamId:
+            "session-team-awards"
+        },
+        {
+          id: "call-current-new",
+          auctionSessionId:
+            "session-awards",
+          playerId:
+            "player-current-award",
+          callerAuctionSessionTeamId:
+            "session-team-awards",
+          status: "CONFIRMED",
+          openingBid: 1,
+          currentBid: 20,
+          currentLeaderAuctionSessionTeamId:
+            "session-team-awards",
+          currentTurnAuctionSessionTeamId:
+            null,
+          provisionalWinnerAuctionSessionTeamId:
+            "session-team-awards"
+        },
+        {
+          id: "call-removed",
+          auctionSessionId:
+            "session-awards",
+          playerId:
+            "player-removed-award",
+          callerAuctionSessionTeamId:
+            "session-team-awards",
+          status: "CONFIRMED",
+          openingBid: 1,
+          currentBid: 11,
+          currentLeaderAuctionSessionTeamId:
+            "session-team-awards",
+          currentTurnAuctionSessionTeamId:
+            null,
+          provisionalWinnerAuctionSessionTeamId:
+            "session-team-awards"
+        }
+      ]);
+
+      await db.insert(auctionEvents).values([
+        {
+          id: "award-current-old",
+          auctionSessionId:
+            "session-awards",
+          auctionCallId:
+            "call-current-old",
+          eventType:
+            "AUCTION_AWARD_CONFIRMED",
+          auctionSessionTeamId:
+            "session-team-awards",
+          playerId:
+            "player-current-award",
+          amount: 20,
+          creditsBefore: 300,
+          creditsAfter: 280,
+          createdAt:
+            "2026-09-16 20:00:00"
+        },
+        {
+          id: "award-current-new",
+          auctionSessionId:
+            "session-awards",
+          auctionCallId:
+            "call-current-new",
+          eventType:
+            "AUCTION_AWARD_CONFIRMED",
+          auctionSessionTeamId:
+            "session-team-awards",
+          playerId:
+            "player-current-award",
+          amount: 20,
+          creditsBefore: 300,
+          creditsAfter: 280,
+          createdAt:
+            "2026-09-16 21:00:00"
+        },
+        {
+          id: "award-removed",
+          auctionSessionId:
+            "session-awards",
+          auctionCallId:
+            "call-removed",
+          eventType:
+            "AUCTION_AWARD_CONFIRMED",
+          auctionSessionTeamId:
+            "session-team-awards",
+          playerId:
+            "player-removed-award",
+          amount: 11,
+          creditsBefore: 291,
+          creditsAfter: 280,
+          createdAt:
+            "2026-09-16 22:00:00"
+        }
+      ]);
+
+      const reader =
+        new SqliteRealtimePublicDisplayReader();
+
+      await expect(
+        reader.findRecentAwardsByAuctionSessionId(
+          "session-awards"
+        )
+      ).resolves.toEqual([
+        expect.objectContaining({
+          eventId:
+            "award-current-new",
+          playerId:
+            "player-current-award",
+          playerName:
+            "Current Award",
+          auctionSessionTeamId:
+            "session-team-awards",
+          teamName:
+            "Team Awards",
+          amount: 20
+        })
+      ]);
+    }
+  );
 });

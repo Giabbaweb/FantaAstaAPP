@@ -401,6 +401,27 @@ export class SqliteRealtimePublicDisplayReader
         )
       )
       .innerJoin(
+        rosterEntries,
+        and(
+          eq(
+            rosterEntries.playerId,
+            auctionEvents.playerId
+          ),
+          eq(
+            rosterEntries.auctionSessionTeamId,
+            auctionEvents.auctionSessionTeamId
+          ),
+          eq(
+            rosterEntries.acquisitionCost,
+            auctionEvents.amount
+          ),
+          eq(
+            rosterEntries.source,
+            "AUCTION"
+          )
+        )
+      )
+      .innerJoin(
         teams,
         eq(
           auctionSessionTeams.teamId,
@@ -424,29 +445,48 @@ export class SqliteRealtimePublicDisplayReader
         desc(auctionEvents.id)
       );
 
-    return records.map((record) => {
-      if (
-        record.auctionSessionTeamId === null ||
-        record.amount === null
-      ) {
-        throw new Error(
-          `Invalid AUCTION_AWARD_CONFIRMED event "${record.eventId}"`
-        );
-      }
+    const seenPlayerIds =
+      new Set<string>();
 
-      return {
-        eventId: record.eventId,
-        playerId: record.playerId,
-        playerName: record.playerName,
-        role: record.role,
-        auctionSessionTeamId:
-          record.auctionSessionTeamId,
-        teamName: record.teamName,
-        amount: record.amount,
-        confirmedAt:
-          record.confirmedAt
-      };
-    });
+    return records
+      .filter((record) => {
+        if (
+          seenPlayerIds.has(
+            record.playerId
+          )
+        ) {
+          return false;
+        }
+
+        seenPlayerIds.add(
+          record.playerId
+        );
+
+        return true;
+      })
+      .map((record) => {
+        if (
+          record.auctionSessionTeamId === null ||
+          record.amount === null
+        ) {
+          throw new Error(
+            `Invalid AUCTION_AWARD_CONFIRMED event "${record.eventId}"`
+          );
+        }
+
+        return {
+          eventId: record.eventId,
+          playerId: record.playerId,
+          playerName: record.playerName,
+          role: record.role,
+          auctionSessionTeamId:
+            record.auctionSessionTeamId,
+          teamName: record.teamName,
+          amount: record.amount,
+          confirmedAt:
+            record.confirmedAt
+        };
+      });
   }
 
   async findPlayerById(
