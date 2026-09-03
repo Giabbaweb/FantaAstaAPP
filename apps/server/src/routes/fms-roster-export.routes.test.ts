@@ -202,8 +202,20 @@ describe(
         'attachment; filename="Abbaweb.txt"'
       );
 
+      expect(
+        response.body.endsWith("\r\n")
+      ).toBe(true);
+
+      expect(
+        response.body
+      ).not.toMatch(
+        /(?<!\r)\n/
+      );
+
       const lines =
-        response.body.split("\n");
+        response.body
+          .slice(0, -2)
+          .split("\r\n");
 
       expect(lines).toHaveLength(25);
 
