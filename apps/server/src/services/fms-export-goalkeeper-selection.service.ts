@@ -25,6 +25,9 @@ import type {
 import type {
   RosterEntryRepository
 } from "../repositories/roster-entry.repository.js";
+import type {
+  FmsSessionExportStateService
+} from "./fms-session-export-state.service.js";
 
 const selectableAuctionSessionStatuses:
   ReadonlySet<AuctionSessionStatus> =
@@ -85,7 +88,12 @@ export class FmsExportGoalkeeperSelectionService {
         "findByPlayerIdWithExecutor"
       >,
     private readonly goalkeeperRepository:
-      FmsExportGoalkeeperRepository
+      FmsExportGoalkeeperRepository,
+    private readonly fmsSessionExportStateService?:
+      Pick<
+        FmsSessionExportStateService,
+        "invalidateWithExecutor"
+      >
   ) {}
 
   getSelected(
@@ -272,6 +280,13 @@ export class FmsExportGoalkeeperSelectionService {
     );
 
     if (existingTeamSelection) {
+      if (
+        existingTeamSelection.playerId ===
+        candidate.id
+      ) {
+        return existingTeamSelection;
+      }
+
       const updated =
         this.goalkeeperRepository
           .updateWithExecutor(
@@ -288,18 +303,33 @@ export class FmsExportGoalkeeperSelectionService {
         );
       }
 
+      this.fmsSessionExportStateService
+        ?.invalidateWithExecutor(
+          executor,
+          auctionSession.id
+        );
+
       return updated;
     }
 
-    return this.goalkeeperRepository
-      .createWithExecutor(
+    const created =
+      this.goalkeeperRepository
+        .createWithExecutor(
+          executor,
+          {
+            auctionSessionTeamId:
+              auctionSessionTeam.id,
+            playerId: candidate.id
+          }
+        );
+
+    this.fmsSessionExportStateService
+      ?.invalidateWithExecutor(
         executor,
-        {
-          auctionSessionTeamId:
-            auctionSessionTeam.id,
-          playerId: candidate.id
-        }
+        auctionSession.id
       );
+
+    return created;
   }
 
   private assertRosterGoalkeepersValid(

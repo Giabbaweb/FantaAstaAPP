@@ -14,6 +14,9 @@ import type {
   AuctionCallRepository
 } from "../repositories/auction-call.repository.js";
 import type {
+  FmsSessionExportStateService
+} from "../services/fms-session-export-state.service.js";
+import type {
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
 import type {
@@ -82,7 +85,12 @@ export class AtomicRosterAssignmentRemovalCommandExecutor {
         "findOperationalByAuctionSessionIdWithExecutor"
       >,
     private readonly auctionEventRepository:
-      AuctionEventRepository
+      AuctionEventRepository,
+    private readonly fmsSessionExportStateService?:
+      Pick<
+        FmsSessionExportStateService,
+        "invalidateWithExecutor"
+      >
   ) {}
 
   async execute(
@@ -238,6 +246,12 @@ export class AtomicRosterAssignmentRemovalCommandExecutor {
                 removal
             }
           );
+
+      this.fmsSessionExportStateService
+        ?.invalidateWithExecutor(
+          tx,
+          auctionSessionId
+        );
 
       return {
         removal:

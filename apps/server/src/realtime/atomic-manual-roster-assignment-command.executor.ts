@@ -20,6 +20,9 @@ import type {
   ManualRosterAssignmentService
 } from "../services/manual-roster-assignment.service.js";
 import type {
+  FmsSessionExportStateService
+} from "../services/fms-session-export-state.service.js";
+import type {
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
 import type {
@@ -90,7 +93,12 @@ export class AtomicManualRosterAssignmentCommandExecutor {
     private readonly auctionSessionTeamRepository:
       AuctionSessionTeamTransactionalRepository,
     private readonly auctionEventRepository:
-      AuctionEventRepository
+      AuctionEventRepository,
+    private readonly fmsSessionExportStateService?:
+      Pick<
+        FmsSessionExportStateService,
+        "invalidateWithExecutor"
+      >
   ) {}
 
   async execute(
@@ -265,6 +273,12 @@ export class AtomicManualRosterAssignmentCommandExecutor {
                 rosterEntry
             }
           );
+
+      this.fmsSessionExportStateService
+        ?.invalidateWithExecutor(
+          tx,
+          auctionSessionId
+        );
 
       return {
         rosterEntry:

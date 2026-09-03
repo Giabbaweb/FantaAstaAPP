@@ -548,6 +548,15 @@ export async function buildApp(
     options.restoreRuntimeCoordinator ??
     new RestoreRuntimeCoordinator();
 
+  const fmsSessionExportRepository =
+    new SqliteFmsSessionExportRepository();
+
+  const fmsSessionExportStateService =
+    new FmsSessionExportStateService(
+      auctionSessionRepository,
+      fmsSessionExportRepository
+    );
+
   const manualRosterAssignmentService =
     new ManualRosterAssignmentService(
       auctionSessionRepository,
@@ -563,7 +572,8 @@ export async function buildApp(
       manualRosterAssignmentService,
       auctionCallRepository,
       new SqliteAuctionSessionTeamRepository(),
-      new SqliteAuctionEventRepository()
+      new SqliteAuctionEventRepository(),
+      fmsSessionExportStateService
     );
 
   const atomicManualRosterAssignmentCommandService =
@@ -618,7 +628,8 @@ export async function buildApp(
       new SqliteCommandRegistryRepository(),
       rosterAssignmentRemovalService,
       auctionCallRepository,
-      new SqliteAuctionEventRepository()
+      new SqliteAuctionEventRepository(),
+      fmsSessionExportStateService
     );
 
   const atomicRosterAssignmentRemovalCommandService =
@@ -746,19 +757,14 @@ export async function buildApp(
       new SqliteTeamRepository()
     );
 
-  const fmsSessionExportStateService =
-    new FmsSessionExportStateService(
-      auctionSessionRepository,
-      new SqliteFmsSessionExportRepository()
-    );
-
   const fmsExportGoalkeeperSelectionService =
     new FmsExportGoalkeeperSelectionService(
       auctionSessionRepository,
       new SqliteAuctionSessionTeamRepository(),
       new SqlitePlayerRepository(),
       new SqliteRosterEntryRepository(),
-      new SqliteFmsExportGoalkeeperRepository()
+      new SqliteFmsExportGoalkeeperRepository(),
+      fmsSessionExportStateService
     );
 
   const atomicAuctionCallCommandService =
