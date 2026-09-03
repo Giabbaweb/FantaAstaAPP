@@ -32,8 +32,7 @@ import type {
 const selectableAuctionSessionStatuses:
   ReadonlySet<AuctionSessionStatus> =
     new Set([
-      "COMPLETED",
-      "CLOSED"
+      "COMPLETED"
     ]);
 
 export type FmsExportGoalkeeperSelectionServiceErrorCode =
