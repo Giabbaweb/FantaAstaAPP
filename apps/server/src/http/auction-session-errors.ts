@@ -31,7 +31,8 @@ export type AuctionSessionConflictResponse = {
       | "INVALID_STATUS_TRANSITION"
       | "ACTIVE_SESSION_ALREADY_EXISTS"
       | "OPERATIONAL_AUCTION_CALL_EXISTS"
-      | "AUCTION_SESSION_ROSTERS_INCOMPLETE";
+      | "AUCTION_SESSION_ROSTERS_INCOMPLETE"
+      | "FMS_EXPORT_REQUIRED";
     message: string;
   };
 };

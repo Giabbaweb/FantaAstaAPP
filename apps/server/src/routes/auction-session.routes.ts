@@ -67,6 +67,9 @@ import {
 import {
   SqliteAuctionSessionReadinessRepository
 } from "../repositories/auction-session-readiness.repository.js";
+import {
+  SqliteFmsSessionExportRepository
+} from "../repositories/fms-session-export.repository.js";
 import type {
   AuctionSessionOperationalCommandCoordinator
 } from "../realtime/auction-session-operational-command-coordinator.js";
@@ -97,6 +100,9 @@ import type {
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
+import {
+  FmsSessionExportStateService
+} from "../services/fms-session-export-state.service.js";
 import {
   AuctionSessionSetupService,
   AuctionSessionSetupServiceError
@@ -266,6 +272,12 @@ const repository =
 
 const service =
   new AuctionSessionService(repository);
+
+const fmsSessionExportStateService =
+  new FmsSessionExportStateService(
+    repository,
+    new SqliteFmsSessionExportRepository()
+  );
 
 const setupService =
   new AuctionSessionSetupService();
@@ -1333,6 +1345,21 @@ fastify.post<{
           if (command === "complete") {
             await completionService
               .assertCanComplete(id);
+          }
+
+          if (
+            command === "close" &&
+            !fmsSessionExportStateService
+              .getStatus(id)
+          ) {
+            return reply.code(409).send({
+              data: null,
+              error: {
+                code: "FMS_EXPORT_REQUIRED",
+                message:
+                  "FMS ReVo roster export must be completed before closing the auction session"
+              }
+            });
           }
 
           const session =

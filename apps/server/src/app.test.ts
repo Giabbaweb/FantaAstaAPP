@@ -2583,6 +2583,63 @@ describe("GET /api/auction-sessions", () => {
             error: null
           });
 
+          const closeWithoutExportResponse =
+            await executeCommand("close");
+
+          expect(
+            closeWithoutExportResponse.statusCode
+          ).toBe(409);
+          expect(
+            closeWithoutExportResponse.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code: "FMS_EXPORT_REQUIRED",
+              message:
+                "FMS ReVo roster export must be completed before closing the auction session"
+            }
+          });
+
+          const sessionAfterRejectedCloseResponse =
+            await app.inject({
+              method: "GET",
+              url:
+                "/api/auction-sessions/session-command-lifecycle"
+            });
+
+          expect(
+            sessionAfterRejectedCloseResponse.statusCode
+          ).toBe(200);
+          expect(
+            sessionAfterRejectedCloseResponse.json()
+          ).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "COMPLETED"
+            }),
+            error: null
+          });
+
+          const confirmExportResponse =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/session-command-lifecycle/fms-export-state/confirm"
+            });
+
+          expect(
+            confirmExportResponse.statusCode
+          ).toBe(200);
+          expect(
+            confirmExportResponse.json()
+          ).toEqual({
+            data: expect.objectContaining({
+              auctionSessionId:
+                "session-command-lifecycle"
+            }),
+            error: null
+          });
+
           const closeResponse =
             await executeCommand("close");
 
