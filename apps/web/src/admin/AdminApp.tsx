@@ -43,8 +43,10 @@ import {
 import {
   closeAuctionSession,
   completeAuctionSession,
+  confirmFmsSessionExport,
   forceCompleteAuctionSession,
   loadFmsExportGoalkeeperSelection,
+  loadFmsSessionExportState,
   loadFmsSessionRosterExport,
   selectFmsExportGoalkeeper
 } from "../shared/auction-closing-api.js";
@@ -1646,28 +1648,39 @@ export function AdminApp() {
         setFmsClosingError(null);
 
         try {
-          const selections =
-            await Promise.all(
-              snapshot.publicDisplay.teams.map(
-                async (team) => {
-                  const selection =
-                    await loadFmsExportGoalkeeperSelection(
-                      team.auctionSessionTeamId
-                    );
+          const [
+            selections,
+            exportState
+          ] =
+            await Promise.all([
+              Promise.all(
+                snapshot.publicDisplay.teams.map(
+                  async (team) => {
+                    const selection =
+                      await loadFmsExportGoalkeeperSelection(
+                        team.auctionSessionTeamId
+                      );
 
-                  return [
-                    team.auctionSessionTeamId,
-                    selection?.playerId ?? null
-                  ] as const;
-                }
+                    return [
+                      team.auctionSessionTeamId,
+                      selection?.playerId ?? null
+                    ] as const;
+                  }
+                )
+              ),
+              loadFmsSessionExportState(
+                session.id
               )
-            );
+            ]);
 
           if (!cancelled) {
             setFmsGoalkeeperSelections(
               Object.fromEntries(
                 selections
               )
+            );
+            setFmsExportCompleted(
+              exportState !== null
             );
           }
         } catch (error) {
@@ -1791,6 +1804,10 @@ export function AdminApp() {
 
           URL.revokeObjectURL(url);
         }
+
+        await confirmFmsSessionExport(
+          session.id
+        );
 
         setFmsExportCompleted(true);
       } catch (error) {

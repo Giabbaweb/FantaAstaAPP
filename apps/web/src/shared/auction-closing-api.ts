@@ -29,6 +29,11 @@ type FmsSessionRosterExportResponse = {
   error: null;
 };
 
+export type FmsSessionExportState = {
+  auctionSessionId: string;
+  exportedAt: string;
+};
+
 async function readErrorMessage(
   response: Response,
   fallback: string
@@ -205,6 +210,59 @@ export async function loadFmsSessionRosterExport(
   const payload =
     await response.json() as
       FmsSessionRosterExportResponse;
+
+  return payload.data;
+}
+
+export async function loadFmsSessionExportState(
+  auctionSessionId: string
+): Promise<FmsSessionExportState | null> {
+  const response = await fetch(
+    `/api/auction-sessions/${auctionSessionId}/fms-export-state`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(
+        response,
+        "Lettura stato export FMS fallita"
+      )
+    );
+  }
+
+  const payload =
+    await response.json() as {
+      data: FmsSessionExportState | null;
+      error: null;
+    };
+
+  return payload.data;
+}
+
+export async function confirmFmsSessionExport(
+  auctionSessionId: string
+): Promise<FmsSessionExportState> {
+  const response = await fetch(
+    `/api/auction-sessions/${auctionSessionId}/fms-export-state/confirm`,
+    {
+      method: "POST"
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(
+        response,
+        "Conferma export FMS fallita"
+      )
+    );
+  }
+
+  const payload =
+    await response.json() as {
+      data: FmsSessionExportState;
+      error: null;
+    };
 
   return payload.data;
 }
