@@ -15,6 +15,27 @@ export async function fetchActiveAuctionSession():
   );
 }
 
+export async function fetchAuctionSessions():
+  Promise<AuctionSession[]> {
+  return apiRequest<AuctionSession[]>(
+    "/api/auction-sessions"
+  );
+}
+
+export function selectCurrentAuctionSession(
+  activeSession: AuctionSession | null,
+  availableSessions: AuctionSession[]
+): AuctionSession | null {
+  return (
+    activeSession ??
+    availableSessions.find(
+      (candidate) =>
+        candidate.status === "COMPLETED"
+    ) ??
+    null
+  );
+}
+
 export async function fetchLeagues():
   Promise<League[]> {
   return apiRequest<League[]>(

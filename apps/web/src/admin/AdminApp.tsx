@@ -20,7 +20,8 @@ import type {
 import {
   fetchActiveAuctionSession,
   fetchAdminActivity,
-  fetchLeagues
+  fetchLeagues,
+  selectCurrentAuctionSession
 } from "../shared/app-api.js";
 
 import {
@@ -673,8 +674,14 @@ export function AdminApp() {
           return;
         }
 
+        const currentSession =
+          selectCurrentAuctionSession(
+            activeSession,
+            availableSessions
+          );
+
         const setupSession =
-          activeSession
+          currentSession
             ? null
             : (
                 availableSessions.find(
@@ -685,17 +692,17 @@ export function AdminApp() {
               );
 
         const selectedSession =
-          activeSession ??
+          currentSession ??
           setupSession;
 
         setSession(selectedSession);
         setLeagues(availableLeagues);
 
-        if (activeSession) {
+        if (selectedSession) {
           try {
             const sessionPlayers =
               await fetchPlayers(
-                activeSession.id
+                selectedSession.id
               );
 
             if (!cancelled) {
@@ -714,7 +721,7 @@ export function AdminApp() {
           try {
             const displayControl =
               await fetchPublicDisplayControl(
-                activeSession.id
+                selectedSession.id
               );
 
             if (!cancelled) {
@@ -731,7 +738,7 @@ export function AdminApp() {
           }
         }
 
-        if (!activeSession) {
+        if (!selectedSession) {
           setStatus("READY");
           return;
         }
@@ -743,7 +750,7 @@ export function AdminApp() {
             deviceId:
               createAdminDeviceId(),
             auctionSessionId:
-              activeSession.id,
+              selectedSession.id,
 
             onRegistered: () => {
               if (!cancelled) {
@@ -1685,7 +1692,8 @@ export function AdminApp() {
     };
   }, [
     session?.id,
-    session?.status
+    session?.status,
+    snapshot?.session.id
   ]);
 
   const executeSelectFmsExportGoalkeeper =

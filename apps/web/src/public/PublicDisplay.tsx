@@ -11,7 +11,9 @@ import type {
 } from "@fantaastaapp/contracts";
 
 import {
-  fetchActiveAuctionSession
+  fetchActiveAuctionSession,
+  fetchAuctionSessions,
+  selectCurrentAuctionSession
 } from "./public-display-api.js";
 
 import {
@@ -252,14 +254,25 @@ export function PublicDisplay():
 
     async function start(): Promise<void> {
       try {
-        const activeSession =
-          await fetchActiveAuctionSession();
+        const [
+          activeSession,
+          availableSessions
+        ] = await Promise.all([
+          fetchActiveAuctionSession(),
+          fetchAuctionSessions()
+        ]);
 
         if (disposed) {
           return;
         }
 
-        if (!activeSession) {
+        const selectedSession =
+          selectCurrentAuctionSession(
+            activeSession,
+            availableSessions
+          );
+
+        if (!selectedSession) {
           setStatus(
             "NO_ACTIVE_SESSION"
           );
@@ -267,7 +280,7 @@ export function PublicDisplay():
           return;
         }
 
-        setSession(activeSession);
+        setSession(selectedSession);
         setStatus("CONNECTING");
 
         const client =
@@ -275,7 +288,7 @@ export function PublicDisplay():
             deviceId:
               createPublicDisplayDeviceId(),
             auctionSessionId:
-              activeSession.id,
+              selectedSession.id,
 
             onRegistered: () => {
               if (!disposed) {

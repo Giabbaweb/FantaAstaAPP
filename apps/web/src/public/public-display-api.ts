@@ -1,3 +1,5 @@
 export {
-  fetchActiveAuctionSession
+  fetchActiveAuctionSession,
+  fetchAuctionSessions,
+  selectCurrentAuctionSession
 } from "../shared/app-api.js";
