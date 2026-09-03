@@ -1709,6 +1709,58 @@ export function AdminApp() {
     snapshot?.session.id
   ]);
 
+  useEffect(() => {
+    if (
+      !session ||
+      session.status !== "COMPLETED"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshExportState =
+      async (): Promise<void> => {
+        try {
+          const exportState =
+            await loadFmsSessionExportState(
+              session.id
+            );
+
+          if (!cancelled) {
+            setFmsExportCompleted(
+              exportState !== null
+            );
+          }
+        } catch {
+          /*
+           * Il polling serve solo a sincronizzare
+           * gli altri dispositivi. Un errore
+           * temporaneo non deve degradare
+           * l'intera Console Admin.
+           */
+        }
+      };
+
+    const intervalId =
+      window.setInterval(
+        () => {
+          void refreshExportState();
+        },
+        5000
+      );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(
+        intervalId
+      );
+    };
+  }, [
+    session?.id,
+    session?.status
+  ]);
+
   const executeSelectFmsExportGoalkeeper =
     async (
       auctionSessionTeamId: string,
