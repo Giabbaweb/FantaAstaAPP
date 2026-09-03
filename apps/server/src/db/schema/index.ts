@@ -380,6 +380,21 @@ export const fmsExportGoalkeepers = sqliteTable(
   ]
 );
 
+export const fmsSessionExports = sqliteTable(
+  "fms_session_exports",
+  {
+    auctionSessionId: text("auction_session_id")
+      .primaryKey()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    exportedAt: text("exported_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  }
+);
+
 export const auctionCalls = sqliteTable(
   "auction_calls",
   {
