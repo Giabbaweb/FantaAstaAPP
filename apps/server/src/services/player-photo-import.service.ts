@@ -1,6 +1,7 @@
 import {
   access,
   mkdir,
+  rm,
   writeFile
 } from "node:fs/promises";
 import path from "node:path";
@@ -22,7 +23,7 @@ export type PlayerPhotoImportIssue = {
   fileName: string;
   reason:
     | "INVALID_FILENAME"
-    | "INVALID_PNG";
+    | "INVALID_IMAGE";
 };
 
 export type PlayerPhotoImportResult = {
@@ -54,12 +55,40 @@ const pngSignature =
     0x0a
   ]);
 
-function isValidPlayerPhotoName(
+const managedExtensions = [
+  "png",
+  "jpg",
+  "jpeg"
+] as const;
+
+type ManagedExtension =
+  (typeof managedExtensions)[number];
+
+function parsePlayerPhotoName(
   fileName: string
-): boolean {
-  return /^\d+\.png$/i.test(
-    fileName
-  );
+): {
+  fmsCode: string;
+  extension: ManagedExtension;
+} | null {
+  const match =
+    /^(\d+)\.(png|jpe?g)$/i.exec(
+      fileName
+    );
+
+  if (
+    !match ||
+    !match[1] ||
+    !match[2]
+  ) {
+    return null;
+  }
+
+  return {
+    fmsCode: match[1],
+    extension:
+      match[2].toLowerCase() as
+        ManagedExtension
+  };
 }
 
 function isPng(
@@ -77,6 +106,28 @@ function isPng(
         pngSignature
       )
   );
+}
+
+function isJpeg(
+  content: Buffer
+): boolean {
+  return (
+    content.length >= 3 &&
+    content[0] === 0xff &&
+    content[1] === 0xd8 &&
+    content[2] === 0xff
+  );
+}
+
+function isValidImage(
+  extension: ManagedExtension,
+  content: Buffer
+): boolean {
+  if (extension === "png") {
+    return isPng(content);
+  }
+
+  return isJpeg(content);
 }
 
 async function fileExists(
@@ -127,11 +178,12 @@ export class PlayerPhotoImportService {
       };
 
     for (const file of files) {
-      if (
-        !isValidPlayerPhotoName(
+      const parsedName =
+        parsePlayerPhotoName(
           file.fileName
-        )
-      ) {
+        );
+
+      if (!parsedName) {
         result.rejected += 1;
         result.issues.push({
           fileName: file.fileName,
@@ -141,35 +193,75 @@ export class PlayerPhotoImportService {
         continue;
       }
 
-      if (!isPng(file.content)) {
+      if (
+        !isValidImage(
+          parsedName.extension,
+          file.content
+        )
+      ) {
         result.rejected += 1;
         result.issues.push({
           fileName: file.fileName,
-          reason: "INVALID_PNG"
+          reason:
+            "INVALID_IMAGE"
         });
         continue;
       }
 
-      const normalizedFileName =
-        file.fileName.toLowerCase();
+      const existingPaths =
+        (
+          await Promise.all(
+            managedExtensions.map(
+              async (extension) => {
+                const candidatePath =
+                  path.join(
+                    this.playerPhotosDirectory,
+                    `${parsedName.fmsCode}.${extension}`
+                  );
 
-      const destination =
-        path.join(
-          this.playerPhotosDirectory,
-          normalizedFileName
-        );
-
-      const exists =
-        await fileExists(
-          destination
+                return (
+                  await fileExists(
+                    candidatePath
+                  )
+                )
+                  ? candidatePath
+                  : null;
+              }
+            )
+          )
+        ).filter(
+          (
+            candidate
+          ): candidate is string =>
+            candidate !== null
         );
 
       if (
-        exists &&
+        existingPaths.length > 0 &&
         mode === "KEEP"
       ) {
         result.kept += 1;
         continue;
+      }
+
+      const destination =
+        path.join(
+          this.playerPhotosDirectory,
+          `${parsedName.fmsCode}.${parsedName.extension}`
+        );
+
+      if (existingPaths.length > 0) {
+        await Promise.all(
+          existingPaths.map(
+            (existingPath) =>
+              rm(
+                existingPath,
+                {
+                  force: true
+                }
+              )
+          )
+        );
       }
 
       await writeFile(
@@ -177,7 +269,7 @@ export class PlayerPhotoImportService {
         file.content
       );
 
-      if (exists) {
+      if (existingPaths.length > 0) {
         result.replaced += 1;
       } else {
         result.created += 1;

@@ -32,6 +32,22 @@ const pngHeader =
     0x0a
   ]);
 
+const jpegHeader =
+  Buffer.from([
+    0xff,
+    0xd8,
+    0xff
+  ]);
+
+function fakeJpeg(
+  marker: string
+): Buffer {
+  return Buffer.concat([
+    jpegHeader,
+    Buffer.from(marker)
+  ]);
+}
+
 function fakePng(
   marker: string
 ): Buffer {
@@ -138,7 +154,7 @@ describe(
     );
 
     it(
-      "rejects invalid names and non-PNG content without aborting the batch",
+      "rejects invalid names and invalid image content without aborting the batch",
       async () => {
         const root =
           await createRoot();
@@ -192,9 +208,197 @@ describe(
               fileName:
                 "100020.png",
               reason:
-                "INVALID_PNG"
+                "INVALID_IMAGE"
             }
           ]
+        });
+      }
+    );
+
+    it(
+      "imports valid numeric JPG and JPEG files",
+      async () => {
+        const root =
+          await createRoot();
+
+        const service =
+          new PlayerPhotoImportService(
+            root
+          );
+
+        const result =
+          await service.importPhotos(
+            [
+              {
+                fileName:
+                  "100021.jpg",
+                content:
+                  fakeJpeg("jpg")
+              },
+              {
+                fileName:
+                  "100022.JPEG",
+                content:
+                  fakeJpeg("jpeg")
+              }
+            ],
+            "KEEP"
+          );
+
+        expect(result).toEqual({
+          selected: 2,
+          created: 2,
+          replaced: 0,
+          kept: 0,
+          rejected: 0,
+          issues: []
+        });
+
+        await expect(
+          readFile(
+            path.join(
+              root,
+              "100021.jpg"
+            )
+          )
+        ).resolves.toEqual(
+          fakeJpeg("jpg")
+        );
+
+        await expect(
+          readFile(
+            path.join(
+              root,
+              "100022.jpeg"
+            )
+          )
+        ).resolves.toEqual(
+          fakeJpeg("jpeg")
+        );
+      }
+    );
+
+    it(
+      "keeps an existing photo regardless of its extension",
+      async () => {
+        const root =
+          await createRoot();
+
+        const existing =
+          fakePng("existing");
+
+        await writeFile(
+          path.join(
+            root,
+            "100035.png"
+          ),
+          existing
+        );
+
+        const service =
+          new PlayerPhotoImportService(
+            root
+          );
+
+        const result =
+          await service.importPhotos(
+            [
+              {
+                fileName:
+                  "100035.jpg",
+                content:
+                  fakeJpeg("incoming")
+              }
+            ],
+            "KEEP"
+          );
+
+        expect(result).toEqual({
+          selected: 1,
+          created: 0,
+          replaced: 0,
+          kept: 1,
+          rejected: 0,
+          issues: []
+        });
+
+        await expect(
+          readFile(
+            path.join(
+              root,
+              "100035.png"
+            )
+          )
+        ).resolves.toEqual(
+          existing
+        );
+      }
+    );
+
+    it(
+      "replaces an existing PNG with an incoming JPG",
+      async () => {
+        const root =
+          await createRoot();
+
+        await writeFile(
+          path.join(
+            root,
+            "100045.png"
+          ),
+          fakePng("old")
+        );
+
+        const incoming =
+          fakeJpeg("new");
+
+        const service =
+          new PlayerPhotoImportService(
+            root
+          );
+
+        const result =
+          await service.importPhotos(
+            [
+              {
+                fileName:
+                  "100045.jpg",
+                content:
+                  incoming
+              }
+            ],
+            "REPLACE"
+          );
+
+        expect(result).toEqual({
+          selected: 1,
+          created: 0,
+          replaced: 1,
+          kept: 0,
+          rejected: 0,
+          issues: []
+        });
+
+        await expect(
+          readFile(
+            path.join(
+              root,
+              "100045.jpg"
+            )
+          )
+        ).resolves.toEqual(
+          incoming
+        );
+
+        await expect(
+          readFile(
+            path.join(
+              root,
+              "100045.png"
+            )
+          )
+        ).rejects.toMatchObject({
+          code: "ENOENT"
         });
       }
     );

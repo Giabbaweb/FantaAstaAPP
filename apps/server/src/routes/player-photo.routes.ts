@@ -113,37 +113,58 @@ export function createPlayerPhotoRoutes(
               .send();
           }
 
-          const filePath =
-            path.join(
-              photosDirectory,
-              `${fmsCode}.png`
-            );
-
-          try {
-            const content =
-              await readFile(filePath);
-
-            return reply
-              .type("image/png")
-              .header(
-                "Cache-Control",
-                "no-cache"
-              )
-              .code(200)
-              .send(content);
-          } catch (error) {
-            if (
-              error instanceof Error &&
-              "code" in error &&
-              error.code === "ENOENT"
-            ) {
-              return reply
-                .code(404)
-                .send();
+          const candidates = [
+            {
+              extension: "png",
+              contentType: "image/png"
+            },
+            {
+              extension: "jpg",
+              contentType: "image/jpeg"
+            },
+            {
+              extension: "jpeg",
+              contentType: "image/jpeg"
             }
+          ] as const;
 
-            throw error;
+          for (const candidate of candidates) {
+            const filePath =
+              path.join(
+                photosDirectory,
+                `${fmsCode}.${candidate.extension}`
+              );
+
+            try {
+              const content =
+                await readFile(filePath);
+
+              return reply
+                .type(
+                  candidate.contentType
+                )
+                .header(
+                  "Cache-Control",
+                  "no-cache"
+                )
+                .code(200)
+                .send(content);
+            } catch (error) {
+              if (
+                error instanceof Error &&
+                "code" in error &&
+                error.code === "ENOENT"
+              ) {
+                continue;
+              }
+
+              throw error;
+            }
           }
+
+          return reply
+            .code(404)
+            .send();
         }
       );
 
@@ -257,7 +278,7 @@ export function createPlayerPhotoRoutes(
                 error: {
                   code: "NO_FILES",
                   message:
-                    "Selezionare almeno un file PNG"
+                    "Selezionare almeno un file PNG, JPG o JPEG"
                 }
               });
           }

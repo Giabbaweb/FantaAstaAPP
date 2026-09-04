@@ -43,6 +43,22 @@ const pngHeader =
     0x0a
   ]);
 
+const jpegHeader =
+  Buffer.from([
+    0xff,
+    0xd8,
+    0xff
+  ]);
+
+function fakeJpeg(
+  marker: string
+): Buffer {
+  return Buffer.concat([
+    jpegHeader,
+    Buffer.from(marker)
+  ]);
+}
+
 function fakePng(
   marker: string
 ): Buffer {
@@ -107,6 +123,24 @@ async function cleanup():
       path.join(
         photoDirectory,
         secondFileName
+      ),
+      {
+        force: true
+      }
+    ),
+    rm(
+      path.join(
+        photoDirectory,
+        "999990001.jpg"
+      ),
+      {
+        force: true
+      }
+    ),
+    rm(
+      path.join(
+        photoDirectory,
+        "999990001.jpeg"
       ),
       {
         force: true
@@ -418,6 +452,47 @@ describe(
           ]
         ).toBe(
           "no-cache"
+        );
+
+        expect(
+          response.rawPayload
+        ).toEqual(
+          content
+        );
+      }
+    );
+
+    it(
+      "serves a managed JPG player photo",
+      async () => {
+        const content =
+          fakeJpeg("served-jpg");
+
+        await writeFile(
+          path.join(
+            photoDirectory,
+            "999990001.jpg"
+          ),
+          content
+        );
+
+        const response =
+          await app.inject({
+            method: "GET",
+            url:
+              "/api/player-photos/999990001"
+          });
+
+        expect(
+          response.statusCode
+        ).toBe(200);
+
+        expect(
+          response.headers[
+            "content-type"
+          ]
+        ).toContain(
+          "image/jpeg"
         );
 
         expect(

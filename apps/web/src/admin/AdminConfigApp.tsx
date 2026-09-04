@@ -6729,7 +6729,7 @@ export function AdminConfigApp() {
 
         <div className="admin-config__player-photo-help">
           <strong>
-            Formato richiesto: PNG
+            Formati ammessi: PNG, JPG, JPEG
           </strong>
 
           <span>
@@ -6737,7 +6737,7 @@ export function AdminConfigApp() {
             FMS del giocatore.
             Esempio:{" "}
             <code>
-              100002.png
+              100002.png / 100002.jpg
             </code>
           </span>
         </div>
@@ -6746,7 +6746,7 @@ export function AdminConfigApp() {
           <input
             key={playerPhotoInputKey}
             type="file"
-            accept=".png,image/png"
+            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
             multiple
             disabled={
               playerPhotoImportPending ||
@@ -6761,7 +6761,7 @@ export function AdminConfigApp() {
               const invalidFiles =
                 selectedFiles.filter(
                   (file) =>
-                    !/\.png$/i.test(
+                    !/\.(png|jpe?g)$/i.test(
                       file.name
                     )
                 );
@@ -6771,7 +6771,7 @@ export function AdminConfigApp() {
               ) {
                 setPlayerPhotoFiles([]);
                 setPlayerPhotoError(
-                  "Sono ammessi esclusivamente file PNG."
+                  "Sono ammessi esclusivamente file PNG, JPG o JPEG."
                 );
                 setPlayerPhotoSuccess(null);
                 setPlayerPhotoIssues([]);

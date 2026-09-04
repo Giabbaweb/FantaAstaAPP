@@ -23,7 +23,7 @@ const defaultPlayerPhotosDirectory =
 function isManagedPlayerPhoto(
   fileName: string
 ): boolean {
-  return /^\d+\.png$/i.test(
+  return /^\d+\.(png|jpe?g)$/i.test(
     fileName
   );
 }

@@ -79,7 +79,7 @@ describe(
     );
 
     it(
-      "deletes only managed numeric PNG files",
+      "deletes managed numeric PNG JPG and JPEG files",
       async () => {
         const root =
           await createRoot();
@@ -125,6 +125,20 @@ describe(
               root,
               "100020.jpg"
             ),
+            "photo"
+          ),
+          writeFile(
+            path.join(
+              root,
+              "100030.jpeg"
+            ),
+            "photo"
+          ),
+          writeFile(
+            path.join(
+              root,
+              "player.jpg"
+            ),
             "keep"
           )
         ]);
@@ -137,7 +151,7 @@ describe(
         await expect(
           service.deleteAll()
         ).resolves.toEqual({
-          deleted: 2
+          deleted: 4
         });
 
         const remaining =
@@ -149,8 +163,8 @@ describe(
           remaining
         ).toEqual([
           ".gitkeep",
-          "100020.jpg",
           "notes.txt",
+          "player.jpg",
           "player.png"
         ]);
       }

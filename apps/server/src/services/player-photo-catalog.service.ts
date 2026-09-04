@@ -21,12 +21,15 @@ const defaultPlayerPhotosDirectory =
     "player-photos"
   );
 
-function isPlayerPhotoFile(
+function parsePlayerPhotoCode(
   fileName: string
-): boolean {
-  return /^\d+\.png$/i.test(
-    fileName
-  );
+): string | null {
+  const match =
+    /^(\d+)\.(png|jpe?g)$/i.exec(
+      fileName
+    );
+
+  return match?.[1] ?? null;
 }
 
 export class PlayerPhotoCatalogService {
@@ -62,20 +65,20 @@ export class PlayerPhotoCatalogService {
       throw error;
     }
 
-    const photoNames =
+    const managedPhotoNames =
       entries
         .filter(
           (entry) =>
             entry.isFile() &&
-            isPlayerPhotoFile(
+            parsePlayerPhotoCode(
               entry.name
-            )
+            ) !== null
         )
         .map(
           (entry) => entry.name
         );
 
-    if (photoNames.length === 0) {
+    if (managedPhotoNames.length === 0) {
       return {
         count: 0,
         lastUpdatedAt: null
@@ -84,7 +87,7 @@ export class PlayerPhotoCatalogService {
 
     const stats =
       await Promise.all(
-        photoNames.map(
+        managedPhotoNames.map(
           (fileName) =>
             stat(
               path.join(
@@ -103,8 +106,25 @@ export class PlayerPhotoCatalogService {
         )
       );
 
+    const uniqueFmsCodes =
+      new Set(
+        managedPhotoNames
+          .map(
+            (fileName) =>
+              parsePlayerPhotoCode(
+                fileName
+              )
+          )
+          .filter(
+            (
+              fmsCode
+            ): fmsCode is string =>
+              fmsCode !== null
+          )
+      );
+
     return {
-      count: photoNames.length,
+      count: uniqueFmsCodes.size,
       lastUpdatedAt:
         new Date(
           latestMtimeMs

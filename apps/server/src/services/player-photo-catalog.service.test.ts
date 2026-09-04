@@ -80,7 +80,7 @@ describe(
     );
 
     it(
-      "counts only numeric PNG player photos",
+      "counts unique numeric PNG JPG and JPEG player photos",
       async () => {
         const root =
           await createRoot();
@@ -121,6 +121,35 @@ describe(
             root,
             "100020.jpg"
           ),
+          "photo"
+        );
+
+        await writeFile(
+          path.join(
+            root,
+            "100030.jpeg"
+          ),
+          "photo"
+        );
+
+        /*
+         * Un formato duplicato dello stesso codice
+         * non deve aumentare il numero di giocatori
+         * con faccina.
+         */
+        await writeFile(
+          path.join(
+            root,
+            "100002.jpg"
+          ),
+          "duplicate"
+        );
+
+        await writeFile(
+          path.join(
+            root,
+            "player-test.jpg"
+          ),
           "ignored"
         );
 
@@ -134,7 +163,7 @@ describe(
 
         expect(
           catalog.count
-        ).toBe(2);
+        ).toBe(4);
 
         expect(
           catalog.lastUpdatedAt
