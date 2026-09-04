@@ -3616,7 +3616,7 @@ describe("GET /api/auction-sessions", () => {
       );
 
       it(
-        "returns 409 when another session is already active for the league",
+        "allows another session to become ready when one is already ready",
         async () => {
           await db.insert(leagues).values({
             id: "league-command-active-conflict",
@@ -3733,15 +3733,55 @@ describe("GET /api/auction-sessions", () => {
               "commands/ready"
           });
 
-          expect(response.statusCode).toBe(409);
+          expect(response.statusCode).toBe(200);
 
           expect(response.json()).toEqual({
-            data: null,
-            error: expect.objectContaining({
-              code:
-                "ACTIVE_SESSION_ALREADY_EXISTS"
-            })
+            data: expect.objectContaining({
+              id:
+                "session-command-conflicting",
+              status: "READY"
+            }),
+            error: null
           });
+
+          const sessionsResponse =
+            await app.inject({
+              method: "GET",
+              url:
+                "/api/auction-sessions"
+            });
+
+          expect(
+            sessionsResponse.statusCode
+          ).toBe(200);
+
+          const sessionsPayload =
+            sessionsResponse.json();
+
+          const readySessionIds =
+            sessionsPayload.data
+              .filter(
+                (session: {
+                  status: string;
+                }) =>
+                  session.status ===
+                  "READY"
+              )
+              .map(
+                (session: {
+                  id: string;
+                }) =>
+                  session.id
+              );
+
+          expect(
+            readySessionIds
+          ).toEqual(
+            expect.arrayContaining([
+              "session-command-active",
+              "session-command-conflicting"
+            ])
+          );
         }
       );
     }
