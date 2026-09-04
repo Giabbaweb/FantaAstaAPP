@@ -187,6 +187,11 @@ export function PublicDisplay():
   );
 
   const [
+    auctionSessions,
+    setAuctionSessions
+  ] = useState<AuctionSession[]>([]);
+
+  const [
     snapshot,
     setSnapshot
   ] = useState<RealtimeAuctionSnapshot | null>(
@@ -297,6 +302,10 @@ export function PublicDisplay():
         if (disposed) {
           return;
         }
+
+        setAuctionSessions(
+          availableSessions
+        );
 
         const persistedSession =
           selectedAuctionSessionId
