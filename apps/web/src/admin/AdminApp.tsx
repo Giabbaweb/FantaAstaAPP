@@ -343,6 +343,25 @@ function getActivityDescription(
   }
 }
 
+const adminSelectedAuctionSessionStorageKey =
+  "fantaastaapp.admin.selectedAuctionSessionId";
+
+function loadSelectedAdminAuctionSessionId():
+  string | null {
+  return window.localStorage.getItem(
+    adminSelectedAuctionSessionStorageKey
+  );
+}
+
+function persistSelectedAdminAuctionSessionId(
+  auctionSessionId: string
+): void {
+  window.localStorage.setItem(
+    adminSelectedAuctionSessionStorageKey,
+    auctionSessionId
+  );
+}
+
 function createAdminDeviceId(): string {
   const storageKey =
     "fantaastaapp.admin.deviceId";
@@ -676,7 +695,22 @@ export function AdminApp() {
           return;
         }
 
+        const persistedSessionId =
+          loadSelectedAdminAuctionSessionId();
+
+        const persistedSession =
+          persistedSessionId
+            ? (
+                availableSessions.find(
+                  (candidate) =>
+                    candidate.id ===
+                      persistedSessionId
+                ) ?? null
+              )
+            : null;
+
         const currentSession =
+          persistedSession ??
           selectCurrentAuctionSession(
             activeSession,
             availableSessions
@@ -696,6 +730,12 @@ export function AdminApp() {
         const selectedSession =
           currentSession ??
           setupSession;
+
+        if (selectedSession) {
+          persistSelectedAdminAuctionSessionId(
+            selectedSession.id
+          );
+        }
 
         setSession(selectedSession);
         setLeagues(availableLeagues);
