@@ -28,6 +28,7 @@ export type AtomicAuctionSessionCommandExecutorErrorCode =
   | "AUCTION_SESSION_NOT_FOUND"
   | "STALE_STATE"
   | "COMMAND_ID_CONFLICT"
+  | "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS"
   | "AUCTION_SESSION_SAVE_FAILED";
 
 export class AtomicAuctionSessionCommandExecutorError
@@ -180,6 +181,25 @@ export class AtomicAuctionSessionCommandExecutor {
       input.validate?.(
         currentSession
       );
+
+      if (
+        input.commandType ===
+          "START_SESSION"
+      ) {
+        const operationalSession =
+          this.stateRepository
+            .findOperationalExcludingWithExecutor(
+              tx,
+              input.auctionSessionId
+            );
+
+        if (operationalSession) {
+          throw new AtomicAuctionSessionCommandExecutorError(
+            "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS",
+            `Auction session "${operationalSession.auctionSessionId}" is already running or suspended`
+          );
+        }
+      }
 
       const updatedState =
         this.stateRepository

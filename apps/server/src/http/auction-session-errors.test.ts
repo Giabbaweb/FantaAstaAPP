@@ -28,6 +28,10 @@ describe(
         409
       ],
       [
+        "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS",
+        409
+      ],
+      [
         "AUCTION_SESSION_SAVE_FAILED",
         500
       ]

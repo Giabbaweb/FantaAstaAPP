@@ -75,6 +75,7 @@ export type AuctionSessionOperationalCommandErrorResponse = {
       | "AUCTION_SESSION_NOT_FOUND"
       | "STALE_STATE"
       | "COMMAND_ID_CONFLICT"
+      | "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS"
       | "AUCTION_SESSION_SAVE_FAILED";
     message: string;
   };
@@ -188,6 +189,7 @@ export function mapAuctionSessionOperationalCommandError(
 
     case "STALE_STATE":
     case "COMMAND_ID_CONFLICT":
+    case "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS":
       return {
         statusCode: 409,
         body: {

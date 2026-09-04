@@ -6,6 +6,10 @@ import {
 } from "vitest";
 
 import {
+  eq
+} from "drizzle-orm";
+
+import {
   db
 } from "../db/client.js";
 import {
@@ -408,6 +412,150 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       )
     ).rejects.toMatchObject({
       code: "COMMAND_ID_CONFLICT"
+    });
+  });
+
+  it("allows start when another session is ready", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "READY",
+        stateVersion: 0
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    await db.insert(leagues).values({
+      id: "league-ready-other",
+      name: "League Ready Other",
+      normalizedName:
+        "league ready other"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-ready-other",
+      leagueId: "league-ready-other",
+      season: "2026/2027",
+      editionNumber: 2,
+      status: "READY",
+      suspensionReason: null,
+      initialCredits: 300,
+      stateVersion: 0
+    });
+
+    const result =
+      await executor.execute({
+        auctionSessionId,
+        commandId:
+          "start-with-ready-other",
+        commandType:
+          "START_SESSION",
+        expectedStateVersion: 0,
+        requestFingerprint:
+          "START_SESSION",
+        update: {
+          status: "RUNNING",
+          suspensionReason: null
+        },
+        auditEvent: {
+          auctionSessionId,
+          eventType:
+            "SESSION_STARTED"
+        }
+      });
+
+    expect(result).toMatchObject({
+      stateVersion: 1,
+      idempotentReplay: false,
+      session: {
+        id: auctionSessionId,
+        status: "RUNNING"
+      }
+    });
+  });
+
+  it("rejects start when another session is operational", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "READY",
+        stateVersion: 0
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    await db.insert(leagues).values({
+      id: "league-operational-other",
+      name: "League Operational Other",
+      normalizedName:
+        "league operational other"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-operational-other",
+      leagueId:
+        "league-operational-other",
+      season: "2026/2027",
+      editionNumber: 3,
+      status: "SUSPENDED",
+      suspensionReason:
+        "TECHNICAL_BREAK",
+      initialCredits: 300,
+      stateVersion: 4
+    });
+
+    await expect(
+      executor.execute({
+        auctionSessionId,
+        commandId:
+          "start-with-operational-other",
+        commandType:
+          "START_SESSION",
+        expectedStateVersion: 0,
+        requestFingerprint:
+          "START_SESSION",
+        update: {
+          status: "RUNNING",
+          suspensionReason: null
+        },
+        auditEvent: {
+          auctionSessionId,
+          eventType:
+            "SESSION_STARTED"
+        }
+      })
+    ).rejects.toMatchObject({
+      code:
+        "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS"
+    });
+
+    const [stored] =
+      await db
+        .select({
+          status:
+            auctionSessions.status,
+          stateVersion:
+            auctionSessions.stateVersion
+        })
+        .from(auctionSessions)
+        .where(
+          eq(
+            auctionSessions.id,
+            auctionSessionId
+          )
+        );
+
+    expect(stored).toEqual({
+      status: "READY",
+      stateVersion: 0
     });
   });
 
