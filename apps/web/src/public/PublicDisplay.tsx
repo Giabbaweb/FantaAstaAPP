@@ -119,6 +119,25 @@ function formatPublicPlayerRole(
   }
 }
 
+const publicSelectedAuctionSessionStorageKey =
+  "fantaastaapp.publicDisplay.selectedAuctionSessionId";
+
+function loadSelectedPublicAuctionSessionId():
+  string | null {
+  return window.localStorage.getItem(
+    publicSelectedAuctionSessionStorageKey
+  );
+}
+
+function persistSelectedPublicAuctionSessionId(
+  auctionSessionId: string
+): void {
+  window.localStorage.setItem(
+    publicSelectedAuctionSessionStorageKey,
+    auctionSessionId
+  );
+}
+
 function createPublicDisplayDeviceId(): string {
   const storageKey =
     "fantaastaapp.publicDisplay.deviceId";
@@ -157,6 +176,14 @@ export function PublicDisplay():
     setSession
   ] = useState<AuctionSession | null>(
     null
+  );
+
+  const [
+    selectedAuctionSessionId,
+    setSelectedAuctionSessionId
+  ] = useState<string | null>(
+    () =>
+      loadSelectedPublicAuctionSessionId()
   );
 
   const [
@@ -253,6 +280,11 @@ export function PublicDisplay():
       (() => void) | null = null;
 
     async function start(): Promise<void> {
+      setStatus("LOADING");
+      setSession(null);
+      setSnapshot(null);
+      setErrorMessage(null);
+
       try {
         const [
           activeSession,
@@ -266,7 +298,19 @@ export function PublicDisplay():
           return;
         }
 
+        const persistedSession =
+          selectedAuctionSessionId
+            ? (
+                availableSessions.find(
+                  (candidate) =>
+                    candidate.id ===
+                      selectedAuctionSessionId
+                ) ?? null
+              )
+            : null;
+
         const selectedSession =
+          persistedSession ??
           selectCurrentAuctionSession(
             activeSession,
             availableSessions
@@ -278,6 +322,19 @@ export function PublicDisplay():
           );
 
           return;
+        }
+
+        persistSelectedPublicAuctionSessionId(
+          selectedSession.id
+        );
+
+        if (
+          selectedAuctionSessionId !==
+            selectedSession.id
+        ) {
+          setSelectedAuctionSessionId(
+            selectedSession.id
+          );
         }
 
         setSession(selectedSession);
@@ -349,7 +406,9 @@ export function PublicDisplay():
       disposed = true;
       disconnect?.();
     };
-  }, []);
+  }, [
+    selectedAuctionSessionId
+  ]);
 
   if (
     status === "LOADING" ||
