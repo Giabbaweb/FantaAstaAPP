@@ -5,6 +5,7 @@ import {
 
 import type {
   AuctionSession,
+  League,
   PublicDisplayControlState,
   RealtimeAuctionSnapshot,
   RealtimeError
@@ -15,6 +16,10 @@ import {
   fetchAuctionSessions,
   selectCurrentAuctionSession
 } from "./public-display-api.js";
+
+import {
+  fetchLeagues
+} from "../shared/app-api.js";
 
 import {
   createPublicDisplayRealtimeClient
@@ -192,6 +197,16 @@ export function PublicDisplay():
   ] = useState<AuctionSession[]>([]);
 
   const [
+    leagues,
+    setLeagues
+  ] = useState<League[]>([]);
+
+  const [
+    sessionSelectorOpen,
+    setSessionSelectorOpen
+  ] = useState(false);
+
+  const [
     snapshot,
     setSnapshot
   ] = useState<RealtimeAuctionSnapshot | null>(
@@ -293,10 +308,12 @@ export function PublicDisplay():
       try {
         const [
           activeSession,
-          availableSessions
+          availableSessions,
+          availableLeagues
         ] = await Promise.all([
           fetchActiveAuctionSession(),
-          fetchAuctionSessions()
+          fetchAuctionSessions(),
+          fetchLeagues()
         ]);
 
         if (disposed) {
@@ -305,6 +322,10 @@ export function PublicDisplay():
 
         setAuctionSessions(
           availableSessions
+        );
+
+        setLeagues(
+          availableLeagues
         );
 
         const persistedSession =
@@ -437,9 +458,53 @@ export function PublicDisplay():
     return (
       <main>
         <h1>FantaAstaAPP</h1>
-        <p>
-          Nessuna sessione d'asta attiva.
-        </p>
+
+        {auctionSessions.length > 0 ? (
+          <>
+            <p>
+              Seleziona la sessione da visualizzare.
+            </p>
+
+            <div>
+              {auctionSessions.map(
+                (candidate) => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    onClick={() => {
+                      persistSelectedPublicAuctionSessionId(
+                        candidate.id
+                      );
+
+                      setSelectedAuctionSessionId(
+                        candidate.id
+                      );
+                    }}
+                  >
+                    {
+                      leagues.find(
+                        (league) =>
+                          league.id ===
+                            candidate.leagueId
+                      )?.name ??
+                      candidate.leagueId
+                    }
+                    {" · "}
+                    {candidate.season}
+                    {" · "}
+                    {candidate.editionNumber}ª
+                    {" · "}
+                    {candidate.status}
+                  </button>
+                )
+              )}
+            </div>
+          </>
+        ) : (
+          <p>
+            Nessuna sessione d'asta disponibile.
+          </p>
+        )}
       </main>
     );
   }
@@ -594,7 +659,17 @@ export function PublicDisplay():
           </span>
         </div>
 
-        <div className="public-display__league-brand">
+        <button
+          className="public-display__league-brand"
+          type="button"
+          aria-expanded={sessionSelectorOpen}
+          aria-label="Cambia sessione d'asta"
+          onClick={() => {
+            setSessionSelectorOpen(
+              (current) => !current
+            );
+          }}
+        >
           {snapshot.publicDisplay.league.logoPath && (
             <img
               className="public-display__league-logo"
@@ -625,9 +700,89 @@ export function PublicDisplay():
               <span>
                 {session.editionNumber}ª edizione
               </span>
+
+              <span
+                className="public-display__session-selector-chevron"
+                aria-hidden="true"
+              >
+                {sessionSelectorOpen ? "▴" : "▾"}
+              </span>
             </div>
           </div>
-        </div>
+        </button>
+
+        {sessionSelectorOpen && (
+          <div
+            className="public-display__session-selector"
+            role="dialog"
+            aria-label="Seleziona sessione d'asta"
+          >
+            <strong className="public-display__session-selector-title">
+              Cambia sessione
+            </strong>
+
+            <div className="public-display__session-selector-list">
+              {auctionSessions.map(
+                (candidate) => {
+                  const candidateLeague =
+                    leagues.find(
+                      (league) =>
+                        league.id ===
+                          candidate.leagueId
+                    )?.name ??
+                    candidate.leagueId;
+
+                  const isSelected =
+                    candidate.id === session.id;
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      className="public-display__session-selector-option"
+                      data-selected={isSelected}
+                      disabled={isSelected}
+                      onClick={() => {
+                        persistSelectedPublicAuctionSessionId(
+                          candidate.id
+                        );
+
+                        setSessionSelectorOpen(
+                          false
+                        );
+
+                        setSelectedAuctionSessionId(
+                          candidate.id
+                        );
+                      }}
+                    >
+                      <span>
+                        <strong>
+                          {candidateLeague}
+                        </strong>
+
+                        <small>
+                          {candidate.season}
+                          {" · "}
+                          {candidate.editionNumber}ª edizione
+                        </small>
+                      </span>
+
+                      <span
+                        className="public-display__session-selector-status"
+                        data-status={
+                          candidate.status
+                        }
+                      >
+                        {candidate.status}
+                      </span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="public-display__runtime">
           {activeView === "AUCTION" && (

@@ -462,6 +462,7 @@ body {
 /* STANDARD header compact three-zone layout */
 
 .public-display__header {
+  position: relative;
   display: grid;
   grid-template-columns:
     minmax(260px, 1fr)
@@ -496,7 +497,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: clamp(10px, 1vw, 16px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   text-align: left;
+  cursor: pointer;
 }
 
 .public-display__league-logo {
@@ -524,6 +531,94 @@ body {
   justify-content: flex-start;
   margin-top: 5px;
   font-size: clamp(12px, 0.9vw, 16px);
+}
+
+.public-display__session-selector-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1em;
+  font-size: 0.85em;
+  line-height: 1;
+}
+
+
+.public-display__session-selector {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% - 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.22);
+  color: #172033;
+}
+
+.public-display__session-selector-title {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.public-display__session-selector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.public-display__session-selector-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 11px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 9px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.public-display__session-selector-option > span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.public-display__session-selector-option strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-display__session-selector-option small {
+  opacity: 0.72;
+}
+
+.public-display__session-selector-option:hover:not(:disabled) {
+  background: #f4f7fb;
+}
+
+.public-display__session-selector-option[data-selected="true"] {
+  background: #eef3f8;
+  cursor: default;
+}
+
+.public-display__session-selector-status {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .public-display__session-meta {
