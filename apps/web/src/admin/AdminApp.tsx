@@ -398,6 +398,14 @@ export function AdminApp() {
   ] = useState<AuctionSession | null>(null);
 
   const [
+    selectedAuctionSessionId,
+    setSelectedAuctionSessionId
+  ] = useState<string | null>(
+    () =>
+      loadSelectedAdminAuctionSessionId()
+  );
+
+  const [
     leagues,
     setLeagues
   ] = useState<League[]>([]);
@@ -680,6 +688,12 @@ export function AdminApp() {
       (() => void) | null = null;
 
     const load = async () => {
+      setStatus("LOADING");
+      setSession(null);
+      setSnapshot(null);
+      setPlayers([]);
+      setErrorMessage(null);
+
       try {
         const [
           activeSession,
@@ -695,16 +709,13 @@ export function AdminApp() {
           return;
         }
 
-        const persistedSessionId =
-          loadSelectedAdminAuctionSessionId();
-
         const persistedSession =
-          persistedSessionId
+          selectedAuctionSessionId
             ? (
                 availableSessions.find(
                   (candidate) =>
                     candidate.id ===
-                      persistedSessionId
+                      selectedAuctionSessionId
                 ) ?? null
               )
             : null;
@@ -735,6 +746,15 @@ export function AdminApp() {
           persistSelectedAdminAuctionSessionId(
             selectedSession.id
           );
+
+          if (
+            selectedAuctionSessionId !==
+              selectedSession.id
+          ) {
+            setSelectedAuctionSessionId(
+              selectedSession.id
+            );
+          }
         }
 
         setSession(selectedSession);
@@ -857,7 +877,9 @@ export function AdminApp() {
       cancelled = true;
       disconnect?.();
     };
-  }, []);
+  }, [
+    selectedAuctionSessionId
+  ]);
 
   useEffect(() => {
     if (!session) {
