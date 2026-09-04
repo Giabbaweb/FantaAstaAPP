@@ -2752,3 +2752,203 @@ input {
 .admin-confirm-award:disabled {
   box-shadow: none;
 }
+
+/* ============================================================
+   Cockpit session selector
+   Compact league/session identity + popup selector
+   ============================================================ */
+
+.admin-cockpit__session {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 18px;
+}
+
+.admin-cockpit__session-trigger {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-content: center;
+  align-items: center;
+  justify-content: start;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  column-gap: 6px;
+  row-gap: 4px;
+}
+
+.admin-cockpit__session-trigger > strong {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.9rem;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-cockpit__session-trigger > span {
+  color: #64748b;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-cockpit__session-trigger
+  > span:nth-of-type(2)::before {
+  content: "·";
+  margin-right: 6px;
+  color: #94a3b8;
+}
+
+.admin-cockpit__session-trigger
+  > .admin-cockpit__session-chevron {
+  margin-left: 2px;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.admin-cockpit__session-selector {
+  position: absolute;
+  z-index: 200;
+  top: calc(100% + 8px);
+  left: 12px;
+  width: min(390px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid #cbd6e2;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 14px 32px rgb(15 23 42 / 16%),
+    0 3px 8px rgb(15 23 42 / 8%);
+}
+
+.admin-cockpit__session-selector-title {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0 3px;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.admin-cockpit__session-selector-list {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-cockpit__session-selector-option {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid #d8e1eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243247;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-cockpit__session-selector-option:hover:not(:disabled) {
+  border-color: #8fb6df;
+  background: #f5f9ff;
+}
+
+.admin-cockpit__session-selector-option:disabled {
+  cursor: default;
+}
+
+.admin-cockpit__session-selector-option[data-selected="true"] {
+  border-color: #8fb6df;
+  background: #edf5ff;
+}
+
+.admin-cockpit__session-selector-option > span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.admin-cockpit__session-selector-option strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-cockpit__session-selector-option small {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.admin-cockpit__session-selector-status {
+  padding: 4px 7px;
+  border: 1px solid #b7c2cf;
+  border-radius: 999px;
+  color: #526174;
+  background: #f8fafc;
+  font-size: 0.62rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+
+/* iPad landscape / compact header */
+
+@media (max-width: 1100px) {
+  .admin-cockpit__header {
+    grid-template-columns:
+      auto
+      minmax(120px, auto)
+      minmax(0, 1fr)
+      auto;
+  }
+
+  .admin-cockpit__session {
+    min-width: 120px;
+    padding: 0 10px;
+  }
+
+  .admin-cockpit__session-trigger {
+    column-gap: 4px;
+    row-gap: 3px;
+  }
+
+  .admin-cockpit__session-trigger > strong {
+    font-size: 0.8rem;
+  }
+
+  .admin-cockpit__session-trigger > span {
+    font-size: 0.67rem;
+  }
+
+  .admin-cockpit__session-trigger
+    > span:nth-of-type(2)::before {
+    margin-right: 4px;
+  }
+
+  .admin-cockpit__session-selector {
+    left: 6px;
+    width: min(360px, calc(100vw - 24px));
+  }
+
+  .admin-cockpit__session-selector-option {
+    min-height: 50px;
+  }
+}
+

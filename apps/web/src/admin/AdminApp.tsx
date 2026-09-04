@@ -411,6 +411,11 @@ export function AdminApp() {
   ] = useState<AuctionSession[]>([]);
 
   const [
+    sessionSelectorOpen,
+    setSessionSelectorOpen
+  ] = useState(false);
+
+  const [
     leagues,
     setLeagues
   ] = useState<League[]>([]);
@@ -2515,6 +2520,117 @@ export function AdminApp() {
       }
     };
 
+  const publicDisplayHeaderControls = (
+    <div className="admin-public-display-controls">
+      <p className="admin-public-display-controls__title">
+        Display
+      </p>
+
+      <div className="admin-public-display-modes">
+        {(
+          [
+            [
+              "STANDARD",
+              "STD"
+            ],
+            [
+              "DARK",
+              "DARK"
+            ],
+            [
+              "HIGH_CONTRAST_OUTDOOR",
+              "OUT"
+            ],
+            [
+              "COMPACT",
+              "COMPACT"
+            ]
+          ] as const
+        ).map(
+          ([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              disabled={
+                publicDisplayControlPending
+              }
+              data-active={
+                publicDisplayControl
+                  .displayMode ===
+                mode
+              }
+              onClick={() => {
+                void changePublicDisplay({
+                  displayMode:
+                    mode as PublicDisplayMode
+                });
+              }}
+            >
+              {label}
+            </button>
+          )
+        )}
+      </div>
+
+      <button
+        className="admin-public-display-view"
+        type="button"
+        disabled={
+          publicDisplayControlPending
+        }
+        data-active={
+          publicDisplayControl.activeView ===
+            "ROSTER_OVERVIEW"
+        }
+        onClick={() => {
+          void changePublicDisplay({
+            activeView:
+              publicDisplayControl
+                .activeView ===
+                "ROSTER_OVERVIEW"
+                ? "AUCTION"
+                : "ROSTER_OVERVIEW"
+          });
+        }}
+      >
+        {
+          publicDisplayControl.activeView ===
+            "ROSTER_OVERVIEW"
+            ? "Nascondi foglione"
+            : "Mostra foglione"
+        }
+      </button>
+
+      <div className="admin-public-display-export">
+        <button
+          type="button"
+          disabled={!snapshot}
+          onClick={
+            printRosterOverview
+          }
+        >
+          Stampa / PDF
+        </button>
+
+        <button
+          type="button"
+          disabled={!snapshot}
+          onClick={
+            exportRosterOverviewExcel
+          }
+        >
+          Esporta Excel
+        </button>
+      </div>
+
+      {publicDisplayControlError && (
+        <small className="admin-public-display-controls__error">
+          {publicDisplayControlError}
+        </small>
+      )}
+    </div>
+  );
+
   const administrativeCorrectionAllowed =
     session !== null &&
     !snapshot?.operationalAuctionCall &&
@@ -2640,73 +2756,107 @@ export function AdminApp() {
           </div>
 
           <div className="admin-cockpit__session">
-            <strong>
-              {league?.name ?? session.leagueId}
-            </strong>
+            <button
+              className="admin-cockpit__session-trigger"
+              type="button"
+              aria-expanded={sessionSelectorOpen}
+              aria-label="Cambia sessione d'asta"
+              onClick={() => {
+                setSessionSelectorOpen(
+                  (current) => !current
+                );
+              }}
+            >
+              <strong>
+                {league?.name ?? session.leagueId}
+              </strong>
 
-            <span>
-              {session.season}
-            </span>
+              <span>
+                {session.season}
+              </span>
 
-            <span>
-              {session.editionNumber}ª edizione
-            </span>
+              <span>
+                {session.editionNumber}ª edizione
+              </span>
 
-            <label>
-              Sessione
-              <select
-                value={session.id}
-                onChange={(event) => {
-                  const nextSessionId =
-                    event.target.value;
-
-                  if (
-                    !nextSessionId ||
-                    nextSessionId === session.id
-                  ) {
-                    return;
-                  }
-
-                  persistSelectedAdminAuctionSessionId(
-                    nextSessionId
-                  );
-
-                  setSelectedAuctionSessionId(
-                    nextSessionId
-                  );
-                }}
+              <span
+                className="admin-cockpit__session-chevron"
+                aria-hidden="true"
               >
-                {auctionSessions.map(
-                  (candidate) => {
-                    const candidateLeague =
-                      leagues.find(
-                        (leagueCandidate) =>
-                          leagueCandidate.id ===
-                            candidate.leagueId
-                      );
+                {sessionSelectorOpen ? "▴" : "▾"}
+              </span>
+            </button>
 
-                    return (
-                      <option
-                        key={candidate.id}
-                        value={candidate.id}
-                      >
-                        {
-                          candidateLeague?.name ??
-                          candidate.leagueId
-                        }
-                        {" · "}
-                        {candidate.season}
-                        {" · "}
-                        {candidate.editionNumber}ª
-                        {" · "}
-                        {candidate.status}
-                      </option>
-                    );
-                  }
-                )}
-              </select>
-            </label>
+            {sessionSelectorOpen && (
+              <div
+                className="admin-cockpit__session-selector"
+                role="dialog"
+                aria-label="Seleziona sessione d'asta"
+              >
+                <strong className="admin-cockpit__session-selector-title">
+                  Cambia sessione
+                </strong>
+
+                <div className="admin-cockpit__session-selector-list">
+                  {auctionSessions.map(
+                    (candidate) => {
+                      const candidateLeague =
+                        leagues.find(
+                          (leagueCandidate) =>
+                            leagueCandidate.id ===
+                              candidate.leagueId
+                        )?.name ??
+                        candidate.leagueId;
+
+                      const isSelected =
+                        candidate.id === session.id;
+
+                      return (
+                        <button
+                          key={candidate.id}
+                          type="button"
+                          className="admin-cockpit__session-selector-option"
+                          data-selected={isSelected}
+                          disabled={isSelected}
+                          onClick={() => {
+                            persistSelectedAdminAuctionSessionId(
+                              candidate.id
+                            );
+
+                            setSessionSelectorOpen(
+                              false
+                            );
+
+                            setSelectedAuctionSessionId(
+                              candidate.id
+                            );
+                          }}
+                        >
+                          <span>
+                            <strong>
+                              {candidateLeague}
+                            </strong>
+
+                            <small>
+                              {candidate.season}
+                              {" · "}
+                              {candidate.editionNumber}ª edizione
+                            </small>
+                          </span>
+
+                          <span className="admin-cockpit__session-selector-status">
+                            {candidate.status}
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+
+          {publicDisplayHeaderControls}
 
           <div className="admin-cockpit__runtime">
             <div className="admin-cockpit__state">
@@ -2912,182 +3062,107 @@ export function AdminApp() {
         </div>
 
         <div className="admin-cockpit__session">
-          <strong>
-            {league?.name ?? session.leagueId}
-          </strong>
+          <button
+            className="admin-cockpit__session-trigger"
+            type="button"
+            aria-expanded={sessionSelectorOpen}
+            aria-label="Cambia sessione d'asta"
+            onClick={() => {
+              setSessionSelectorOpen(
+                (current) => !current
+              );
+            }}
+          >
+            <strong>
+              {league?.name ?? session.leagueId}
+            </strong>
 
-          <span>
-            {session.season}
-          </span>
+            <span>
+              {session.season}
+            </span>
 
-          <span>
-            {session.editionNumber}ª edizione
-          </span>
+            <span>
+              {session.editionNumber}ª edizione
+            </span>
 
-          <label>
-            Sessione
-            <select
-              value={session.id}
-              onChange={(event) => {
-                const nextSessionId =
-                  event.target.value;
-
-                if (
-                  !nextSessionId ||
-                  nextSessionId === session.id
-                ) {
-                  return;
-                }
-
-                persistSelectedAdminAuctionSessionId(
-                  nextSessionId
-                );
-
-                setSelectedAuctionSessionId(
-                  nextSessionId
-                );
-              }}
+            <span
+              className="admin-cockpit__session-chevron"
+              aria-hidden="true"
             >
-              {auctionSessions.map(
-                (candidate) => {
-                  const candidateLeague =
-                    leagues.find(
-                    (leagueCandidate) =>
-                      leagueCandidate.id ===
-                        candidate.leagueId
-                    );
+              {sessionSelectorOpen ? "▴" : "▾"}
+            </span>
+          </button>
 
-                  return (
-                    <option
-                    key={candidate.id}
-                    value={candidate.id}
-                    >
-                    {
-                      candidateLeague?.name ??
-                      candidate.leagueId
-                    }
-                    {" · "}
-                    {candidate.season}
-                    {" · "}
-                    {candidate.editionNumber}ª
-                    {" · "}
-                    {candidate.status}
-                    </option>
-                  );
-                }
-              )}
-            </select>
-          </label>
+          {sessionSelectorOpen && (
+            <div
+              className="admin-cockpit__session-selector"
+              role="dialog"
+              aria-label="Seleziona sessione d'asta"
+            >
+              <strong className="admin-cockpit__session-selector-title">
+                Cambia sessione
+              </strong>
+
+              <div className="admin-cockpit__session-selector-list">
+                {auctionSessions.map(
+                  (candidate) => {
+                    const candidateLeague =
+                      leagues.find(
+                        (leagueCandidate) =>
+                          leagueCandidate.id ===
+                            candidate.leagueId
+                      )?.name ??
+                      candidate.leagueId;
+
+                    const isSelected =
+                      candidate.id === session.id;
+
+                    return (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        className="admin-cockpit__session-selector-option"
+                        data-selected={isSelected}
+                        disabled={isSelected}
+                        onClick={() => {
+                          persistSelectedAdminAuctionSessionId(
+                            candidate.id
+                          );
+
+                          setSessionSelectorOpen(
+                            false
+                          );
+
+                          setSelectedAuctionSessionId(
+                            candidate.id
+                          );
+                        }}
+                      >
+                        <span>
+                          <strong>
+                            {candidateLeague}
+                          </strong>
+
+                          <small>
+                            {candidate.season}
+                            {" · "}
+                            {candidate.editionNumber}ª edizione
+                          </small>
+                        </span>
+
+                        <span className="admin-cockpit__session-selector-status">
+                          {candidate.status}
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="admin-public-display-controls">
-            <p className="admin-public-display-controls__title">
-              Display
-            </p>
-
-            <div className="admin-public-display-modes">
-              {(
-                [
-                  [
-                    "STANDARD",
-                    "STD"
-                  ],
-                  [
-                    "DARK",
-                    "DARK"
-                  ],
-                  [
-                    "HIGH_CONTRAST_OUTDOOR",
-                    "OUT"
-                  ],
-                  [
-                    "COMPACT",
-                    "COMPACT"
-                  ]
-                ] as const
-              ).map(
-                ([mode, label]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    disabled={
-                      publicDisplayControlPending
-                    }
-                    data-active={
-                      publicDisplayControl
-                        .displayMode ===
-                      mode
-                    }
-                    onClick={() => {
-                      void changePublicDisplay({
-                        displayMode:
-                          mode as PublicDisplayMode
-                      });
-                    }}
-                  >
-                    {label}
-                  </button>
-                )
-              )}
-            </div>
-
-            <button
-              className="admin-public-display-view"
-              type="button"
-              disabled={
-                publicDisplayControlPending
-              }
-              data-active={
-                publicDisplayControl.activeView ===
-                "ROSTER_OVERVIEW"
-              }
-              onClick={() => {
-                void changePublicDisplay({
-                  activeView:
-                    publicDisplayControl
-                      .activeView ===
-                    "ROSTER_OVERVIEW"
-                      ? "AUCTION"
-                      : "ROSTER_OVERVIEW"
-                });
-              }}
-            >
-              {
-                publicDisplayControl.activeView ===
-                "ROSTER_OVERVIEW"
-                  ? "Nascondi foglione"
-                  : "Mostra foglione"
-              }
-            </button>
-
-            <div className="admin-public-display-export">
-              <button
-                type="button"
-                disabled={!snapshot}
-                onClick={
-                  printRosterOverview
-                }
-              >
-                Stampa / PDF
-              </button>
-
-              <button
-                type="button"
-                disabled={!snapshot}
-                onClick={
-                  exportRosterOverviewExcel
-                }
-              >
-                Esporta Excel
-              </button>
-            </div>
-
-            {publicDisplayControlError && (
-              <small className="admin-public-display-controls__error">
-                {publicDisplayControlError}
-              </small>
-            )}
-            </div>
+        {publicDisplayHeaderControls}
 
         <div className="admin-cockpit__runtime">
           <div className="admin-cockpit__clock">
