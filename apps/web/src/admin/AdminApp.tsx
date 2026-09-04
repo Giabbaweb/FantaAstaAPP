@@ -2651,6 +2651,61 @@ export function AdminApp() {
             <span>
               {session.editionNumber}ª edizione
             </span>
+
+            <label>
+              Sessione
+              <select
+                value={session.id}
+                onChange={(event) => {
+                  const nextSessionId =
+                    event.target.value;
+
+                  if (
+                    !nextSessionId ||
+                    nextSessionId === session.id
+                  ) {
+                    return;
+                  }
+
+                  persistSelectedAdminAuctionSessionId(
+                    nextSessionId
+                  );
+
+                  setSelectedAuctionSessionId(
+                    nextSessionId
+                  );
+                }}
+              >
+                {auctionSessions.map(
+                  (candidate) => {
+                    const candidateLeague =
+                      leagues.find(
+                        (leagueCandidate) =>
+                          leagueCandidate.id ===
+                            candidate.leagueId
+                      );
+
+                    return (
+                      <option
+                        key={candidate.id}
+                        value={candidate.id}
+                      >
+                        {
+                          candidateLeague?.name ??
+                          candidate.leagueId
+                        }
+                        {" · "}
+                        {candidate.season}
+                        {" · "}
+                        {candidate.editionNumber}ª
+                        {" · "}
+                        {candidate.status}
+                      </option>
+                    );
+                  }
+                )}
+              </select>
+            </label>
           </div>
 
           <div className="admin-cockpit__runtime">
@@ -2868,6 +2923,61 @@ export function AdminApp() {
           <span>
             {session.editionNumber}ª edizione
           </span>
+
+          <label>
+            Sessione
+            <select
+              value={session.id}
+              onChange={(event) => {
+                const nextSessionId =
+                  event.target.value;
+
+                if (
+                  !nextSessionId ||
+                  nextSessionId === session.id
+                ) {
+                  return;
+                }
+
+                persistSelectedAdminAuctionSessionId(
+                  nextSessionId
+                );
+
+                setSelectedAuctionSessionId(
+                  nextSessionId
+                );
+              }}
+            >
+              {auctionSessions.map(
+                (candidate) => {
+                  const candidateLeague =
+                    leagues.find(
+                    (leagueCandidate) =>
+                      leagueCandidate.id ===
+                        candidate.leagueId
+                    );
+
+                  return (
+                    <option
+                    key={candidate.id}
+                    value={candidate.id}
+                    >
+                    {
+                      candidateLeague?.name ??
+                      candidate.leagueId
+                    }
+                    {" · "}
+                    {candidate.season}
+                    {" · "}
+                    {candidate.editionNumber}ª
+                    {" · "}
+                    {candidate.status}
+                    </option>
+                  );
+                }
+              )}
+            </select>
+          </label>
         </div>
 
         <div className="admin-public-display-controls">
