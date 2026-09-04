@@ -18,6 +18,8 @@ import {
 } from "./backup-recovery-technical-logger.js";
 
 const roots: string[] = [];
+const loggers:
+  BackupRecoveryTechnicalLogger[] = [];
 
 async function createRoot() {
   const root =
@@ -34,6 +36,13 @@ async function createRoot() {
 }
 
 afterEach(async () => {
+  for (
+    const logger of
+    loggers.splice(0)
+  ) {
+    logger.close();
+  }
+
   await Promise.all(
     roots.splice(0).map(
       (root) =>
@@ -63,6 +72,8 @@ describe(
               logsRoot:
                 root
             });
+
+        loggers.push(logger);
 
         logger.info({
           event:
@@ -148,6 +159,8 @@ describe(
                 root
             });
 
+        loggers.push(logger);
+
         logger.info({
           event:
             "BACKUP_STARTED",
@@ -190,6 +203,8 @@ describe(
               logsRoot:
                 root
             });
+
+        loggers.push(logger);
 
         const error =
           Object.assign(
@@ -259,6 +274,8 @@ describe(
             .create({
               logsRoot
             });
+
+        loggers.push(logger);
 
         logger.info({
           event:

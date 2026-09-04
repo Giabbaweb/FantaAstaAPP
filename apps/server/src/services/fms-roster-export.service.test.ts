@@ -282,7 +282,9 @@ describe("FmsRosterExportService", () => {
       );
 
     const lines =
-      result.split("\n");
+      result
+        .slice(0, -2)
+        .split("\r\n");
 
     expect(lines).toHaveLength(25);
 

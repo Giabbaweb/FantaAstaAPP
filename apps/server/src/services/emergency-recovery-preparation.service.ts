@@ -435,6 +435,9 @@ export class EmergencyRecoveryPreparationService {
         );
       }
     } catch (error) {
+      candidate?.close();
+      candidate = null;
+
       await rm(
         candidatePath,
         {
