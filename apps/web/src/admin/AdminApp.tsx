@@ -406,6 +406,11 @@ export function AdminApp() {
   );
 
   const [
+    auctionSessions,
+    setAuctionSessions
+  ] = useState<AuctionSession[]>([]);
+
+  const [
     leagues,
     setLeagues
   ] = useState<League[]>([]);
@@ -757,6 +762,9 @@ export function AdminApp() {
           }
         }
 
+        setAuctionSessions(
+          availableSessions
+        );
         setSession(selectedSession);
         setLeagues(availableLeagues);
 
