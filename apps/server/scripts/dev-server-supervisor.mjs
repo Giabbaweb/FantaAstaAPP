@@ -1,19 +1,26 @@
 import {
   spawn
 } from "node:child_process";
+import {
+  fileURLToPath
+} from "node:url";
 
-const tsxExecutable =
-  process.platform === "win32"
-    ? "tsx.cmd"
-    : "tsx";
+const tsxCliPath =
+  fileURLToPath(
+    new URL(
+      "../node_modules/tsx/dist/cli.mjs",
+      import.meta.url
+    )
+  );
 
 let child = null;
 let stopping = false;
 
 function startServer() {
   child = spawn(
-    tsxExecutable,
+    process.execPath,
     [
+      tsxCliPath,
       "src/index.ts"
     ],
     {
