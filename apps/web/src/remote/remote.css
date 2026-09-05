@@ -223,6 +223,20 @@
     ease-in-out infinite;
 }
 
+.remote-turn--caller {
+  color: #143d2a;
+  background:
+    linear-gradient(
+      135deg,
+      #dff5e7,
+      #bfe8ce
+    );
+  border: 2px solid #78c394;
+  animation:
+    remote-turn-pulse 1.05s
+    ease-in-out infinite;
+}
+
 @keyframes remote-turn-pulse {
   0%,
   100% {
@@ -713,7 +727,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .remote-turn--active {
+  .remote-turn--active,
+  .remote-turn--caller {
     animation: none;
   }
 }

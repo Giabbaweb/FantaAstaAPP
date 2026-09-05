@@ -513,6 +513,15 @@ export function RemoteApp() {
         realtimeSessionTeam.id
     );
 
+  const isMyCallerTurn =
+    Boolean(
+      realtimeSessionTeam &&
+      !operationalCall &&
+      snapshot
+        ?.nextCallerAuctionSessionTeamId ===
+        realtimeSessionTeam.id
+    );
+
   const liveSessionStatus =
     snapshot?.session.status ??
     session?.status ??
@@ -1173,7 +1182,9 @@ export function RemoteApp() {
         className={
           isMyTurn
             ? "remote-turn remote-turn--active"
-            : "remote-turn remote-turn--waiting"
+            : isMyCallerTurn
+              ? "remote-turn remote-turn--caller"
+              : "remote-turn remote-turn--waiting"
         }
       >
         <span className="remote-turn__owner">
@@ -1185,7 +1196,9 @@ export function RemoteApp() {
         <strong className="remote-turn__message">
           {isMyTurn
             ? "TOCCA A TE"
-            : "Attendi"}
+            : isMyCallerTurn
+              ? "DEVI CHIAMARE"
+              : "Attendi"}
         </strong>
       </section>
 
