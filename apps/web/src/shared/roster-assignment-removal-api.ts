@@ -1,3 +1,7 @@
+import {
+  createRandomUuid
+} from "./random-uuid.js";
+
 type RosterAssignmentRemovalActor = {
   name: string;
   role:
@@ -51,7 +55,7 @@ export async function removeRosterAssignment(
       },
       body: JSON.stringify({
         commandId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         stateVersion,
         rosterEntryId,
         actor,

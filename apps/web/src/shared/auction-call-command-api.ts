@@ -1,3 +1,7 @@
+import {
+  createRandomUuid
+} from "./random-uuid.js";
+
 import type {
   RealtimeOperationalAuctionCall
 } from "@fantaastaapp/contracts";
@@ -31,7 +35,7 @@ export async function openAuctionCall(
       },
       body: JSON.stringify({
         commandId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         stateVersion,
         openingBid
       })
@@ -80,7 +84,7 @@ export async function confirmAuctionCall(
       },
       body: JSON.stringify({
         commandId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         stateVersion
       })
     }
@@ -128,7 +132,7 @@ export async function cancelAuctionCall(
       },
       body: JSON.stringify({
         commandId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         stateVersion
       })
     }
@@ -188,10 +192,10 @@ export async function createAuctionCallDraft(
       },
       body: JSON.stringify({
         auctionCallId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         playerFmsCode,
         commandId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         stateVersion
       })
     }

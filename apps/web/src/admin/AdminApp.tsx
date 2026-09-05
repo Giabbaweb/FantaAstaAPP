@@ -1,4 +1,8 @@
 import {
+  createRandomUuid
+} from "../shared/random-uuid.js";
+
+import {
   useEffect,
   useState
 } from "react";
@@ -376,7 +380,7 @@ function createAdminDeviceId(): string {
   }
 
   const deviceId =
-    `admin-${crypto.randomUUID()}`;
+    `admin-${createRandomUuid()}`;
 
   window.localStorage.setItem(
     storageKey,

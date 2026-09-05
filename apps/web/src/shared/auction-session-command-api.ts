@@ -1,3 +1,7 @@
+import {
+  createRandomUuid
+} from "./random-uuid.js";
+
 import type {
   AuctionSession,
   AuctionSessionSuspensionReason
@@ -68,7 +72,7 @@ export function startAuctionSession(
     "start",
     {
       commandId:
-        crypto.randomUUID(),
+        createRandomUuid(),
       stateVersion
     }
   );
@@ -84,7 +88,7 @@ export function suspendAuctionSession(
     "suspend",
     {
       commandId:
-        crypto.randomUUID(),
+        createRandomUuid(),
       stateVersion,
       reason
     }
@@ -100,7 +104,7 @@ export function resumeAuctionSession(
     "resume",
     {
       commandId:
-        crypto.randomUUID(),
+        createRandomUuid(),
       stateVersion
     }
   );

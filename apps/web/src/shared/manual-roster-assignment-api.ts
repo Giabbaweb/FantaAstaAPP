@@ -1,3 +1,7 @@
+import {
+  createRandomUuid
+} from "./random-uuid.js";
+
 export type ManualRosterAssignmentReason =
   | "OPTION_EXERCISED_MANUALLY"
   | "OPTION_NO_EXTERNAL_BID"
@@ -54,7 +58,7 @@ export async function addManualRosterAssignment(
       },
       body: JSON.stringify({
         commandId:
-          crypto.randomUUID(),
+          createRandomUuid(),
         stateVersion,
         auctionSessionTeamId,
         playerId,

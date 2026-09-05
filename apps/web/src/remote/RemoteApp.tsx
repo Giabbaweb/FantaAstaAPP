@@ -1,4 +1,8 @@
 import {
+  createRandomUuid
+} from "../shared/random-uuid.js";
+
+import {
   useEffect,
   useMemo,
   useRef,
@@ -127,7 +131,7 @@ function getDeviceId(): string {
   }
 
   const generated =
-    `remote-${crypto.randomUUID()}`;
+    `remote-${createRandomUuid()}`;
 
   window.sessionStorage.setItem(
     remoteDeviceStorageKey,
@@ -618,7 +622,7 @@ export function RemoteApp() {
             bid: quickBid,
             metadata: {
               commandId:
-                crypto.randomUUID(),
+                createRandomUuid(),
               stateVersion:
                 snapshot.stateVersion
             }
@@ -689,7 +693,7 @@ export function RemoteApp() {
             bid,
             metadata: {
               commandId:
-                crypto.randomUUID(),
+                createRandomUuid(),
               stateVersion:
                 snapshot.stateVersion
             }
@@ -757,7 +761,7 @@ export function RemoteApp() {
               realtimeSessionTeam.id,
             metadata: {
               commandId:
-                crypto.randomUUID(),
+                createRandomUuid(),
               stateVersion:
                 snapshot.stateVersion
             }

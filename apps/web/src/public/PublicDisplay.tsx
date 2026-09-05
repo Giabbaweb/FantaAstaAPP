@@ -1,4 +1,8 @@
 import {
+  createRandomUuid
+} from "../shared/random-uuid.js";
+
+import {
   useEffect,
   useState
 } from "react";
@@ -157,7 +161,7 @@ function createPublicDisplayDeviceId(): string {
   }
 
   const deviceId =
-    `public-display-${crypto.randomUUID()}`;
+    `public-display-${createRandomUuid()}`;
 
   window.localStorage.setItem(
     storageKey,
