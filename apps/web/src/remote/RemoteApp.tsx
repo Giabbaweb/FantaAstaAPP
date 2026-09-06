@@ -504,6 +504,30 @@ export function RemoteApp() {
         realtimeSessionTeam?.id
     ) ?? null;
 
+  const leaderSessionTeam =
+    snapshot?.sessionTeams.find(
+      (team) =>
+        team.id ===
+        operationalCall?.call
+          .currentLeaderAuctionSessionTeamId
+    ) ?? null;
+
+  const leaderTeam =
+    teams.find(
+      (team) =>
+        team.id ===
+        leaderSessionTeam?.teamId
+    ) ?? null;
+
+  const leaderName =
+    leaderTeam?.name ?? "-";
+
+  const hasPassed =
+    callTeam?.status === "PASSED";
+
+  const isExcluded =
+    callTeam?.status === "EXCLUDED";
+
   const isMyTurn =
     Boolean(
       realtimeSessionTeam &&
@@ -1180,11 +1204,13 @@ export function RemoteApp() {
 
       <section
         className={
-          isMyTurn
-            ? "remote-turn remote-turn--active"
-            : isMyCallerTurn
-              ? "remote-turn remote-turn--caller"
-              : "remote-turn remote-turn--waiting"
+          isExcluded || hasPassed
+            ? "remote-turn remote-turn--inactive"
+            : isMyTurn
+              ? "remote-turn remote-turn--active"
+              : isMyCallerTurn
+                ? "remote-turn remote-turn--caller"
+                : "remote-turn remote-turn--waiting"
         }
       >
         <span className="remote-turn__owner">
@@ -1194,11 +1220,15 @@ export function RemoteApp() {
         </span>
 
         <strong className="remote-turn__message">
-          {isMyTurn
-            ? "TOCCA A TE"
-            : isMyCallerTurn
-              ? "DEVI CHIAMARE"
-              : "Attendi"}
+          {isExcluded
+            ? "SEI ESCLUSO"
+            : hasPassed
+              ? "HAI PASSATO"
+              : isMyTurn
+                ? "TOCCA A TE"
+                : isMyCallerTurn
+                  ? "DEVI CHIAMARE"
+                  : "Attendi"}
         </strong>
       </section>
 
@@ -1262,19 +1292,19 @@ export function RemoteApp() {
 
       <section className="remote-stats">
         <div className="remote-stat">
+          <span>Leader</span>
+          <strong>
+            {leaderName}
+          </strong>
+        </div>
+
+        <div className="remote-stat">
           <span>Crediti</span>
           <strong>
             {publicTeam?.remainingCredits ??
               realtimeSessionTeam
                 ?.remainingCredits ??
               "-"}
-          </strong>
-        </div>
-
-        <div className="remote-stat">
-          <span>Max offerta</span>
-          <strong>
-            {publicTeam?.maximumBid ?? "-"}
           </strong>
         </div>
 

@@ -237,6 +237,17 @@
     ease-in-out infinite;
 }
 
+.remote-turn--inactive {
+  color: #a61b1b;
+  background:
+    linear-gradient(
+      135deg,
+      #fdeaea,
+      #f8d2d2
+    );
+  border: 2px solid #e5a0a0;
+}
+
 @keyframes remote-turn-pulse {
   0%,
   100% {
