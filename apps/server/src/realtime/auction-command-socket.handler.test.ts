@@ -320,7 +320,7 @@ describe("AuctionCommandSocketHandler", () => {
   });
 
 
-  it("rejects admin connections", async () => {
+  function createAdminFixture() {
     const connectionManager =
       new RealtimeConnectionManager();
 
@@ -344,10 +344,25 @@ describe("AuctionCommandSocketHandler", () => {
         )
     };
 
+    const commandResult = {
+      aggregate,
+      stateVersion: 4,
+      idempotentReplay: false
+    };
+
     const coordinator = {
-      placeBid: vi.fn(),
-      passTurn: vi.fn(),
-      undoPass: vi.fn()
+      placeBid:
+        vi.fn().mockResolvedValue(
+          commandResult
+        ),
+      passTurn:
+        vi.fn().mockResolvedValue(
+          commandResult
+        ),
+      undoPass:
+        vi.fn().mockResolvedValue(
+          commandResult
+        )
     };
 
     const handler =
@@ -356,6 +371,139 @@ describe("AuctionCommandSocketHandler", () => {
         auctionCallReader,
         coordinator
       );
+
+    return {
+      auctionCallReader,
+      coordinator,
+      handler
+    };
+  }
+
+  it("allows an admin to bid for a team", async () => {
+    const {
+      coordinator,
+      handler
+    } = createAdminFixture();
+
+    await expect(
+      handler.handle(
+        "admin-socket",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "BID",
+          metadata,
+          auctionSessionTeamId:
+            "session-team-2",
+          bid: 8
+        }
+      )
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        stateVersion: 4,
+        idempotentReplay: false
+      },
+      error: null
+    });
+
+    expect(
+      coordinator.placeBid
+    ).toHaveBeenCalledWith(
+      "auction-call-1",
+      metadata,
+      "session-team-2",
+      8
+    );
+  });
+
+  it("allows an admin to pass for a team", async () => {
+    const {
+      coordinator,
+      handler
+    } = createAdminFixture();
+
+    await expect(
+      handler.handle(
+        "admin-socket",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "PASS",
+          metadata,
+          auctionSessionTeamId:
+            "session-team-2"
+        }
+      )
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        stateVersion: 4,
+        idempotentReplay: false
+      },
+      error: null
+    });
+
+    expect(
+      coordinator.passTurn
+    ).toHaveBeenCalledWith(
+      "auction-call-1",
+      metadata,
+      "session-team-2"
+    );
+  });
+
+  it("rejects admin undo pass", async () => {
+    const {
+      auctionCallReader,
+      coordinator,
+      handler
+    } = createAdminFixture();
+
+    await expect(
+      handler.handle(
+        "admin-socket",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "UNDO_PASS",
+          metadata,
+          auctionSessionTeamId:
+            "session-team-1"
+        }
+      )
+    ).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: "COMMAND_NOT_ALLOWED"
+      }
+    });
+
+    expect(
+      auctionCallReader.getById
+    ).not.toHaveBeenCalled();
+
+    expect(
+      coordinator.undoPass
+    ).not.toHaveBeenCalled();
+  });
+
+  it("rejects admin commands for another session", async () => {
+    const {
+      auctionCallReader,
+      coordinator,
+      handler
+    } = createAdminFixture();
+
+    auctionCallReader.getById
+      .mockResolvedValueOnce({
+        ...aggregate,
+        call: {
+          ...aggregate.call,
+          auctionSessionId:
+            "session-2"
+        }
+      });
 
     await expect(
       handler.handle(
@@ -377,7 +525,40 @@ describe("AuctionCommandSocketHandler", () => {
     });
 
     expect(
+      coordinator.passTurn
+    ).not.toHaveBeenCalled();
+  });
+
+  it("rejects banditore-only commands from admin remote", async () => {
+    const {
+      auctionCallReader,
+      coordinator,
+      handler
+    } = createAdminFixture();
+
+    await expect(
+      handler.handle(
+        "admin-socket",
+        {
+          auctionCallId:
+            "auction-call-1",
+          command: "CONFIRM",
+          metadata
+        }
+      )
+    ).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: "COMMAND_NOT_ALLOWED"
+      }
+    });
+
+    expect(
       auctionCallReader.getById
+    ).not.toHaveBeenCalled();
+
+    expect(
+      coordinator.placeBid
     ).not.toHaveBeenCalled();
 
     expect(
