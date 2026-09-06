@@ -2952,3 +2952,123 @@ input {
   }
 }
 
+
+
+/* extraordinary-operations-cards-v2 */
+
+.admin-extraordinary-control__actions {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-extraordinary-control__action {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-extraordinary-control__button {
+  width: 100%;
+  min-height: 54px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 11px;
+  border: 1px solid #c6d3df;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px
+    rgba(31, 50, 72, 0.08);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.admin-extraordinary-control__button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 10px
+    rgba(31, 50, 72, 0.12);
+}
+
+.admin-extraordinary-control__button--correction {
+  color: #23415f;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff,
+      #edf4fb
+    );
+}
+
+.admin-extraordinary-control__button--manual {
+  color: #174d30;
+  background:
+    linear-gradient(
+      180deg,
+      #f8fdf9,
+      #e4f3e8
+    );
+  border-color: #a8cfb4;
+}
+
+.admin-extraordinary-control__button--emergency {
+  color: #8f270f;
+  background:
+    linear-gradient(
+      180deg,
+      #fff9f2,
+      #ffe3cb
+    );
+  border-color: #e4a06d;
+}
+
+.admin-extraordinary-control__button:disabled {
+  color: #8996a5;
+  background: #eef1f4;
+  border-color: #d4dae1;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.admin-extraordinary-control__icon {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.admin-extraordinary-control__action small {
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #718198;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .admin-extraordinary-control__actions {
+    grid-template-columns: 1fr;
+  }
+}

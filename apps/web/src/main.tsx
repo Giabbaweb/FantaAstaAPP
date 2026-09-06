@@ -13,6 +13,15 @@ import {
 import {
   RemoteApp
 } from "./remote/RemoteApp.js";
+import {
+  RemoteAllApp
+} from "./remote/RemoteAllApp.js";
+import {
+  HomeApp
+} from "./home/HomeApp.js";
+import {
+  ReadmeFirst
+} from "./home/ReadmeFirst.js";
 
 const rootElement =
   document.getElementById("root");
@@ -32,14 +41,20 @@ const pathname =
     : rawPathname;
 
 const app =
-  pathname === "/public"
-    ? <PublicDisplay />
+  pathname === "/"
+    ? <HomeApp />
+    : pathname === "/readme-first"
+      ? <ReadmeFirst />
+      : pathname === "/public"
+      ? <PublicDisplay />
     : pathname === "/admin/config"
       ? <AdminConfigApp />
       : pathname === "/admin"
         ? <AdminApp />
+        : pathname === "/remote/all"
+        ? <RemoteAllApp />
         : pathname === "/remote"
-        ? <RemoteApp />
+          ? <RemoteApp />
         : (
             <main>
               <h1>FantaAstaAPP</h1>

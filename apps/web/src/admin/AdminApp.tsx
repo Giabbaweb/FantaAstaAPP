@@ -3639,6 +3639,7 @@ export function AdminApp() {
                 <div className="admin-extraordinary-control__action">
                   <button
                     type="button"
+                    className="admin-extraordinary-control__button admin-extraordinary-control__button--correction"
                     disabled={
                       correctionPending ||
                       !administrativeCorrectionAllowed
@@ -3658,7 +3659,13 @@ export function AdminApp() {
                       setCorrectionError(null);
                     }}
                   >
-                    Correzione amministrativa
+                    <span className="admin-extraordinary-control__icon">
+                      ?
+                    </span>
+
+                    <span>
+                      Correzione amministrativa
+                    </span>
                   </button>
 
                   <small>
@@ -3677,6 +3684,7 @@ export function AdminApp() {
                 <div className="admin-extraordinary-control__action">
                   <button
                     type="button"
+                    className="admin-extraordinary-control__button admin-extraordinary-control__button--manual"
                     disabled={
                       manualAssignmentPending ||
                       !manualAssignmentAllowed
@@ -3696,7 +3704,13 @@ export function AdminApp() {
                       setManualAssignmentError(null);
                     }}
                   >
-                    Assegnazione manuale
+                    <span className="admin-extraordinary-control__icon">
+                      +
+                    </span>
+
+                    <span>
+                      Assegnazione manuale
+                    </span>
                   </button>
 
                   <small>
@@ -3708,6 +3722,52 @@ export function AdminApp() {
                           : session.status === "RUNNING"
                             ? "Sospendi prima l'asta"
                             : "Non disponibile"
+                    }
+                  </small>
+                </div>
+
+                <div className="admin-extraordinary-control__action">
+                  <button
+                    type="button"
+                    className="admin-extraordinary-control__button admin-extraordinary-control__button--emergency"
+                    disabled={
+                      session.status !== "RUNNING" ||
+                      snapshot?.operationalAuctionCall?.call.status !== "OPEN"
+                    }
+                    title={
+                      session.status === "RUNNING" &&
+                      snapshot?.operationalAuctionCall?.call.status === "OPEN"
+                        ? "Apri il telecomando universale di emergenza"
+                        : "Disponibile durante una normale chiamata RUNNING"
+                    }
+                    onClick={() => {
+                      if (
+                        session.status !== "RUNNING" ||
+                        snapshot?.operationalAuctionCall?.call.status !== "OPEN"
+                      ) {
+                        return;
+                      }
+
+                      window.location.href = "/remote/all";
+                    }}
+                  >
+                    <span className="admin-extraordinary-control__icon">
+                      SOS
+                    </span>
+
+                    <span>
+                      Telecomando universale
+                    </span>
+                  </button>
+
+                  <small>
+                    {
+                      session.status === "RUNNING" &&
+                      snapshot?.operationalAuctionCall?.call.status === "OPEN"
+                        ? "Controllo sostitutivo dei telecomandi"
+                        : session.status === "RUNNING"
+                          ? "Disponibile durante una chiamata aperta"
+                          : "Disponibile durante l'asta RUNNING"
                     }
                   </small>
                 </div>
