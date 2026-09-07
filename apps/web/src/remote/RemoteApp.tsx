@@ -1202,6 +1202,15 @@ export function RemoteApp() {
         </button>
       </section>
 
+      {liveSessionStatus ===
+        "SUSPENDED" && (
+        <div className="remote-notice">
+          Asta temporaneamente sospesa —
+          telecomando in sola lettura.
+        </div>
+      )}
+
+
       <section
         className={
           isExcluded || hasPassed
@@ -1415,14 +1424,6 @@ export function RemoteApp() {
           </button>
         </div>
       </fieldset>
-
-      {liveSessionStatus ===
-        "SUSPENDED" && (
-        <div className="remote-notice">
-          Asta temporaneamente sospesa —
-          telecomando in sola lettura.
-        </div>
-      )}
 
       {commandError && (
         <div

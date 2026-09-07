@@ -550,7 +550,7 @@ export function RemoteAllApp() {
             <small>
               {currentPlayer.role}
               {currentPlayer.realTeamName
-                ? ` ? ${currentPlayer.realTeamName}`
+                ? ` · ${currentPlayer.realTeamName}`
                 : ""}
             </small>
           )}
@@ -627,7 +627,7 @@ export function RemoteAllApp() {
 
                   <span>
                     Crediti {team.remainingCredits}
-                    {" ? "}
+                    {" · "}
                     Max {team.maximumBid}
                   </span>
                 </div>
@@ -708,7 +708,7 @@ export function RemoteAllApp() {
 
       <footer className="remote-all-footer">
         {session
-          ? `${session.season} ? Sessione ${session.editionNumber}`
+          ? `${session.season} · Sessione ${session.editionNumber}`
           : "FantaAstaAPP"}
       </footer>
     </main>

@@ -336,3 +336,83 @@ body {
     height: 100px;
   }
 }
+
+
+/* ipad-landscape-home-fit */
+
+@media (
+  min-width: 901px
+) and (
+  max-width: 1100px
+) and (
+  max-height: 900px
+) {
+  .home-page {
+    padding:
+      20px 22px 14px;
+  }
+
+  .home-hero {
+    gap: 26px;
+  }
+
+  .home-logo {
+    width: 155px;
+  }
+
+  .home-title h1 {
+    margin: 4px 0 5px;
+    font-size: 48px;
+  }
+
+  .home-title p {
+    font-size: 17px;
+  }
+
+  .home-actions {
+    margin-top: 24px;
+    gap: 13px;
+  }
+
+  .home-action {
+    min-height: 142px;
+    padding:
+      17px 19px;
+    grid-template-columns:
+      48px 1fr;
+    gap: 13px;
+  }
+
+  .home-action__icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .home-action__icon svg {
+    width: 45px;
+    height: 45px;
+  }
+
+  .home-action__content {
+    gap: 5px;
+  }
+
+  .home-action strong {
+    font-size: 20px;
+  }
+
+  .home-action__content
+  > span:last-child {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .home-footer {
+    margin-top: 14px;
+    gap: 10px;
+  }
+
+  .home-footer img {
+    height: 78px;
+  }
+}

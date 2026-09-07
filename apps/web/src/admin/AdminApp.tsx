@@ -3842,7 +3842,7 @@ export function AdminApp() {
                   </label>
 
                   <label>
-                    Note (facoltative)
+                    Motivo della correzione
                     <input
                       type="text"
                       value={correctionComment}
