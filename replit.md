@@ -6,7 +6,7 @@ FantaAstaAPP
 
 ## Current Version
 
-v0.13.0
+v0.14.0
 
 ## Package Manager
 
@@ -69,6 +69,8 @@ docs/DECISIONS.md
 docs/CODING_STANDARDS.md
 
 docs/ROADMAP.md
+
+docs/VADEMECUM_OPERATIVO.md
 
 ## Development Runtime Architecture
 
@@ -224,6 +226,6 @@ with the other devices connecting over the auction LAN:
 /public  → public monitor/projector
 ```
 
-Before the operational v0.14 release candidate, verify and document the final production startup command and whether Fastify directly serves the compiled `apps/web/dist` frontend.
+For the v0.14 operational release, the Windows host workflow is provided by the local AVVIA/ARRESTA launchers and the related PowerShell scripts. The operational rehearsal confirmed controlled startup and complete shutdown of the local application processes.
 
-The auction operator must not be required to manually start separate Vite and Fastify development processes in production.
+Replit remains a development and verification environment. The auction evening uses the Windows host workflow documented in `docs/VADEMECUM_OPERATIVO.md`; the auction operator must not manually start separate Vite and Fastify processes.

@@ -1063,7 +1063,7 @@ Le decisioni complete sono formalizzate in ADR-051.
 La versione corrente è:
 
 ```text
-v0.13.0
+v0.14.0
 ```
 
 Sono operative:
@@ -1158,10 +1158,19 @@ Sono operative:
 - technical log persistente di backup e recovery;
 - Emergency Recovery indipendente dal bootstrap del database live;
 - preservazione del database danneggiato e dei sidecar WAL/SHM;
-- 82 file di test server e 511 test server verdi;
-- 15 file di test domain e 135 test domain verdi;
-- 646 test automatici complessivi;
-- typecheck e build completi del monorepo superati.
+- cockpit amministrativo `/admin` e setup `/admin/config` operativi;
+- telecomando squadra `/remote` e telecomando universale `/remote/all` operativi;
+- accesso remoto tramite PIN/QR;
+- rotazione del chiamante con esclusione delle rose complete;
+- blocco della preparazione chiamata sui ruoli già completi per il prossimo chiamante;
+- chiusura operativa `RUNNING -> COMPLETED -> CLOSED`;
+- selezione persistente degli otto portieri export-only e stato dell'export FMS;
+- launcher Windows AVVIA/ARRESTA per il runtime locale;
+- 118 file di test server e 762 test server verdi;
+- 18 file di test domain e 150 test domain verdi;
+- 912 test automatici complessivi;
+- typecheck e build completi del monorepo superati;
+- collaudo end-to-end a otto squadre completato fino a `CLOSED`.
 
 La v0.11.0 completa quindi il livello amministrativo necessario per
 correggere errori operativi senza aggirare le invarianti del dominio.
@@ -1272,10 +1281,12 @@ danneggiato e gli eventuali sidecar WAL/SHM prima dello swap.
 La diagnostica di backup e recovery è persistita in un technical log locale
 separato dall'audit di dominio.
 
+La v0.14.0 ha completato il collaudo operativo end-to-end.
+
 La prossima milestone funzionale è:
 
 ```text
-v0.14.0 — Collaudo operativo
+v1.0.0 — Release stabile
 ```
 
 Le decisioni architetturali significative continueranno a essere registrate in:
@@ -1286,7 +1297,46 @@ docs/DECISIONS.md
 
 ---
 
-## 22. Fonti progettuali
+
+## 22. v0.14.0 — Collaudo operativo e interfacce complete
+
+La v0.14.0 porta l'architettura progettata nelle milestone precedenti a un
+workflow operativo completo e collaudato su otto squadre.
+
+Sono stati integrati e verificati insieme:
+
+- `/admin/config` per setup, readiness, import e accesso remoto;
+- `/admin` come cockpit autorevole del banditore/amministratore;
+- `/remote` per gli operatori di squadra;
+- `/remote/all` come telecomando universale di emergenza;
+- `/public` come schermo pubblico read-only;
+- selezione sessione e sincronizzazione realtime tra le interfacce;
+- assegnazione manuale e rimozione/correzione amministrativa;
+- completamento controllato delle rose ordinarie;
+- preparazione dell'export FMS ReVo e selezione dei portieri export-only;
+- stato persistente dell'export prima della chiusura definitiva;
+- launcher Windows per avvio e arresto controllati.
+
+Il collaudo operativo ha percorso il lifecycle completo:
+
+```text
+SETUP -> READY -> RUNNING -> SUSPENDED -> RUNNING -> COMPLETED -> CLOSED
+```
+
+La rotazione del chiamante ignora le squadre con rosa ordinaria completa.
+La UI amministrativa impedisce inoltre la preparazione di una chiamata quando
+il prossimo chiamante ha già completato il ruolo del giocatore selezionato,
+fermo restando che le invarianti definitive rimangono validate dal server.
+
+Il manuale operativo della serata è:
+
+```text
+docs/VADEMECUM_OPERATIVO.md
+```
+
+---
+
+## 23. Fonti progettuali
 
 Questo documento sintetizza e traduce in architettura tecnica le regole definite nella specifica master, nella roadmap e nella struttura iniziale del progetto.
 
