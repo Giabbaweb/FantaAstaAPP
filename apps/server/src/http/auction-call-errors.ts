@@ -104,6 +104,7 @@ export function mapAuctionCallError(
       case "PLAYER_ALREADY_ROSTERED":
       case "NO_SESSION_TEAMS":
       case "CALLER_NOT_FOUND":
+      case "NO_ELIGIBLE_CALLER":
         return createMapping(409, error);
 
       default:

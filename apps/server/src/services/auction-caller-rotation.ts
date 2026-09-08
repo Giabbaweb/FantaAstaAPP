@@ -1,6 +1,7 @@
 export type AuctionCallerRotationTeam = {
   id: string;
   tableOrder: number;
+  isEligibleToCall?: boolean;
 };
 
 export type ResolveNextCallerInput = {
@@ -25,7 +26,7 @@ export class AuctionCallerRotationError extends Error {
 
 export function resolveNextCallerAuctionSessionTeamId(
   input: ResolveNextCallerInput
-): string {
+): string | null {
   const orderedSessionTeams =
     [...input.sessionTeams].sort(
       (left, right) =>
@@ -41,11 +42,20 @@ export function resolveNextCallerAuctionSessionTeamId(
     );
   }
 
+  const isEligible = (
+    team: AuctionCallerRotationTeam
+  ) =>
+    team.isEligibleToCall !== false;
+
   if (
     input.previousCallerAuctionSessionTeamId ===
     null
   ) {
-    return firstTeam.id;
+    return (
+      orderedSessionTeams.find(
+        isEligible
+      )?.id ?? null
+    );
   }
 
   const previousCallerIndex =
@@ -61,8 +71,24 @@ export function resolveNextCallerAuctionSessionTeamId(
     );
   }
 
-  return orderedSessionTeams[
-    (previousCallerIndex + 1) %
-      orderedSessionTeams.length
-  ]!.id;
+  for (
+    let offset = 1;
+    offset <= orderedSessionTeams.length;
+    offset += 1
+  ) {
+    const candidate =
+      orderedSessionTeams[
+        (previousCallerIndex + offset) %
+          orderedSessionTeams.length
+      ];
+
+    if (
+      candidate &&
+      isEligible(candidate)
+    ) {
+      return candidate.id;
+    }
+  }
+
+  return null;
 }

@@ -116,10 +116,33 @@ auctionSessionId
       string | null = null;
 
     if (sessionTeams.length > 0) {
+      const rosterSizeBySessionTeamId =
+        new Map(
+          publicDisplayTeams.map((team) => [
+            team.auctionSessionTeamId,
+            team.roleCounts.P +
+              team.roleCounts.D +
+              team.roleCounts.C +
+              team.roleCounts.A
+          ])
+        );
+
+      const rotationTeams =
+        sessionTeams.map((team) => ({
+          ...team,
+          isEligibleToCall:
+            (
+              rosterSizeBySessionTeamId.get(
+                team.id
+              ) ?? rosterSizeLimit
+            ) < rosterSizeLimit
+        }));
+
       try {
         nextCallerAuctionSessionTeamId =
           resolveNextCallerAuctionSessionTeamId({
-            sessionTeams,
+            sessionTeams:
+              rotationTeams,
             previousCallerAuctionSessionTeamId:
               latestConfirmedAuctionCall?.call
                 .callerAuctionSessionTeamId ??

@@ -1,5 +1,6 @@
 import {
-  createAuctionCallDraft
+  createAuctionCallDraft,
+  rosterSizeLimit
 } from "@fantaastaapp/domain";
 
 import type {
@@ -27,7 +28,8 @@ export type AuctionCallCreationServiceErrorCode =
   | "PLAYER_NOT_AVAILABLE"
   | "PLAYER_ALREADY_ROSTERED"
   | "NO_SESSION_TEAMS"
-  | "CALLER_NOT_FOUND";
+  | "CALLER_NOT_FOUND"
+  | "NO_ELIGIBLE_CALLER";
 
 export class AuctionCallCreationServiceError
   extends Error
@@ -149,13 +151,49 @@ export class AuctionCallCreationService {
               input.auctionSessionId
             );
 
+        const teamStates =
+          sessionTeams.map((sessionTeam) => {
+            const rosterEntries =
+              this.rosterEntryRepository
+                .findByAuctionSessionTeamIdWithExecutor(
+                  transactionExecutor,
+                  sessionTeam.id
+                );
+
+            const rosterPlayers =
+              this.playerRepository
+                .findByIdsWithExecutor(
+                  transactionExecutor,
+                  rosterEntries.map(
+                    (entry) => entry.playerId
+                  )
+                );
+
+            return {
+              sessionTeam,
+              rosterEntries,
+              rosterPlayers
+            };
+          });
+
         let callerAuctionSessionTeamId:
-          string;
+          string | null;
 
         try {
           callerAuctionSessionTeamId =
             resolveNextCallerAuctionSessionTeamId({
-              sessionTeams,
+              sessionTeams:
+                teamStates.map(
+                  ({
+                    sessionTeam,
+                    rosterEntries
+                  }) => ({
+                    ...sessionTeam,
+                    isEligibleToCall:
+                      rosterEntries.length <
+                      rosterSizeLimit
+                  })
+                ),
               previousCallerAuctionSessionTeamId:
                 latestConfirmedCall?.call
                   .callerAuctionSessionTeamId ??
@@ -180,43 +218,42 @@ export class AuctionCallCreationService {
           );
         }
 
+        if (
+          callerAuctionSessionTeamId === null
+        ) {
+          throw new AuctionCallCreationServiceError(
+            "NO_ELIGIBLE_CALLER",
+            `Auction session "${input.auctionSessionId}" has no team with remaining roster slots`
+          );
+        }
+
         const draftTeams =
-          sessionTeams.map((sessionTeam) => {
-            const rosterEntries =
-              this.rosterEntryRepository
-                .findByAuctionSessionTeamIdWithExecutor(
-                  transactionExecutor,
-                  sessionTeam.id
-                );
+          teamStates.map(
+            ({
+              sessionTeam,
+              rosterEntries,
+              rosterPlayers
+            }) => {
+              const currentRoleCount =
+                rosterPlayers.filter(
+                  (rosterPlayer) =>
+                    rosterPlayer.role ===
+                    player.role
+                ).length;
 
-            const rosterPlayers =
-              this.playerRepository
-                .findByIdsWithExecutor(
-                  transactionExecutor,
-                  rosterEntries.map(
-                    (entry) => entry.playerId
-                  )
-                );
-
-            const currentRoleCount =
-              rosterPlayers.filter(
-                (rosterPlayer) =>
-                  rosterPlayer.role ===
-                  player.role
-              ).length;
-
-            return {
-              auctionSessionTeamId:
-                sessionTeam.id,
-              turnOrder:
-                sessionTeam.tableOrder,
-              remainingCredits:
-                sessionTeam.remainingCredits,
-              currentRosterSize:
-                rosterEntries.length,
-              currentRoleCount
-            };
-          });
+              return {
+                auctionSessionTeamId:
+                  sessionTeam.id,
+                turnOrder:
+                  sessionTeam.tableOrder,
+                remainingCredits:
+                  sessionTeam.remainingCredits,
+                currentRosterSize:
+                  rosterEntries.length,
+                currentRoleCount
+              };
+            }
+          );
 
         return createAuctionCallDraft({
           auctionCallId:
