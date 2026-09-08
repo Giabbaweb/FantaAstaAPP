@@ -286,16 +286,28 @@ session must first be explicitly reopened to `COMPLETED`.
 
 Current milestone
 
-✅ **v0.13.0 — Backup & Recovery**
+✅ **v0.14.0 — Operational Validation**
 
-The backup and recovery subsystem now provides SQLite-safe recovery points,
-integrity manifests, event-driven automatic and manual backup triggers,
-startup recovery, controlled restore, persistent technical logging and an
-offline Emergency Recovery workflow for an unusable live database.
+The operational-validation milestone is complete. The application has been
+validated end-to-end with eight teams and multiple devices, including the
+administrator cockpit, team remotes, universal emergency remote, public
+display, suspension/resume, manual operations, final roster completion,
+FMS ReVo export preparation and session closure.
+
+The full rehearsal reached the authoritative lifecycle state:
+
+```text
+SETUP → READY → RUNNING → SUSPENDED → RUNNING → COMPLETED → CLOSED
+```
+
+Operational fixes discovered during the rehearsal were completed and tested,
+including caller rotation that skips completed rosters and prevention of
+invalid call preparation when the next caller has already completed the
+selected role.
 
 Next milestone
 
-➡ **v0.14.0 — Operational Validation**
+➡ **v1.0.0 — Stable Release**
 
 ---
 
@@ -331,9 +343,10 @@ pnpm test
 
 | Interface | Path | Current status |
 |-----------|------|----------------|
-| Administrator Console | `/admin` | Planned frontend |
-| Team Remote Controller | `/remote` | Planned frontend; realtime command protocol already available server-side |
-| Public Display | `/public` | Implemented |
+| Administrator Console | `/admin` | Implemented and operationally validated |
+| Team Remote Controller | `/remote` | Implemented and operationally validated |
+| Universal Emergency Remote | `/remote/all` | Implemented and operationally validated |
+| Public Display | `/public` | Implemented and operationally validated |
 
 ---
 
@@ -402,6 +415,7 @@ The `docs/` directory contains the complete project documentation.
 | [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Coding conventions |
 | [DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records |
 | [ROADMAP.md](docs/ROADMAP.md) | Technical roadmap |
+| [VADEMECUM_OPERATIVO.md](docs/VADEMECUM_OPERATIVO.md) | Operational auction guide and field checklist |
 
 ---
 
@@ -422,7 +436,7 @@ The `docs/` directory contains the complete project documentation.
 | v0.11   | ✅ Manual Operations & Corrections      |
 | v0.12   | ✅ FMS Import/Export                     |
 | v0.13   | ✅ Backup & Recovery                     |
-| v0.14   | ⏭️ Operational Validation          |
+| v0.14   | ✅ Operational Validation                  |
 | v1.0 | 🎯 Stable Release |
 
 ---
