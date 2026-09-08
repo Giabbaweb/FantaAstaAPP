@@ -124,25 +124,46 @@ export function createSocketServer(
               );
 
             if (
-              registration.role === "OPERATOR" &&
-              connectionManager
-                .findOperatorByAuctionSessionTeamId(
-                  registration.auctionSessionTeamId
-                )
+              registration.role === "OPERATOR"
             ) {
-              const errorPayload: RealtimeError = {
-                code:
-                  "OPERATOR_ALREADY_CONNECTED",
-                message:
-                  "An operator is already connected for this auction session team"
-              };
+              const existingOperator =
+                connectionManager
+                  .findOperatorByAuctionSessionTeamId(
+                    registration
+                      .auctionSessionTeamId
+                  );
 
-              socket.emit(
-                "realtime:error",
-                errorPayload
-              );
+              if (existingOperator) {
+                if (
+                  existingOperator.deviceId ===
+                    registration.deviceId
+                ) {
+                  connectionManager.disconnect(
+                    existingOperator.socketId
+                  );
 
-              return;
+                  io.sockets.sockets
+                    .get(
+                      existingOperator.socketId
+                    )
+                    ?.disconnect(true);
+                } else {
+                  const errorPayload:
+                    RealtimeError = {
+                      code:
+                        "OPERATOR_ALREADY_CONNECTED",
+                      message:
+                        "An operator is already connected for this auction session team"
+                    };
+
+                  socket.emit(
+                    "realtime:error",
+                    errorPayload
+                  );
+
+                  return;
+                }
+              }
             }
           }
 
@@ -159,12 +180,22 @@ export function createSocketServer(
                       registration.auctionSessionTeamId,
                     role: registration.role
                   }
-                : {
-                    kind: "PUBLIC_DISPLAY",
-                    deviceId: registration.deviceId,
-                    auctionSessionId:
-                      registration.auctionSessionId
-                  }
+                : registration.kind ===
+                    "PUBLIC_DISPLAY"
+                  ? {
+                      kind: "PUBLIC_DISPLAY",
+                      deviceId:
+                        registration.deviceId,
+                      auctionSessionId:
+                        registration.auctionSessionId
+                    }
+                  : {
+                      kind: "ADMIN",
+                      deviceId:
+                        registration.deviceId,
+                      auctionSessionId:
+                        registration.auctionSessionId
+                    }
             );
 
           await socket.join(
@@ -211,19 +242,34 @@ export function createSocketServer(
                     registeredAt:
                       registeredConnection.registeredAt
                   }
-                : {
-                    kind: "PUBLIC_DISPLAY",
-                    socketId:
-                      registeredConnection.socketId,
-                    deviceId:
-                      registeredConnection.deviceId,
-                    auctionSessionId:
-                      registeredConnection.auctionSessionId,
-                    connectedAt:
-                      registeredConnection.connectedAt,
-                    registeredAt:
-                      registeredConnection.registeredAt
-                  };
+                : registeredConnection.kind ===
+                    "PUBLIC_DISPLAY"
+                  ? {
+                      kind: "PUBLIC_DISPLAY",
+                      socketId:
+                        registeredConnection.socketId,
+                      deviceId:
+                        registeredConnection.deviceId,
+                      auctionSessionId:
+                        registeredConnection.auctionSessionId,
+                      connectedAt:
+                        registeredConnection.connectedAt,
+                      registeredAt:
+                        registeredConnection.registeredAt
+                    }
+                  : {
+                      kind: "ADMIN",
+                      socketId:
+                        registeredConnection.socketId,
+                      deviceId:
+                        registeredConnection.deviceId,
+                      auctionSessionId:
+                        registeredConnection.auctionSessionId,
+                      connectedAt:
+                        registeredConnection.connectedAt,
+                      registeredAt:
+                        registeredConnection.registeredAt
+                    };
 
           socket.emit(
             "realtime:registered",
@@ -308,8 +354,8 @@ export function createSocketServer(
     });
   });
 
-  app.addHook("onClose", async () => {
-    await io.close();
+  app.addHook("preClose", async () => {
+    io.engine.close();
   });
 
   return {

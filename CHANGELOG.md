@@ -14,6 +14,56 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
+## [0.14.0] - 2026-09-08
+
+### Added
+
+* Operational administrator cockpit `/admin`
+* Team remote controller `/remote` with PIN/QR access
+* Universal emergency remote `/remote/all`
+* Operational setup/readiness workflow in `/admin/config`
+* Windows local AVVIA/ARRESTA launcher workflow
+* Operational auction vademecum under `docs/VADEMECUM_OPERATIVO.md`
+* Administrative extraordinary operations for manual assignment and roster correction
+* Final-session FMS ReVo closing workflow with export-only goalkeeper selection
+
+### Changed
+
+* Caller rotation skips teams whose ordinary roster is already complete
+* Call preparation is disabled when the next caller has already completed the selected player role
+* Responsive layouts refined for iPad, smartphones and public-display use
+* Session-closing UI guides the administrator through ordinary-roster completion, 8/8 FMS goalkeeper selection, export and final closure
+* Remote suspended-state messaging and operational status presentation refined
+
+### Fixed
+
+* Completed teams are no longer selected as the next auction caller
+* Administrator call preparation no longer silently fails when the selected role is already complete for the next caller
+* Universal-remote separator rendering was corrected
+* Administrative-correction wording now reflects that the reason is mandatory
+* Apple touch icon support added for iPad Home Screen installation
+
+### Tested
+
+* Complete eight-team auction rehearsal from operational setup to `CLOSED`
+* Administrator cockpit, team remotes, universal remote and public display used concurrently
+* BID, PASS, automatic exclusions, provisional awards and confirmed awards
+* Suspension/resume and read-only remote behaviour while suspended
+* Manual roster assignment and administrative correction
+* Caller rotation across completed and incomplete rosters
+* End-of-auction transition to `COMPLETED`
+* Export-only goalkeeper selection for all eight teams, including uniqueness-conflict handling
+* FMS ReVo session export with 25 rows per team (`3 P / 8 D / 8 C / 6 A`)
+* Browser multiple-file download flow
+* FMS ReVo import-format validation; confirmed that seasonal archive mismatch can reject otherwise valid export content
+* Final `COMPLETED -> CLOSED` transition
+* Windows AVVIA/ARRESTA scripts with complete release of ports `3001` and `5173`
+* 118 server test files — 762 tests passed
+* Full monorepo type checking
+* Full monorepo production build
+
+---
+
 ## [0.13.0] - 2026-08-18
 
 ### Added
@@ -112,12 +162,6 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ---
 
-
-## [Unreleased]
-
-### Added
-
-* Nothing yet
 
 ---
 

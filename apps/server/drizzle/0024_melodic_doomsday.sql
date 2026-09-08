@@ -1,0 +1,1 @@
+ALTER TABLE `auction_sessions` ADD `remote_base_url` text;

@@ -260,8 +260,20 @@ describe(
       ]);
 
       for (const file of body.data) {
+        expect(
+          file.content.endsWith("\r\n")
+        ).toBe(true);
+
+        expect(
+          file.content
+        ).not.toMatch(
+          /(?<!\r)\n/
+        );
+
         const lines =
-          file.content.split("\n");
+          file.content
+            .slice(0, -2)
+            .split("\r\n");
 
         expect(lines).toHaveLength(25);
 

@@ -14,6 +14,11 @@ export type TeamAccessServiceErrorCode =
   | "TEAM_ACCESS_PIN_INVALID"
   | "TEAM_ACCESS_PIN_UPDATE_FAILED";
 
+export type TeamAccessStatus = {
+  auctionSessionTeamId: string;
+  configured: boolean;
+};
+
 export class TeamAccessServiceError
   extends Error
 {
@@ -35,6 +40,24 @@ export class TeamAccessService {
     private readonly repository:
       TeamAccessRepository
   ) {}
+
+  async listSessionAccessStatus(
+    auctionSessionId: string
+  ): Promise<TeamAccessStatus[]> {
+    const credentials =
+      await this.repository.findByAuctionSessionId(
+        auctionSessionId
+      );
+
+    return credentials.map(
+      (credential) => ({
+        auctionSessionTeamId:
+          credential.auctionSessionTeamId,
+        configured:
+          credential.accessPinHash !== null
+      })
+    );
+  }
 
   async setAccessPin(
     auctionSessionTeamId: string,

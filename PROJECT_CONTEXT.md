@@ -57,9 +57,11 @@ Percorsi UI di riferimento:
 
 Stato frontend corrente:
 
-- `/public`: implementato;
-- `/remote`: UI non ancora implementata; protocollo realtime e comandi di squadra già disponibili lato server;
-- `/admin`: percorso architetturale previsto dal progetto.
+- `/admin`: cockpit amministrativo implementato e collaudato end-to-end;
+- `/remote`: telecomando smartphone implementato e collaudato per OPERATOR/OBSERVER;
+- `/remote/all`: telecomando universale/emergenza implementato e collaudato;
+- `/public`: schermo pubblico fullscreen implementato e collaudato;
+- `/admin/config`: setup operativo implementato fino alla readiness della sessione.
 
 Principio:
 
@@ -126,10 +128,11 @@ stateVersion
 
 ## UI
 
-- `/admin`: interfaccia amministrativa prevista dal progetto.
-- `/remote`: UI smartphone non ancora implementata; il backend realtime supporta già `OPERATOR` e `OBSERVER`, con comandi `BID`, `PASS` e `UNDO_PASS`.
-- `/public`: interfaccia fullscreen read-only implementata, con crediti, P/D/C/A, posti liberi e chiamata corrente.
-- Modalità schermo: `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`.
+- `/admin`: cockpit amministrativo operativo con gestione chiamata, sospensione/ripresa, operazioni straordinarie, controllo schermo pubblico e chiusura/export.
+- `/remote`: UI smartphone implementata per accesso squadra tramite PIN/QR, comandi operativi e stato realtime.
+- `/remote/all`: telecomando universale di emergenza per BID/PASS amministrativi.
+- `/public`: interfaccia fullscreen read-only implementata, con crediti, P/D/C/A, posti liberi, chiamata corrente e foglione rose.
+- Modalità schermo pubblico: `STANDARD`, `HIGH_CONTRAST_OUTDOOR`, `COMPACT` e `DARK`.
 
 ## Opzioni
 
@@ -348,18 +351,115 @@ Versione 0.10 — Sospensione e resilienza:
 - nessuna ripresa automatica;
 - resilienza dello stato `SUSPENDED` verificata dopo ricostruzione del runtime.
 
+## Runtime di sviluppo Replit e restart backend
+
+Nel workspace Replit il workflow `Project` esegue automaticamente `pnpm dev`.
+
+Il runtime di sviluppo è composto da due processi principali:
+
+```text
+Vite :5173
+→ frontend React
+→ proxy /api, /assets e /socket.io verso Fastify
+
+Fastify :3001
+→ API HTTP
+→ Socket.IO
+→ SQLite
+```
+
+Vite applica HMR alle modifiche frontend. Il backend invece viene avviato dal `dev-server-supervisor.mjs` tramite `tsx src/index.ts`, che non è un watcher generale dei sorgenti.
+
+Regola operativa consolidata durante il completamento della Fase B di v0.14:
+
+```text
+modifica solo frontend
+→ HMR Vite
+→ verifica browser
+```
+
+```text
+modifica backend
+→ test / typecheck
+→ commit
+→ restart controllato del runtime server
+→ verifica browser
+```
+
+Test e typecheck verdi verificano il codice presente su disco, ma non garantiscono che un processo Fastify già in esecuzione abbia ricaricato quel codice.
+
+Il restart del backend non è neutro quando una sessione è `RUNNING`: all'avvio viene eseguito `StartupRecoveryService`, che tratta una sessione `RUNNING` come un'asta interrotta e attiva il flusso di recovery/sospensione di sicurezza.
+
+Durante il collaudo del nuovo START autorevole è stato osservato e risolto un mismatch runtime:
+
+```text
+frontend nuovo + backend vecchio
+→ RUNNING #0
+→ nessun SESSION_STARTED
+→ nessun START_SESSION
+```
+
+Dopo restart completo del runtime con sessione riportata controllatamente a `READY #0`, il percorso corretto è stato verificato end-to-end:
+
+```text
+/admin → Avvia asta
+→ READY #0
+→ START_SESSION
+→ RUNNING #1
+→ SESSION_STARTED
+→ realtime
+→ /admin e /public sincronizzati su Stato #1
+```
+
+Per il deployment LAN definitivo della serata d'asta resta da chiudere il modello production: un solo avvio controllato dell'applicazione host, senza dipendenza dal Vite development server, con verifica del serving del frontend compilato e documentazione della procedura operativa.
+
+## Stato v0.14 — Collaudo operativo
+
+La v0.14 è stata collaudata end-to-end su una sessione completa a otto squadre,
+fino allo stato `CLOSED`.
+
+Sono stati verificati operativamente:
+
+- setup e readiness;
+- avvio autorevole `READY -> RUNNING`;
+- cockpit `/admin`;
+- telecomandi `/remote`;
+- telecomando universale `/remote/all`;
+- schermo pubblico `/public`;
+- rilanci, PASS, esclusioni e aggiudicazioni;
+- sospensione e ripresa;
+- assegnazione manuale e correzione amministrativa;
+- rotazione del chiamante con salto delle rose complete;
+- blocco UI delle chiamate su ruoli già completi per il prossimo chiamante;
+- completamento delle rose ordinarie 24/24;
+- transizione a `COMPLETED`;
+- scelta dei terzi portieri export-only;
+- export FMS ReVo a 25 righe;
+- download multiplo dei file;
+- verifica della compatibilità del contenuto con l'archivio stagionale FMS ReVo;
+- transizione finale `COMPLETED -> CLOSED`;
+- launcher Windows AVVIA/ARRESTA e verifica dell'arresto completo dei processi.
+
+Il collaudo ha inoltre confermato che una mancata importazione in FMS ReVo può
+dipendere da giocatori non presenti nell'archivio della stagione corrente,
+anche quando il formato del file esportato è corretto.
+
+Il manuale operativo della serata è:
+
+```text
+docs/VADEMECUM_OPERATIVO.md
+```
+
 ## Prossimo obiettivo
 
-Versione 0.14 — Collaudo operativo:
+Versione 1.0 — Release stabile:
 
-- simulazione completa dell'asta con otto squadre;
-- verifica contemporanea di operatori, osservatori e schermo pubblico;
-- test di disconnessioni, comandi simultanei, sospensione e ripresa;
-- misurazione di stabilità e tempi di risposta;
-- prova operativa dei flussi di backup e recovery;
-- verifica delle assegnazioni manuali e dell'export finale;
-- correzione degli eventuali problemi UX emersi dal collaudo;
-- preparazione della release candidate.
+- hardening finale;
+- verifica del pacchetto/runtime locale per la serata reale;
+- ultimo controllo operativo pre-asta;
+- release candidate;
+- debutto operativo SFL'92 del 16 settembre 2026.
+
 
 Fonte autoritativa completa:
 

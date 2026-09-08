@@ -539,6 +539,9 @@ export class RecoveryPointRestoreService {
         );
       }
     } catch (error) {
+      candidate?.close();
+      candidate = null;
+
       await rm(
         candidatePath,
         {

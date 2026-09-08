@@ -1,8 +1,10 @@
 import {
   addManualInitialRosterEntryCommandSchema,
   addManualRosterAssignmentCommandSchema,
+  removeRosterAssignmentCommandSchema,
   technicalRosterCorrectionCommandSchema,
   createAuctionSessionSchema,
+  realtimeCommandMetadataSchema,
   reopenAuctionSessionCommandSchema,
   resumeAuctionSessionCommandSchema,
   suspendAuctionSessionCommandSchema,
@@ -54,8 +56,20 @@ import type {
   TechnicalRosterCorrectionErrorMapping
 } from "../http/technical-roster-correction-errors.js";
 import {
+  mapRosterAssignmentRemovalError
+} from "../http/roster-assignment-removal-errors.js";
+import type {
+  RosterAssignmentRemovalErrorMapping
+} from "../http/roster-assignment-removal-errors.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
+import {
+  SqliteAuctionSessionReadinessRepository
+} from "../repositories/auction-session-readiness.repository.js";
+import {
+  SqliteFmsSessionExportRepository
+} from "../repositories/fms-session-export.repository.js";
 import type {
   AuctionSessionOperationalCommandCoordinator
 } from "../realtime/auction-session-operational-command-coordinator.js";
@@ -69,11 +83,33 @@ import type {
   AtomicTechnicalRosterCorrectionCommandService
 } from "../realtime/atomic-technical-roster-correction-command.service.js";
 import type {
+  AtomicRosterAssignmentRemovalCommandService
+} from "../realtime/atomic-roster-assignment-removal-command.service.js";
+import type {
   AuctionBackupRequester
 } from "../services/auction-backup-requester.js";
+import type {
+  AuctionSessionCompletionService
+} from "../services/auction-session-completion.service.js";
+import {
+  AuctionSessionReadinessService
+} from "../services/auction-session-readiness.service.js";
+import type {
+  AuctionSessionReadinessResult
+} from "../services/auction-session-readiness.service.js";
 import {
   AuctionSessionService
 } from "../services/auction-session.service.js";
+import {
+  FmsSessionExportStateService
+} from "../services/fms-session-export-state.service.js";
+import {
+  AuctionSessionSetupService,
+  AuctionSessionSetupServiceError
+} from "../services/auction-session-setup.service.js";
+import type {
+  AuctionSessionSetupResult
+} from "../services/auction-session-setup.service.js";
 
 type AuctionSessionListResponse = {
   data: AuctionSession[];
@@ -84,6 +120,22 @@ type AuctionSessionDetailResponse = {
   data: AuctionSession;
   error: null;
 };
+
+type AuctionSessionReadinessResponse = {
+  data: AuctionSessionReadinessResult;
+  error: null;
+};
+
+type AuctionSessionNotReadyResponse = {
+  data: null;
+  error: {
+    code: "AUCTION_SESSION_NOT_READY";
+    message: string;
+    readiness:
+      AuctionSessionReadinessResult;
+  };
+};
+
 
 type ActiveAuctionSessionResponse = {
   data: AuctionSession | null;
@@ -120,6 +172,27 @@ type AuctionSessionCommandBody = {
 type CreateAuctionSessionResponse = {
   data: AuctionSession;
   error: null;
+};
+
+type CreateAuctionSessionSetupResponse = {
+  data: AuctionSessionSetupResult;
+  error: null;
+};
+
+type AuctionSessionSetupConflictResponse = {
+  data: null;
+  error: {
+    code: "INVALID_LEAGUE_TEAM_COUNT";
+    message: string;
+  };
+};
+
+type AuctionSessionSetupFailureResponse = {
+  data: null;
+  error: {
+    code: "SESSION_SETUP_FAILED";
+    message: string;
+  };
 };
 
 type UpdateAuctionSessionResponse = {
@@ -163,6 +236,21 @@ type ExecuteTechnicalRosterCorrectionCommandResponse = {
   error: null;
 };
 
+type ExecuteRosterAssignmentRemovalCommandResponse = {
+  data: {
+    removed: {
+      rosterEntry: RosterEntry;
+      auctionSessionTeamId: string;
+      playerId: string;
+      acquisitionCost: number;
+    };
+    remainingCreditsAfterRemoval: number;
+  };
+  stateVersion: number;
+  idempotentReplay: boolean;
+  error: null;
+};
+
 type InvalidRequestResponse = {
   data: null;
   error: {
@@ -185,9 +273,23 @@ const repository =
 const service =
   new AuctionSessionService(repository);
 
+const fmsSessionExportStateService =
+  new FmsSessionExportStateService(
+    repository,
+    new SqliteFmsSessionExportRepository()
+  );
+
+const setupService =
+  new AuctionSessionSetupService();
+
+const readinessService =
+  new AuctionSessionReadinessService(
+    new SqliteAuctionSessionReadinessRepository()
+  );
+
 type AuctionSessionOperationalCommandPort = Pick<
   AuctionSessionOperationalCommandCoordinator,
-  "suspend" | "resume" | "reopen"
+  "start" | "suspend" | "resume" | "reopen"
 >;
 
 type ManualInitialRosterCommandPort = Pick<
@@ -205,6 +307,17 @@ type TechnicalRosterCorrectionCommandPort = Pick<
   "correct"
 >;
 
+type RosterAssignmentRemovalCommandPort = Pick<
+  AtomicRosterAssignmentRemovalCommandService,
+  "remove"
+>;
+
+type AuctionSessionCompletionPort = Pick<
+  AuctionSessionCompletionService,
+  | "assertCanComplete"
+  | "assertCanForceComplete"
+>;
+
 type CompletedSessionBackupRequesterPort = Pick<
   AuctionBackupRequester,
   "requestCompletedSessionBackup"
@@ -219,6 +332,10 @@ export function auctionSessionRoutes(
     ManualRosterAssignmentCommandPort,
   technicalRosterCorrectionCommandService:
     TechnicalRosterCorrectionCommandPort,
+  rosterAssignmentRemovalCommandService:
+    RosterAssignmentRemovalCommandPort,
+  completionService:
+    AuctionSessionCompletionPort,
   completedSessionBackupRequester:
     CompletedSessionBackupRequesterPort
 ): FastifyPluginAsync {
@@ -253,7 +370,123 @@ export function auctionSessionRoutes(
   }
 );
 
-fastify.get<{
+    fastify.get<{
+      Params: AuctionSessionParams;
+      Reply:
+        | AuctionSessionReadinessResponse
+        | AuctionSessionNotFoundResponse;
+    }>(
+      "/api/auction-sessions/:id/readiness",
+      async (request, reply) => {
+        const readiness =
+          await readinessService
+            .getReadiness(
+              request.params.id
+            );
+
+        if (!readiness) {
+          return reply.code(404).send({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                `Auction session "${request.params.id}" was not found`
+            }
+          });
+        }
+
+        return reply.code(200).send({
+          data: readiness,
+          error: null
+        });
+      }
+    );
+
+fastify.post<{
+      Body: CreateAuctionSessionInput;
+      Reply:
+        | CreateAuctionSessionSetupResponse
+        | InvalidRequestResponse
+        | AuctionSessionSetupConflictResponse
+        | AuctionSessionCreationConflictResponse
+        | AuctionSessionSetupFailureResponse;
+    }>(
+      "/api/auction-sessions/setup",
+      async (request, reply) => {
+        const validation =
+          createAuctionSessionSchema.safeParse(
+            request.body
+          );
+
+        if (!validation.success) {
+          return reply.code(400).send({
+            data: null,
+            error: {
+              code: "INVALID_REQUEST",
+              message:
+                validation.error.issues
+                  .map((issue) => issue.message)
+                  .join("; ")
+            }
+          });
+        }
+
+        try {
+          const result =
+            setupService.execute(
+              validation.data
+            );
+
+          return reply.code(201).send({
+            data: result,
+            error: null
+          });
+        } catch (error) {
+          if (
+            error instanceof
+              AuctionSessionSetupServiceError
+          ) {
+            switch (error.code) {
+              case "INVALID_LEAGUE_TEAM_COUNT":
+                return reply.code(409).send({
+                  data: null,
+                  error: {
+                    code:
+                      "INVALID_LEAGUE_TEAM_COUNT",
+                    message: error.message
+                  }
+                });
+
+              case "SESSION_SETUP_FAILED":
+                return reply.code(500).send({
+                  data: null,
+                  error: {
+                    code:
+                      "SESSION_SETUP_FAILED",
+                    message: error.message
+                  }
+                });
+            }
+          }
+
+          const mapped =
+            mapAuctionSessionCreationError(
+              error
+            );
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
+    fastify.get<{
       Params: AuctionSessionParams;
       Reply:
         | AuctionSessionDetailResponse
@@ -424,6 +657,62 @@ fastify.get<{
     );
 
     fastify.post<{
+      Params: {
+        id: string;
+      };
+    }>(
+      "/api/auction-sessions/:id/force-complete",
+      async (request, reply) => {
+        const { id } = request.params;
+
+        try {
+          await completionService
+            .assertCanForceComplete(id);
+
+          const session =
+            await service.executeCommand(
+              id,
+              "complete"
+            );
+
+          try {
+            await completedSessionBackupRequester
+              .requestCompletedSessionBackup({
+                auctionSessionId: id
+              });
+          } catch (error) {
+            fastify.log.error(
+              {
+                module: "backup",
+                auctionSessionId: id,
+                backupType:
+                  "SESSION_COMPLETED",
+                error
+              },
+              "Post-commit forced session completion backup failed"
+            );
+          }
+
+          return reply.code(200).send({
+            data: session,
+            error: null
+          });
+        } catch (error) {
+          const mapped =
+            mapAuctionSessionError(error);
+
+          if (mapped) {
+            return reply
+              .code(mapped.statusCode)
+              .send(mapped.body);
+          }
+
+          throw error;
+        }
+      }
+    );
+
+    fastify.post<{
       Params: AuctionSessionCommandParams;
       Body: AuctionSessionCommandBody;
       Reply:
@@ -432,13 +721,16 @@ fastify.get<{
         | InvalidRequestResponse
         | AuctionSessionNotFoundResponse
         | AuctionSessionConflictResponse
+        | AuctionSessionNotReadyResponse
         | AuctionSessionOperationalCommandErrorResponse
         | ExecuteManualInitialRosterCommandResponse
         | ManualInitialRosterErrorMapping["body"]
         | ExecuteManualRosterAssignmentCommandResponse
         | ManualRosterAssignmentErrorMapping["body"]
         | ExecuteTechnicalRosterCorrectionCommandResponse
-        | TechnicalRosterCorrectionErrorMapping["body"];
+        | TechnicalRosterCorrectionErrorMapping["body"]
+        | ExecuteRosterAssignmentRemovalCommandResponse
+        | RosterAssignmentRemovalErrorMapping["body"];
     }>(
       "/api/auction-sessions/:id/commands/:command",
       async (request, reply) => {
@@ -446,6 +738,102 @@ fastify.get<{
           request.params;
 
         const body = request.body ?? {};
+
+        if (command === "start") {
+          const validation =
+            realtimeCommandMetadataSchema
+              .safeParse({
+                commandId: body.commandId,
+                stateVersion:
+                  body.stateVersion
+              });
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  '"commandId" and "stateVersion" are required and must be valid'
+              }
+            });
+          }
+
+          const readiness =
+            await readinessService
+              .getReadiness(id);
+
+          if (!readiness) {
+            return reply.code(404).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_FOUND",
+                message:
+                  `Auction session "${id}" was not found`
+              }
+            });
+          }
+
+          if (!readiness.ready) {
+            return reply.code(409).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_READY",
+                message:
+                  "Auction session is no longer ready to start",
+                readiness
+              }
+            });
+          }
+
+          try {
+            const result =
+              await operationalCommandService.start({
+                auctionSessionId: id,
+                commandId:
+                  validation.data.commandId,
+                expectedStateVersion:
+                  validation.data.stateVersion
+              });
+
+            return reply.code(200).send({
+              data: result.session,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const operationalMapped =
+              mapAuctionSessionOperationalCommandError(
+                error
+              );
+
+            if (operationalMapped) {
+              return reply
+                .code(
+                  operationalMapped.statusCode
+                )
+                .send(
+                  operationalMapped.body
+                );
+            }
+
+            const mapped =
+              mapAuctionSessionError(error);
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
 
         if (command === "suspend") {
           const validation =
@@ -780,6 +1168,67 @@ fastify.get<{
 
         if (
           command ===
+            "remove-roster-assignment"
+        ) {
+          const validation =
+            removeRosterAssignmentCommandSchema
+              .safeParse(body);
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  "Roster assignment removal command payload is invalid"
+              }
+            });
+          }
+
+          try {
+            const result =
+              await rosterAssignmentRemovalCommandService.remove(
+                {
+                  commandId:
+                    validation.data.commandId,
+                  stateVersion:
+                    validation.data.stateVersion
+                },
+                validation.data.actor,
+                {
+                  auctionSessionId: id,
+                  rosterEntryId:
+                    validation.data.rosterEntryId
+                },
+                validation.data.comment
+              );
+
+            return reply.code(200).send({
+              data: result.removal,
+              stateVersion:
+                result.stateVersion,
+              idempotentReplay:
+                result.idempotentReplay,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapRosterAssignmentRemovalError(
+                error
+              );
+
+            if (mapped) {
+              return reply
+                .code(mapped.statusCode)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
+        }
+
+        if (
+          command ===
             "technical-roster-correction"
         ) {
           const validation =
@@ -861,7 +1310,58 @@ fastify.get<{
           });
         }
 
+        if (command === "ready") {
+          const readiness =
+            await readinessService
+              .getReadiness(id);
+
+          if (!readiness) {
+            return reply.code(404).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_FOUND",
+                message:
+                  `Auction session "${id}" was not found`
+              }
+            });
+          }
+
+          if (!readiness.ready) {
+            return reply.code(409).send({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_NOT_READY",
+                message:
+                  "Auction session setup is incomplete",
+                readiness
+              }
+            });
+          }
+        }
+
         try {
+          if (command === "complete") {
+            await completionService
+              .assertCanComplete(id);
+          }
+
+          if (
+            command === "close" &&
+            !fmsSessionExportStateService
+              .getStatus(id)
+          ) {
+            return reply.code(409).send({
+              data: null,
+              error: {
+                code: "FMS_EXPORT_REQUIRED",
+                message:
+                  "FMS ReVo roster export must be completed before closing the auction session"
+              }
+            });
+          }
+
           const session =
             await service.executeCommand(
               id,

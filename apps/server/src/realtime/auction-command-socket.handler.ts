@@ -69,14 +69,17 @@ export class AuctionCommandSocketHandler {
       );
     }
 
-    if (connection.kind !== "TEAM") {
+    if (connection.kind === "PUBLIC_DISPLAY") {
       return this.failure(
         "UNAUTHORIZED",
         "Public display connections cannot execute auction commands"
       );
     }
 
-    if (connection.role !== "OPERATOR") {
+    if (
+      connection.kind === "TEAM" &&
+      connection.role !== "OPERATOR"
+    ) {
       return this.failure(
         "UNAUTHORIZED",
         "Observers cannot execute auction commands"
@@ -92,7 +95,17 @@ export class AuctionCommandSocketHandler {
     ) {
       return this.failure(
         "COMMAND_NOT_ALLOWED",
-        `Command "${command.command}" is not available from a team remote`
+        `Command "${command.command}" is not available from a remote control`
+      );
+    }
+
+    if (
+      connection.kind === "ADMIN" &&
+      command.command === "UNDO_PASS"
+    ) {
+      return this.failure(
+        "COMMAND_NOT_ALLOWED",
+        "UNDO_PASS is not available from the universal emergency remote"
       );
     }
 
@@ -113,6 +126,7 @@ export class AuctionCommandSocketHandler {
       }
 
       if (
+        connection.kind === "TEAM" &&
         command.auctionSessionTeamId !==
           connection.auctionSessionTeamId
       ) {

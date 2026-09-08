@@ -1,10 +1,12 @@
 import {
   createAuctionSessionTeamSchema,
+  reorderAuctionSessionTeamsSchema,
   updateAuctionSessionTeamSchema
 } from "@fantaastaapp/contracts";
 import type {
   AuctionSessionTeam,
   CreateAuctionSessionTeamInput,
+  ReorderAuctionSessionTeamsInput,
   UpdateAuctionSessionTeamInput
 } from "@fantaastaapp/contracts";
 import type {
@@ -15,8 +17,13 @@ import {
   mapAuctionSessionTeamError
 } from "../http/auction-session-team-errors.js";
 import type {
-  AuctionSessionTeamNotFoundResponse
+  AuctionSessionTeamInvalidReorderResponse,
+  AuctionSessionTeamNotFoundResponse,
+  AuctionSessionTeamReorderNotAllowedResponse
 } from "../http/auction-session-team-errors.js";
+import {
+  SqliteAuctionSessionRepository
+} from "../repositories/auction-session.repository.js";
 import {
   SqliteAuctionSessionTeamRepository
 } from "../repositories/auction-session-team.repository.js";
@@ -74,8 +81,14 @@ function formatValidationError(
 const repository =
   new SqliteAuctionSessionTeamRepository();
 
+const auctionSessionRepository =
+  new SqliteAuctionSessionRepository();
+
 const service =
-  new AuctionSessionTeamService(repository);
+  new AuctionSessionTeamService(
+    repository,
+    auctionSessionRepository
+  );
 
 export const auctionSessionTeamRoutes:
   FastifyPluginAsync =
@@ -95,6 +108,78 @@ export const auctionSessionTeamRoutes:
             data: sessionTeams,
             error: null
           });
+        }
+      );
+
+      fastify.put<{
+        Params: AuctionSessionParams;
+        Body: ReorderAuctionSessionTeamsInput;
+        Reply:
+          | AuctionSessionTeamListResponse
+          | InvalidRequestResponse
+          | AuctionSessionTeamInvalidReorderResponse
+          | AuctionSessionTeamReorderNotAllowedResponse;
+      }>(
+        "/api/auction-sessions/:auctionSessionId/teams/reorder",
+        async (request, reply) => {
+          const validation =
+            reorderAuctionSessionTeamsSchema
+              .safeParse(
+                request.body
+              );
+
+          if (!validation.success) {
+            return reply.code(400).send({
+              data: null,
+              error: {
+                code: "INVALID_REQUEST",
+                message:
+                  formatValidationError(
+                    validation.error.issues
+                  )
+              }
+            });
+          }
+
+          try {
+            const reordered =
+              await service
+                .reorderSessionTeams(
+                  request.params
+                    .auctionSessionId,
+                  validation.data.teamIds
+                );
+
+            return reply.code(200).send({
+              data: reordered,
+              error: null
+            });
+          } catch (error) {
+            const mapped =
+              mapAuctionSessionTeamError(
+                error
+              );
+
+            if (
+              mapped &&
+              mapped.statusCode === 400
+            ) {
+              return reply
+                .code(400)
+                .send(mapped.body);
+            }
+
+            if (
+              mapped &&
+              mapped.statusCode === 409
+            ) {
+              return reply
+                .code(409)
+                .send(mapped.body);
+            }
+
+            throw error;
+          }
         }
       );
 
@@ -126,9 +211,12 @@ export const auctionSessionTeamRoutes:
             const mapped =
               mapAuctionSessionTeamError(error);
 
-            if (mapped) {
+            if (
+              mapped &&
+              mapped.statusCode === 404
+            ) {
               return reply
-                .code(mapped.statusCode)
+                .code(404)
                 .send(mapped.body);
             }
 
@@ -224,9 +312,12 @@ export const auctionSessionTeamRoutes:
             const mapped =
               mapAuctionSessionTeamError(error);
 
-            if (mapped) {
+            if (
+              mapped &&
+              mapped.statusCode === 404
+            ) {
               return reply
-                .code(mapped.statusCode)
+                .code(404)
                 .send(mapped.body);
             }
 
@@ -259,9 +350,12 @@ export const auctionSessionTeamRoutes:
             const mapped =
               mapAuctionSessionTeamError(error);
 
-            if (mapped) {
+            if (
+              mapped &&
+              mapped.statusCode === 404
+            ) {
               return reply
-                .code(mapped.statusCode)
+                .code(404)
                 .send(mapped.body);
             }
 

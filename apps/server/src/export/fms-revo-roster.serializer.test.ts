@@ -43,16 +43,23 @@ describe("serializeFmsRevoRoster", () => {
       }
     ]);
 
-    expect(result).toBe([
-      "Portiere\tSVILAR Mile\t14\t2",
-      "Difensore\tCOMUZZO Pietro\t1\t2",
-      "Difensore\tSOLET Oumar\t3\t2",
-      "Centrocampista\tDIMARCO Federico\t37\t1",
-      "Attaccante\tYILDIZ Kenan\t2\t3"
-    ].join("\n"));
+    expect(result).toBe(
+      [
+        "Portiere\tSVILAR Mile\t14\t2",
+        "Difensore\tCOMUZZO Pietro\t1\t2",
+        "Difensore\tSOLET Oumar\t3\t2",
+        "Centrocampista\tDIMARCO Federico\t37\t1",
+        "Attaccante\tYILDIZ Kenan\t2\t3"
+      ].join("\r\n") +
+      "\r\n"
+    );
+
+    expect(result).not.toMatch(
+      /(?<!\r)\n/
+    );
   });
 
-  it("does not add a header or trailing newline", () => {
+  it("uses CRLF and adds a final line terminator", () => {
     const result = serializeFmsRevoRoster([
       {
         role: "P",
@@ -63,8 +70,12 @@ describe("serializeFmsRevoRoster", () => {
     ]);
 
     expect(result).toBe(
-      "Portiere\tMAIGNAN Mike Peterson\t35\t1"
+      "Portiere\tMAIGNAN Mike Peterson\t35\t1\r\n"
     );
+
+    expect(
+      result.endsWith("\r\n")
+    ).toBe(true);
   });
 
   it("returns an empty string for an empty roster", () => {

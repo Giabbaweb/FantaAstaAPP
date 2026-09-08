@@ -10,12 +10,18 @@ import type {
   AuctionEventRepository
 } from "../repositories/auction-event.repository.js";
 import type {
+  AuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import type {
   AuctionSessionTeamTransactionalRepository
 } from "../repositories/auction-session-team.repository.js";
 import type {
   ManualRosterAssignmentInput,
   ManualRosterAssignmentService
 } from "../services/manual-roster-assignment.service.js";
+import type {
+  FmsSessionExportStateService
+} from "../services/fms-session-export-state.service.js";
 import type {
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
@@ -26,6 +32,7 @@ import type {
 
 export type AtomicManualRosterAssignmentCommandExecutorErrorCode =
   | "AUCTION_SESSION_NOT_FOUND"
+  | "OPERATIONAL_AUCTION_CALL_EXISTS"
   | "STALE_STATE"
   | "COMMAND_ID_CONFLICT";
 
@@ -78,10 +85,20 @@ export class AtomicManualRosterAssignmentCommandExecutor {
       CommandRegistryRepository,
     private readonly manualRosterAssignmentService:
       ManualRosterAssignmentService,
+    private readonly auctionCallRepository:
+      Pick<
+        AuctionCallRepository,
+        "findOperationalByAuctionSessionIdWithExecutor"
+      >,
     private readonly auctionSessionTeamRepository:
       AuctionSessionTeamTransactionalRepository,
     private readonly auctionEventRepository:
-      AuctionEventRepository
+      AuctionEventRepository,
+    private readonly fmsSessionExportStateService?:
+      Pick<
+        FmsSessionExportStateService,
+        "invalidateWithExecutor"
+      >
   ) {}
 
   async execute(
@@ -150,6 +167,20 @@ export class AtomicManualRosterAssignmentCommandExecutor {
         throw new AtomicManualRosterAssignmentCommandExecutorError(
           "STALE_STATE",
           `Auction session "${auctionSessionId}" expected state version ${input.expectedStateVersion}, but current version is ${currentStateVersion}`
+        );
+      }
+
+      const operationalAuctionCall =
+        this.auctionCallRepository
+          .findOperationalByAuctionSessionIdWithExecutor(
+            tx,
+            auctionSessionId
+          );
+
+      if (operationalAuctionCall) {
+        throw new AtomicManualRosterAssignmentCommandExecutorError(
+          "OPERATIONAL_AUCTION_CALL_EXISTS",
+          `Auction session "${auctionSessionId}" has an operational auction call`
         );
       }
 
@@ -242,6 +273,12 @@ export class AtomicManualRosterAssignmentCommandExecutor {
                 rosterEntry
             }
           );
+
+      this.fmsSessionExportStateService
+        ?.invalidateWithExecutor(
+          tx,
+          auctionSessionId
+        );
 
       return {
         rosterEntry:

@@ -1,0 +1,463 @@
+:root {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: #172334;
+  background: #eef2f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.remote-all-page {
+  min-height: 100vh;
+  padding: 18px;
+  background:
+    linear-gradient(
+      180deg,
+      #f8fafc,
+      #edf2f7
+    );
+}
+
+.remote-all-header,
+.remote-all-call,
+.remote-all-teams,
+.remote-all-error,
+.remote-all-footer {
+  width: min(1180px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.remote-all-header {
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+}
+
+.remote-all-header span {
+  color: #b42318;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.remote-all-header h1 {
+  margin: 3px 0 4px;
+  color: #10233d;
+  font-size: 30px;
+}
+
+.remote-all-header p {
+  margin: 0;
+  color: #6b7a8d;
+}
+
+.remote-all-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.remote-all-header__actions a {
+  padding: 9px 13px;
+  color: #25384f;
+  background: #ffffff;
+  border: 1px solid #cfd9e5;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.remote-all-online,
+.remote-all-offline {
+  padding: 7px 10px;
+  border-radius: 999px;
+}
+
+.remote-all-online {
+  color: #176b36 !important;
+  background: #e5f6eb;
+}
+
+.remote-all-offline {
+  color: #8c2a24 !important;
+  background: #fdeaea;
+}
+
+
+.remote-all-session-status {
+  padding: 7px 11px;
+  border-radius: 999px;
+  color: #4f6073 !important;
+  background: #edf1f5;
+  white-space: nowrap;
+}
+
+.remote-all-session-status--running {
+  color: #176b36 !important;
+  background: #e5f6eb;
+}
+
+.remote-all-session-status--suspended {
+  color: #9a5700 !important;
+  background: #fff0cf;
+}
+
+.remote-all-session-status--ready {
+  color: #155da8 !important;
+  background: #e8f2fd;
+}
+
+.remote-all-session-status--completed,
+.remote-all-session-status--closed {
+  color: #596779 !important;
+  background: #e8ebef;
+}
+
+.remote-all-session-status--setup {
+  color: #6844a5 !important;
+  background: #eee7fa;
+}
+
+.remote-all-call {
+  margin-top: 10px;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    150px
+    220px;
+  gap: 18px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+}
+
+.remote-all-call span,
+.remote-all-call__stat span {
+  display: block;
+  margin-bottom: 5px;
+  color: #6b7a8d;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.remote-all-call > div:first-child
+> strong {
+  display: block;
+  color: #10233d;
+  font-size: 26px;
+}
+
+.remote-all-call small {
+  display: block;
+  margin-top: 4px;
+  color: #66778a;
+}
+
+.remote-all-call__stat {
+  text-align: center;
+}
+
+.remote-all-call__stat strong {
+  color: #10233d;
+  font-size: 25px;
+}
+
+.remote-all-teams {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.remote-all-team {
+  min-height: 92px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns:
+    42px
+    minmax(0, 1fr)
+    105px;
+  gap: 11px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d9e2ec;
+  border-radius: 13px;
+}
+
+.remote-all-team__order {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #61758d;
+  border-radius: 10px;
+  font-weight: 900;
+}
+
+.remote-all-team__name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.remote-all-team__name strong {
+  color: #172334;
+  font-size: 18px;
+}
+
+.remote-all-team__name span {
+  color: #6b7a8d;
+  font-size: 12px;
+}
+
+.remote-all-team__state {
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.remote-all-team--turn {
+  background: #fff7cf;
+  border: 2px solid #e3b321;
+}
+
+.remote-all-team--turn
+.remote-all-team__order {
+  background: #d49b00;
+}
+
+.remote-all-team--leader {
+  background: #edf8f0;
+  border-color: #a7d7b4;
+}
+
+.remote-all-team--leader
+.remote-all-team__state {
+  color: #176b36;
+}
+
+.remote-all-team--inactive {
+  opacity: 0.65;
+  background: #f2f4f6;
+}
+
+.remote-all-team--inactive
+.remote-all-team__state {
+  color: #9b2c2c;
+}
+
+.remote-all-team__controls {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns:
+    86px
+    minmax(0, 1fr)
+    88px;
+  gap: 8px;
+}
+
+.remote-all-team__controls input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #bac7d5;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 850;
+  text-align: center;
+}
+
+.remote-all-team__controls button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.remote-all-bid {
+  color: #ffffff;
+  background: #1565c0;
+}
+
+.remote-all-pass {
+  color: #ffffff;
+  background: #b42318;
+}
+
+.remote-all-team__controls
+button:disabled,
+.remote-all-team__controls
+input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.remote-all-error {
+  margin-top: 14px;
+  padding: 12px 15px;
+  color: #8b1e1e;
+  background: #fdeaea;
+  border: 1px solid #efb5b5;
+  border-radius: 10px;
+  font-weight: 750;
+}
+
+.remote-all-footer {
+  margin-top: 16px;
+  color: #718197;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 1024px) {
+  .remote-all-page {
+    padding: 12px;
+  }
+
+  .remote-all-header {
+    padding: 13px 15px;
+  }
+
+  .remote-all-header h1 {
+    font-size: 25px;
+  }
+
+  .remote-all-header p {
+    font-size: 13px;
+  }
+
+  .remote-all-header__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .remote-all-call {
+    margin-top: 9px;
+    padding: 12px 15px;
+    grid-template-columns:
+      minmax(0, 1fr)
+      110px
+      170px;
+    gap: 10px;
+  }
+
+  .remote-all-call
+  > div:first-child
+  > strong {
+    font-size: 22px;
+  }
+
+  .remote-all-call__stat strong {
+    font-size: 21px;
+  }
+
+  .remote-all-teams {
+    margin-top: 9px;
+    gap: 8px;
+  }
+
+  .remote-all-team {
+    min-height: 86px;
+    padding: 10px 11px;
+    grid-template-columns:
+      38px
+      minmax(0, 1fr)
+      88px;
+    gap: 8px;
+  }
+
+  .remote-all-team__order {
+    width: 34px;
+    height: 34px;
+  }
+
+  .remote-all-team__name strong {
+    font-size: 16px;
+  }
+
+  .remote-all-team__name span {
+    font-size: 11px;
+  }
+
+  .remote-all-team__state {
+    font-size: 10px;
+  }
+
+  .remote-all-team__controls {
+    grid-template-columns:
+      76px
+      minmax(0, 1fr)
+      78px;
+    gap: 6px;
+  }
+
+  .remote-all-team__controls input,
+  .remote-all-team__controls button {
+    min-height: 38px;
+  }
+
+  .remote-all-footer {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 700px) {
+  .remote-all-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .remote-all-header__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .remote-all-call {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .remote-all-call
+  > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .remote-all-teams {
+    grid-template-columns: 1fr;
+  }
+
+  .remote-all-team {
+    grid-template-columns:
+      40px
+      1fr
+      90px;
+  }
+}

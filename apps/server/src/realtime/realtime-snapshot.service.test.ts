@@ -26,6 +26,7 @@ describe("RealtimeSnapshotService", () => {
     suspensionReason: null,
     initialCredits: 330,
     maximumInitialRosterEntries: 11,
+    remoteBaseUrl: null,
     createdAt:
       "2026-08-02T18:00:00.000Z",
     updatedAt:
@@ -47,6 +48,7 @@ describe("RealtimeSnapshotService", () => {
           "auction-session-team-2",
         currentTurnAuctionSessionTeamId:
           "auction-session-team-3",
+        currentTurnStartedAt: null,
         provisionalWinnerAuctionSessionTeamId:
           null,
         createdAt:
@@ -94,6 +96,8 @@ describe("RealtimeSnapshotService", () => {
         },
         {
           findById: vi.fn(),
+          findLatestConfirmedByAuctionSessionId:
+            vi.fn().mockResolvedValue(null),
           findOperationalByAuctionSessionId:
             vi.fn().mockResolvedValue(
               operationalAuctionCall
@@ -123,7 +127,8 @@ describe("RealtimeSnapshotService", () => {
                   D: 5,
                   C: 4,
                   A: 3
-                }
+                },
+                rosterEntries: []
               }
             ]),
           findPlayerById:
@@ -156,6 +161,8 @@ describe("RealtimeSnapshotService", () => {
         }
       ],
       operationalAuctionCall,
+      nextCallerAuctionSessionTeamId:
+        "auction-session-team-1",
       publicDisplay: {
         league: {
           id: "league-1",
@@ -193,7 +200,8 @@ describe("RealtimeSnapshotService", () => {
               },
               rosterSize: 14,
               rosterSizeLimit: 24,
-              remainingRosterSlots: 10
+              remainingRosterSlots: 10,
+              entries: []
             }
           }
         ],
@@ -223,6 +231,8 @@ describe("RealtimeSnapshotService", () => {
       },
       {
         findById: vi.fn(),
+        findLatestConfirmedByAuctionSessionId:
+          vi.fn().mockResolvedValue(null),
         findOperationalByAuctionSessionId:
           vi.fn().mockResolvedValue(null)
       },
@@ -277,6 +287,8 @@ describe("RealtimeSnapshotService", () => {
         },
         {
           findById: vi.fn(),
+          findLatestConfirmedByAuctionSessionId:
+            vi.fn(),
           findOperationalByAuctionSessionId:
             vi.fn()
         },

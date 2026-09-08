@@ -19,6 +19,9 @@ import {
   SqliteAuctionEventRepository
 } from "../repositories/auction-event.repository.js";
 import {
+  SqliteAuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
 import {
@@ -51,7 +54,8 @@ describe(
           sessionRepository,
           new SqliteAuctionSessionStateRepository(),
           new SqliteCommandRegistryRepository(),
-          new SqliteAuctionEventRepository()
+          new SqliteAuctionEventRepository(),
+          new SqliteAuctionCallRepository()
         );
 
       service =
@@ -75,6 +79,58 @@ describe(
         suspensionReason: null,
         initialCredits: 330,
         stateVersion: 0
+      });
+    });
+
+    it("starts a ready session", async () => {
+      await db
+        .update(auctionSessions)
+        .set({
+          status: "READY",
+          suspensionReason: null,
+          stateVersion: 3
+        });
+
+      const result =
+        await service.start({
+          auctionSessionId,
+          commandId: "start-command-1",
+          expectedStateVersion: 3
+        });
+
+      expect(result).toMatchObject({
+        stateVersion: 4,
+        idempotentReplay: false,
+        session: {
+          id: auctionSessionId,
+          status: "RUNNING",
+          suspensionReason: null
+        }
+      });
+
+      const events = await db
+        .select()
+        .from(auctionEvents)
+        .where(
+          eq(
+            auctionEvents.auctionSessionId,
+            auctionSessionId
+          )
+        );
+
+      expect(events).toHaveLength(1);
+
+      expect(events[0]).toMatchObject({
+        auctionSessionId,
+        eventType:
+          "SESSION_STARTED",
+        suspensionReason: null,
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null
       });
     });
 

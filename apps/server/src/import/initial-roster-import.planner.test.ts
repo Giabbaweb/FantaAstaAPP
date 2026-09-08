@@ -43,12 +43,16 @@ describe("buildInitialRosterImportPlan", () => {
       [
         {
           id: "player-svilar",
+          fmsCode: "FMS-SVILAR",
           name: "SVILAR Mile",
+          realTeamName: "Roma",
           role: "P"
         },
         {
           id: "player-comuzzo",
+          fmsCode: "FMS-COMUZZO",
           name: "COMUZZO Pietro",
+          realTeamName: "Fiorentina",
           role: "D"
         }
       ],
@@ -114,7 +118,9 @@ describe("buildInitialRosterImportPlan", () => {
       [
         {
           id: "player-barella",
+          fmsCode: "FMS-BARELLA",
           name: "Barella Nicolo'",
+          realTeamName: "INTER",
           role: "C"
         }
       ],
@@ -161,7 +167,9 @@ describe("buildInitialRosterImportPlan", () => {
       [
         {
           id: "player-lookman",
+          fmsCode: "FMS-LOOKMAN",
           name: "LOOKMAN Ademola Olajade",
+          realTeamName: "Atalanta",
           role: "A"
         }
       ],
@@ -216,7 +224,9 @@ describe("buildInitialRosterImportPlan", () => {
       [
         {
           id: "player-svilar",
+          fmsCode: "FMS-SVILAR",
           name: "SVILAR Mile",
+          realTeamName: "Roma",
           role: "P"
         }
       ],
@@ -238,6 +248,53 @@ describe("buildInitialRosterImportPlan", () => {
     ).toEqual([
       "TEAM_NOT_FOUND",
       "PLAYER_NOT_FOUND"
+    ]);
+  });
+
+  it("reports a real-team mismatch", () => {
+    const parseResult: InitialRosterImportParseResult = {
+      rows: [
+        {
+          rowNumber: 7,
+          teamName: "Abbaweb",
+          playerName: "SVILAR Mile",
+          role: "P",
+          realTeamName: "Milan",
+          contractYear: 2,
+          acquisitionCost: 14
+        }
+      ],
+      issues: []
+    };
+
+    const result = buildInitialRosterImportPlan(
+      parseResult,
+      [
+        {
+          id: "player-svilar",
+          fmsCode: "FMS-SVILAR",
+          name: "SVILAR Mile",
+          realTeamName: "Roma",
+          role: "P"
+        }
+      ],
+      [
+        {
+          auctionSessionTeamId:
+            "session-team-abbaweb",
+          teamName: "Abbaweb"
+        }
+      ]
+    );
+
+    expect(result.entries).toEqual([]);
+
+    expect(
+      result.planningIssues.map(
+        (issue) => issue.code
+      )
+    ).toEqual([
+      "PLAYER_REAL_TEAM_MISMATCH"
     ]);
   });
 
@@ -280,12 +337,16 @@ describe("buildInitialRosterImportPlan", () => {
       [
         {
           id: "player-pulisic",
+          fmsCode: "FMS-PULISIC",
           name: "PULISIC Christian",
+          realTeamName: "Milan",
           role: "C"
         },
         {
           id: "player-svilar",
+          fmsCode: "FMS-SVILAR",
           name: "SVILAR Mile",
+          realTeamName: "Roma",
           role: "P"
         }
       ],

@@ -465,6 +465,139 @@ describe("SqliteAuctionEventRepository", () => {
   );
 
   it(
+    "creates and reads a roster assignment removed event",
+    async () => {
+      db.insert(leagues)
+        .values({
+          id: leagueId,
+          name:
+            "Auction Event Test League",
+          normalizedName:
+            "auction event test league"
+        })
+        .run();
+
+      db.insert(auctionSessions)
+        .values({
+          id: auctionSessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 95,
+          initialCredits: 330
+        })
+        .run();
+
+      db.insert(teams)
+        .values({
+          id: teamId,
+          leagueId,
+          name:
+            "Auction Event Test Team"
+        })
+        .run();
+
+      db.insert(auctionSessionTeams)
+        .values({
+          id: auctionSessionTeamId,
+          auctionSessionId,
+          teamId,
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 310
+        })
+        .run();
+
+      db.insert(players)
+        .values({
+          id: playerId,
+          auctionSessionId,
+          fmsCode:
+            "AUDIT-REMOVAL-001",
+          name:
+            "Removed Assignment Player",
+          normalizedName:
+            "removed assignment player",
+          role: "C",
+          availabilityStatus:
+            "AVAILABLE"
+        })
+        .run();
+
+      const repository =
+        new SqliteAuctionEventRepository();
+
+      const created = db.transaction((tx) =>
+        repository.createWithExecutor(
+          tx,
+          {
+            auctionSessionId,
+            eventType:
+              "ROSTER_ASSIGNMENT_REMOVED",
+            actorName:
+              "Gianfranco",
+            actorRole:
+              "AUCTIONEER",
+            comment:
+              "Rimossa assegnazione errata",
+            beforeAuctionSessionTeamId:
+              auctionSessionTeamId,
+            beforePlayerId:
+              playerId,
+            beforeAmount: 20,
+            beforeContractYear: 1
+          }
+        )
+      );
+
+      expect(created).toMatchObject({
+        auctionSessionId,
+        auctionCallId: null,
+        eventType:
+          "ROSTER_ASSIGNMENT_REMOVED",
+
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+
+        actorName:
+          "Gianfranco",
+        actorRole:
+          "AUCTIONEER",
+        comment:
+          "Rimossa assegnazione errata",
+
+        manualAssignmentReason: null,
+
+        beforeAuctionSessionTeamId:
+          auctionSessionTeamId,
+        beforePlayerId:
+          playerId,
+        beforeAmount: 20,
+        beforeContractYear: 1,
+
+        afterAuctionSessionTeamId: null,
+        afterPlayerId: null,
+        afterAmount: null,
+        afterContractYear: null,
+
+        suspensionReason: null
+      });
+
+      const events =
+        await repository
+          .listByAuctionSessionId(
+            auctionSessionId
+          );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toEqual(created);
+    }
+  );
+
+  it(
     "creates and reads a technical roster correction event",
     async () => {
       db.insert(leagues)

@@ -180,6 +180,7 @@ describe("ConfirmedAuctionAwardService", () => {
             auctionSessionTeamId,
           currentTurnAuctionSessionTeamId:
             null,
+          currentTurnStartedAt: null,
           provisionalWinnerAuctionSessionTeamId:
             auctionSessionTeamId,
           createdAt:
@@ -350,6 +351,7 @@ describe("ConfirmedAuctionAwardService", () => {
             auctionSessionTeamId,
           currentTurnAuctionSessionTeamId:
             null,
+          currentTurnStartedAt: null,
           provisionalWinnerAuctionSessionTeamId:
             auctionSessionTeamId,
           createdAt:
@@ -539,6 +541,7 @@ describe("ConfirmedAuctionAwardService", () => {
             auctionSessionTeamId,
           currentTurnAuctionSessionTeamId:
             null,
+          currentTurnStartedAt: null,
           provisionalWinnerAuctionSessionTeamId:
             auctionSessionTeamId,
           createdAt:

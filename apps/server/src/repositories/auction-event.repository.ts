@@ -22,6 +22,8 @@ export type AuctionEventType =
   | "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY"
   | "MANUAL_ROSTER_ASSIGNMENT_ADDED"
   | "TECHNICAL_ROSTER_CORRECTION"
+  | "ROSTER_ASSIGNMENT_REMOVED"
+  | "SESSION_STARTED"
   | "SESSION_SUSPENDED"
   | "SESSION_RESUMED"
   | "SESSION_REOPENED";
@@ -123,6 +125,55 @@ export type TechnicalRosterCorrectionEvent = {
   createdAt: string;
 };
 
+export type RosterAssignmentRemovedEvent = {
+  id: string;
+  auctionSessionId: string;
+  auctionCallId: null;
+  eventType:
+    "ROSTER_ASSIGNMENT_REMOVED";
+  auctionSessionTeamId: null;
+  playerId: null;
+  amount: null;
+  creditsBefore: null;
+  creditsAfter: null;
+  contractYear: null;
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment: string;
+  manualAssignmentReason: null;
+  beforeAuctionSessionTeamId: string;
+  beforePlayerId: string;
+  beforeAmount: number;
+  beforeContractYear: 1 | 2 | 3;
+  afterAuctionSessionTeamId: null;
+  afterPlayerId: null;
+  afterAmount: null;
+  afterContractYear: null;
+  suspensionReason: null;
+  createdAt: string;
+};
+
+export type AuctionSessionStartedEvent = {
+  id: string;
+  auctionSessionId: string;
+  auctionCallId: null;
+  eventType: "SESSION_STARTED";
+  auctionSessionTeamId: null;
+  playerId: null;
+  amount: null;
+  creditsBefore: null;
+  creditsAfter: null;
+  contractYear: null;
+  actorName: null;
+  actorRole: null;
+  comment: null;
+  manualAssignmentReason: null;
+  suspensionReason: null;
+  createdAt: string;
+};
+
 export type AuctionSessionSuspendedEvent = {
   id: string;
   auctionSessionId: string;
@@ -191,6 +242,8 @@ export type AuctionEvent =
   | ManualInitialRosterEntryAddedEvent
   | ManualRosterAssignmentAddedEvent
   | TechnicalRosterCorrectionEvent
+  | RosterAssignmentRemovedEvent
+  | AuctionSessionStartedEvent
   | AuctionSessionSuspendedEvent
   | AuctionSessionResumedEvent
   | AuctionSessionReopenedEvent;
@@ -263,6 +316,26 @@ export type CreateTechnicalRosterCorrectionEventInput = {
   afterContractYear: 1 | 2 | 3;
 };
 
+export type CreateRosterAssignmentRemovedEventInput = {
+  auctionSessionId: string;
+  eventType:
+    "ROSTER_ASSIGNMENT_REMOVED";
+  actorName: string;
+  actorRole:
+    | "ADMINISTRATOR"
+    | "AUCTIONEER";
+  comment: string;
+  beforeAuctionSessionTeamId: string;
+  beforePlayerId: string;
+  beforeAmount: number;
+  beforeContractYear: 1 | 2 | 3;
+};
+
+export type CreateAuctionSessionStartedEventInput = {
+  auctionSessionId: string;
+  eventType: "SESSION_STARTED";
+};
+
 export type CreateAuctionSessionSuspendedEventInput = {
   auctionSessionId: string;
   eventType: "SESSION_SUSPENDED";
@@ -285,6 +358,8 @@ export type CreateAuctionEventInput =
   | CreateManualInitialRosterEntryAddedEventInput
   | CreateManualRosterAssignmentAddedEventInput
   | CreateTechnicalRosterCorrectionEventInput
+  | CreateRosterAssignmentRemovedEventInput
+  | CreateAuctionSessionStartedEventInput
   | CreateAuctionSessionSuspendedEventInput
   | CreateAuctionSessionResumedEventInput
   | CreateAuctionSessionReopenedEventInput;
@@ -526,6 +601,117 @@ function mapAuctionEvent(
         afterAmount: record.afterAmount,
         afterContractYear:
           record.afterContractYear,
+        suspensionReason: null
+      };
+    }
+
+    case "ROSTER_ASSIGNMENT_REMOVED": {
+      if (
+        record.auctionCallId !== null ||
+        record.auctionSessionTeamId !== null ||
+        record.playerId !== null ||
+        record.amount !== null ||
+        record.creditsBefore !== null ||
+        record.creditsAfter !== null ||
+        record.contractYear !== null ||
+        record.actorName === null ||
+        record.actorName.length === 0 ||
+        (
+          record.actorRole !== "ADMINISTRATOR" &&
+          record.actorRole !== "AUCTIONEER"
+        ) ||
+        record.comment === null ||
+        record.comment.trim().length === 0 ||
+        record.manualAssignmentReason !== null ||
+        record.beforeAuctionSessionTeamId === null ||
+        record.beforePlayerId === null ||
+        record.beforeAmount === null ||
+        record.beforeAmount <= 0 ||
+        record.beforeContractYear === null ||
+        (
+          record.beforeContractYear !== 1 &&
+          record.beforeContractYear !== 2 &&
+          record.beforeContractYear !== 3
+        ) ||
+        record.afterAuctionSessionTeamId !== null ||
+        record.afterPlayerId !== null ||
+        record.afterAmount !== null ||
+        record.afterContractYear !== null ||
+        record.suspensionReason !== null
+      ) {
+        throw new Error(
+          `Invalid ROSTER_ASSIGNMENT_REMOVED event "${record.id}"`
+        );
+      }
+
+      return {
+        ...record,
+        eventType:
+          "ROSTER_ASSIGNMENT_REMOVED",
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+        actorName:
+          record.actorName,
+        actorRole:
+          record.actorRole,
+        comment:
+          record.comment,
+        manualAssignmentReason: null,
+        beforeAuctionSessionTeamId:
+          record.beforeAuctionSessionTeamId,
+        beforePlayerId:
+          record.beforePlayerId,
+        beforeAmount:
+          record.beforeAmount,
+        beforeContractYear:
+          record.beforeContractYear,
+        afterAuctionSessionTeamId: null,
+        afterPlayerId: null,
+        afterAmount: null,
+        afterContractYear: null,
+        suspensionReason: null
+      };
+    }
+
+    case "SESSION_STARTED": {
+      if (
+        record.auctionCallId !== null ||
+        record.auctionSessionTeamId !== null ||
+        record.playerId !== null ||
+        record.amount !== null ||
+        record.creditsBefore !== null ||
+        record.creditsAfter !== null ||
+        record.contractYear !== null ||
+        record.actorName !== null ||
+        record.actorRole !== null ||
+        record.comment !== null ||
+        record.manualAssignmentReason !== null ||
+        record.suspensionReason !== null
+      ) {
+        throw new Error(
+          `Invalid SESSION_STARTED event "${record.id}"`
+        );
+      }
+
+      return {
+        ...record,
+        eventType: "SESSION_STARTED",
+        auctionCallId: null,
+        auctionSessionTeamId: null,
+        playerId: null,
+        amount: null,
+        creditsBefore: null,
+        creditsAfter: null,
+        contractYear: null,
+        actorName: null,
+        actorRole: null,
+        comment: null,
+        manualAssignmentReason: null,
         suspensionReason: null
       };
     }
@@ -825,6 +1011,42 @@ export class SqliteAuctionEventRepository
                 input.afterAmount,
               afterContractYear:
                 input.afterContractYear,
+              suspensionReason: null
+            }
+        : input.eventType ===
+            "ROSTER_ASSIGNMENT_REMOVED"
+          ? {
+              id,
+              auctionSessionId:
+                input.auctionSessionId,
+              auctionCallId: null,
+              eventType:
+                input.eventType,
+              auctionSessionTeamId: null,
+              playerId: null,
+              amount: null,
+              creditsBefore: null,
+              creditsAfter: null,
+              contractYear: null,
+              actorName:
+                input.actorName,
+              actorRole:
+                input.actorRole,
+              comment:
+                input.comment,
+              manualAssignmentReason: null,
+              beforeAuctionSessionTeamId:
+                input.beforeAuctionSessionTeamId,
+              beforePlayerId:
+                input.beforePlayerId,
+              beforeAmount:
+                input.beforeAmount,
+              beforeContractYear:
+                input.beforeContractYear,
+              afterAuctionSessionTeamId: null,
+              afterPlayerId: null,
+              afterAmount: null,
+              afterContractYear: null,
               suspensionReason: null
             }
         : input.eventType ===

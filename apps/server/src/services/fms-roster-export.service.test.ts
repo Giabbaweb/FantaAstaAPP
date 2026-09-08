@@ -38,6 +38,7 @@ function createAuctionSession(
     suspensionReason: null,
     initialCredits: 300,
     maximumInitialRosterEntries: 11,
+    remoteBaseUrl: null,
     createdAt,
     updatedAt,
     ...overrides
@@ -281,7 +282,9 @@ describe("FmsRosterExportService", () => {
       );
 
     const lines =
-      result.split("\n");
+      result
+        .slice(0, -2)
+        .split("\r\n");
 
     expect(lines).toHaveLength(25);
 

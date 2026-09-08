@@ -50,3 +50,13 @@ vite.config.ts.timestamp-*
 
 # Local package manager
 .npm/
+
+# Runtime assets
+data/assets/player-photos/*
+!data/assets/player-photos/.gitkeep
+
+data/assets/team-logos/*
+!data/assets/team-logos/.gitkeep
+
+data/assets/league-logos/*
+!data/assets/league-logos/.gitkeep

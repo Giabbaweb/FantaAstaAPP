@@ -6,6 +6,10 @@ import {
 } from "vitest";
 
 import {
+  eq
+} from "drizzle-orm";
+
+import {
   db
 } from "../db/client.js";
 import {
@@ -21,6 +25,9 @@ import {
 import {
   SqliteAuctionEventRepository
 } from "../repositories/auction-event.repository.js";
+import {
+  SqliteAuctionCallRepository
+} from "../repositories/auction-call.repository.js";
 import {
   SqliteAuctionSessionRepository
 } from "../repositories/auction-session.repository.js";
@@ -46,7 +53,8 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
         new SqliteAuctionSessionRepository(),
         new SqliteAuctionSessionStateRepository(),
         new SqliteCommandRegistryRepository(),
-        new SqliteAuctionEventRepository()
+        new SqliteAuctionEventRepository(),
+        new SqliteAuctionCallRepository()
       );
 
     await db.insert(leagues).values({
@@ -101,6 +109,125 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       }
     };
   }
+
+  it(
+    "restarts the active turn timer when a suspended session resumes",
+    async () => {
+      await db.insert(teams).values({
+        id: "team-turn-timer",
+        leagueId: "league-1",
+        name: "Turn Timer Team"
+      });
+
+      await db.insert(auctionSessionTeams).values({
+        id: "session-team-turn-timer",
+        auctionSessionId,
+        teamId: "team-turn-timer",
+        tableOrder: 1,
+        renewalCredits: 0,
+        remainingCredits: 330
+      });
+
+      await db.insert(players).values({
+        id: "player-turn-timer",
+        auctionSessionId,
+        fmsCode: "TURN-TIMER-001",
+        name: "Turn Timer Player",
+        normalizedName: "turn timer player",
+        role: "A",
+        availabilityStatus: "AVAILABLE"
+      });
+
+      await db.insert(auctionCalls).values({
+        id: "auction-call-turn-timer",
+        auctionSessionId,
+        playerId: "player-turn-timer",
+        callerAuctionSessionTeamId:
+          "session-team-turn-timer",
+        status: "OPEN",
+        openingBid: 1,
+        currentBid: 1,
+        currentLeaderAuctionSessionTeamId:
+          "session-team-turn-timer",
+        currentTurnAuctionSessionTeamId:
+          "session-team-turn-timer",
+        currentTurnStartedAt:
+          "2026-09-16T20:00:00.000Z"
+      });
+
+      await db
+        .update(auctionSessions)
+        .set({
+          status: "SUSPENDED",
+          suspensionReason:
+            "PIZZA_BREAK",
+          stateVersion: 4
+        });
+
+      const resumedAt =
+        "2026-09-16T20:30:00.000Z";
+
+      const resumeExecutor =
+        new AtomicAuctionSessionCommandExecutor(
+          new SqliteAuctionSessionRepository(),
+          new SqliteAuctionSessionStateRepository(),
+          new SqliteCommandRegistryRepository(),
+          new SqliteAuctionEventRepository(),
+          new SqliteAuctionCallRepository(),
+          () => resumedAt
+        );
+
+      const result =
+        await resumeExecutor.execute({
+          auctionSessionId,
+          commandId:
+            "resume-turn-timer-command",
+          commandType:
+            "RESUME_SESSION",
+          expectedStateVersion: 4,
+          requestFingerprint:
+            "RESUME_SESSION",
+          update: {
+            status: "RUNNING",
+            suspensionReason: null
+          },
+          auditEvent: {
+            auctionSessionId,
+            eventType:
+              "SESSION_RESUMED"
+          }
+        });
+
+      expect(result).toMatchObject({
+        stateVersion: 5,
+        idempotentReplay: false,
+        session: {
+          id: auctionSessionId,
+          status: "RUNNING",
+          suspensionReason: null
+        }
+      });
+
+      const [storedCall] =
+        await db
+          .select({
+            currentTurnAuctionSessionTeamId:
+              auctionCalls
+                .currentTurnAuctionSessionTeamId,
+            currentTurnStartedAt:
+              auctionCalls
+                .currentTurnStartedAt
+          })
+          .from(auctionCalls);
+
+      expect(storedCall).toEqual({
+        currentTurnAuctionSessionTeamId:
+          "session-team-turn-timer",
+        currentTurnStartedAt:
+          resumedAt
+      });
+    }
+  );
 
   it("persists the operational state and increments stateVersion atomically", async () => {
     const result =
@@ -266,6 +393,8 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
             null,
           currentTurnAuctionSessionTeamId:
             null,
+          currentTurnStartedAt:
+            null,
           provisionalWinnerAuctionSessionTeamId:
             null,
           createdAt:
@@ -283,6 +412,150 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
       )
     ).rejects.toMatchObject({
       code: "COMMAND_ID_CONFLICT"
+    });
+  });
+
+  it("allows start when another session is ready", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "READY",
+        stateVersion: 0
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    await db.insert(leagues).values({
+      id: "league-ready-other",
+      name: "League Ready Other",
+      normalizedName:
+        "league ready other"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-ready-other",
+      leagueId: "league-ready-other",
+      season: "2026/2027",
+      editionNumber: 2,
+      status: "READY",
+      suspensionReason: null,
+      initialCredits: 300,
+      stateVersion: 0
+    });
+
+    const result =
+      await executor.execute({
+        auctionSessionId,
+        commandId:
+          "start-with-ready-other",
+        commandType:
+          "START_SESSION",
+        expectedStateVersion: 0,
+        requestFingerprint:
+          "START_SESSION",
+        update: {
+          status: "RUNNING",
+          suspensionReason: null
+        },
+        auditEvent: {
+          auctionSessionId,
+          eventType:
+            "SESSION_STARTED"
+        }
+      });
+
+    expect(result).toMatchObject({
+      stateVersion: 1,
+      idempotentReplay: false,
+      session: {
+        id: auctionSessionId,
+        status: "RUNNING"
+      }
+    });
+  });
+
+  it("rejects start when another session is operational", async () => {
+    await db
+      .update(auctionSessions)
+      .set({
+        status: "READY",
+        stateVersion: 0
+      })
+      .where(
+        eq(
+          auctionSessions.id,
+          auctionSessionId
+        )
+      );
+
+    await db.insert(leagues).values({
+      id: "league-operational-other",
+      name: "League Operational Other",
+      normalizedName:
+        "league operational other"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-operational-other",
+      leagueId:
+        "league-operational-other",
+      season: "2026/2027",
+      editionNumber: 3,
+      status: "SUSPENDED",
+      suspensionReason:
+        "TECHNICAL_BREAK",
+      initialCredits: 300,
+      stateVersion: 4
+    });
+
+    await expect(
+      executor.execute({
+        auctionSessionId,
+        commandId:
+          "start-with-operational-other",
+        commandType:
+          "START_SESSION",
+        expectedStateVersion: 0,
+        requestFingerprint:
+          "START_SESSION",
+        update: {
+          status: "RUNNING",
+          suspensionReason: null
+        },
+        auditEvent: {
+          auctionSessionId,
+          eventType:
+            "SESSION_STARTED"
+        }
+      })
+    ).rejects.toMatchObject({
+      code:
+        "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS"
+    });
+
+    const [stored] =
+      await db
+        .select({
+          status:
+            auctionSessions.status,
+          stateVersion:
+            auctionSessions.stateVersion
+        })
+        .from(auctionSessions)
+        .where(
+          eq(
+            auctionSessions.id,
+            auctionSessionId
+          )
+        );
+
+    expect(stored).toEqual({
+      status: "READY",
+      stateVersion: 0
     });
   });
 
@@ -326,7 +599,8 @@ describe("AtomicAuctionSessionCommandExecutor", () => {
         new SqliteAuctionSessionRepository(),
         new SqliteAuctionSessionStateRepository(),
         new FailingCommandRegistryRepository(),
-        new SqliteAuctionEventRepository()
+        new SqliteAuctionEventRepository(),
+        new SqliteAuctionCallRepository()
       );
 
     await expect(

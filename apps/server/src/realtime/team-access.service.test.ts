@@ -71,6 +71,43 @@ describe("TeamAccessService", () => {
     });
   });
 
+  it("reports whether the session team PIN is configured", async () => {
+    await expect(
+      service.listSessionAccessStatus(
+        "session-1"
+      )
+    ).resolves.toEqual([
+      {
+        auctionSessionTeamId,
+        configured: false
+      }
+    ]);
+
+    await service.setAccessPin(
+      auctionSessionTeamId,
+      "1234"
+    );
+
+    await expect(
+      service.listSessionAccessStatus(
+        "session-1"
+      )
+    ).resolves.toEqual([
+      {
+        auctionSessionTeamId,
+        configured: true
+      }
+    ]);
+  });
+
+  it("returns an empty access status list for a session without teams", async () => {
+    await expect(
+      service.listSessionAccessStatus(
+        "missing-session"
+      )
+    ).resolves.toEqual([]);
+  });
+
   it("stores the PIN as a hash", async () => {
     await service.setAccessPin(
       auctionSessionTeamId,

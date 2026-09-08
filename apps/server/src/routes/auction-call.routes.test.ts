@@ -69,6 +69,9 @@ describe("auction call read routes", () => {
             currentTurnAuctionSessionTeamId:
               | string
               | null;
+            currentTurnStartedAt:
+              | string
+              | null;
             provisionalWinnerAuctionSessionTeamId:
               | string
               | null;
@@ -101,6 +104,7 @@ describe("auction call read routes", () => {
         currentBid: null,
         currentLeaderAuctionSessionTeamId: null,
         currentTurnAuctionSessionTeamId: null,
+        currentTurnStartedAt: null,
         provisionalWinnerAuctionSessionTeamId: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)

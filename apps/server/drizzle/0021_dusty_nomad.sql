@@ -1,0 +1,1 @@
+ALTER TABLE `auction_calls` ADD `current_turn_started_at` text;

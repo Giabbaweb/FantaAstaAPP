@@ -27,17 +27,36 @@ describe(
       const onBackupError =
         vi.fn();
 
+      const snapshotDispatcher = {
+        dispatch:
+          vi.fn<
+            (
+              auctionSessionId: string
+            ) => ReturnType<
+              import("./auction-snapshot-dispatcher.js")
+                .AuctionSnapshotDispatcher["dispatch"]
+            >
+          >()
+      };
+
+      const onSnapshotError =
+        vi.fn();
+
       const service =
         new AtomicManualRosterAssignmentCommandService(
           executor,
           backupRequester,
-          onBackupError
+          onBackupError,
+          snapshotDispatcher,
+          onSnapshotError
         );
 
       return {
         executor,
         backupRequester,
         onBackupError,
+        snapshotDispatcher,
+        onSnapshotError,
         service
       };
     }
@@ -341,6 +360,180 @@ describe(
             "session-1",
           error:
             backupError
+        });
+      }
+    );
+
+    it(
+      "publishes a fresh snapshot after a non-replayed commit",
+      async () => {
+        const {
+          executor,
+          snapshotDispatcher,
+          service
+        } = createFixture();
+
+        executor.execute.mockResolvedValue({
+          rosterEntry: {
+            id: "roster-entry-snapshot",
+            auctionSessionTeamId:
+              assignment.auctionSessionTeamId,
+            playerId: assignment.playerId,
+            acquisitionCost:
+              assignment.acquisitionCost,
+            contractYear:
+              assignment.contractYear,
+            source: "MANUAL_ASSIGNMENT",
+            createdAt:
+              "2026-09-02T19:00:00.000Z",
+            updatedAt:
+              "2026-09-02T19:00:00.000Z"
+          },
+          stateVersion: 4,
+          idempotentReplay: false
+        });
+
+        await service.add(
+          {
+            commandId: "command-snapshot",
+            stateVersion: 3
+          },
+          {
+            name: "Administrator",
+            role: "ADMINISTRATOR"
+          },
+          assignment,
+          "OTHER",
+          "Snapshot test"
+        );
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).toHaveBeenCalledTimes(1);
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).toHaveBeenCalledWith(
+          "session-1"
+        );
+      }
+    );
+
+    it(
+      "does not publish a snapshot for an idempotent replay",
+      async () => {
+        const {
+          executor,
+          snapshotDispatcher,
+          service
+        } = createFixture();
+
+        executor.execute.mockResolvedValue({
+          rosterEntry: {
+            id: "roster-entry-replay-snapshot",
+            auctionSessionTeamId:
+              assignment.auctionSessionTeamId,
+            playerId: assignment.playerId,
+            acquisitionCost:
+              assignment.acquisitionCost,
+            contractYear:
+              assignment.contractYear,
+            source: "MANUAL_ASSIGNMENT",
+            createdAt:
+              "2026-09-02T19:00:00.000Z",
+            updatedAt:
+              "2026-09-02T19:00:00.000Z"
+          },
+          stateVersion: 4,
+          idempotentReplay: true
+        });
+
+        await service.add(
+          {
+            commandId:
+              "command-replay-snapshot",
+            stateVersion: 3
+          },
+          {
+            name: "Administrator",
+            role: "ADMINISTRATOR"
+          },
+          assignment,
+          "OTHER",
+          "Replay snapshot test"
+        );
+
+        expect(
+          snapshotDispatcher.dispatch
+        ).not.toHaveBeenCalled();
+      }
+    );
+
+    it(
+      "keeps a committed manual assignment successful when snapshot dispatch fails",
+      async () => {
+        const {
+          executor,
+          snapshotDispatcher,
+          onSnapshotError,
+          service
+        } = createFixture();
+
+        const executorResult = {
+          rosterEntry: {
+            id: "roster-entry-snapshot-failure",
+            auctionSessionTeamId:
+              assignment.auctionSessionTeamId,
+            playerId: assignment.playerId,
+            acquisitionCost:
+              assignment.acquisitionCost,
+            contractYear:
+              assignment.contractYear,
+            source: "MANUAL_ASSIGNMENT" as const,
+            createdAt:
+              "2026-09-02T19:00:00.000Z",
+            updatedAt:
+              "2026-09-02T19:00:00.000Z"
+          },
+          stateVersion: 4,
+          idempotentReplay: false
+        };
+
+        const snapshotError =
+          new Error("snapshot failed");
+
+        executor.execute.mockResolvedValue(
+          executorResult
+        );
+
+        snapshotDispatcher.dispatch
+          .mockRejectedValue(snapshotError);
+
+        await expect(
+          service.add(
+            {
+              commandId:
+                "command-snapshot-failure",
+              stateVersion: 3
+            },
+            {
+              name: "Administrator",
+              role: "ADMINISTRATOR"
+            },
+            assignment,
+            "OTHER",
+            "Snapshot failure test"
+          )
+        ).resolves.toEqual(
+          executorResult
+        );
+
+        expect(
+          onSnapshotError
+        ).toHaveBeenCalledWith({
+          auctionSessionId:
+            "session-1",
+          error: snapshotError
         });
       }
     );

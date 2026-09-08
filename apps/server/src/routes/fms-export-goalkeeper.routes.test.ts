@@ -186,6 +186,100 @@ describe(
       );
     });
 
+    it(
+      "returns null when no export goalkeeper is selected",
+      async () => {
+        const {
+          sessionTeamId
+        } = await seedScenario(
+          "get-empty"
+        );
+
+        const response =
+          await app.inject({
+            method: "GET",
+            url:
+              `/api/auction-session-teams/${sessionTeamId}/fms-export-goalkeeper`
+          });
+
+        expect(
+          response.statusCode
+        ).toBe(200);
+
+        expect(
+          response.json()
+        ).toEqual({
+          data: null,
+          error: null
+        });
+      }
+    );
+
+    it(
+      "returns the persisted export goalkeeper selection",
+      async () => {
+        const {
+          sessionId,
+          sessionTeamId
+        } = await seedScenario(
+          "get-selected"
+        );
+
+        const candidateId =
+          "goalkeeper-http-get-selected-candidate";
+
+        await db.insert(players).values({
+          id: candidateId,
+          auctionSessionId: sessionId,
+          fmsCode: candidateId,
+          name:
+            "Goalkeeper HTTP Get Selected",
+          normalizedName:
+            "goalkeeper http get selected",
+          realTeamName: "Milan",
+          role: "P",
+          availabilityStatus: "AVAILABLE"
+        });
+
+        const putResponse =
+          await app.inject({
+            method: "PUT",
+            url:
+              `/api/auction-session-teams/${sessionTeamId}/fms-export-goalkeeper`,
+            payload: {
+              playerId: candidateId
+            }
+          });
+
+        expect(
+          putResponse.statusCode
+        ).toBe(200);
+
+        const getResponse =
+          await app.inject({
+            method: "GET",
+            url:
+              `/api/auction-session-teams/${sessionTeamId}/fms-export-goalkeeper`
+          });
+
+        expect(
+          getResponse.statusCode
+        ).toBe(200);
+
+        expect(
+          getResponse.json()
+        ).toEqual({
+          data: expect.objectContaining({
+            auctionSessionTeamId:
+              sessionTeamId,
+            playerId:
+              candidateId
+          }),
+          error: null
+        });
+      }
+    );
+
     it("returns 400 for an invalid request body", async () => {
       const {
         sessionTeamId

@@ -32,6 +32,16 @@ export type {
 } from "./technical-roster-correction.js";
 
 export {
+  assertRosterAssignmentRemovalAllowed,
+  RosterAssignmentRemovalDomainError
+} from "./roster-assignment-removal.js";
+
+export type {
+  RosterAssignmentRemovalDomainErrorCode,
+  RosterAssignmentRemovalValidationInput
+} from "./roster-assignment-removal.js";
+
+export {
   assertRosterAcquisitionAllowed
 } from "./roster-acquisition.js";
 
@@ -58,3 +68,10 @@ export type {
   RosterEntryDomainErrorCode,
   RosterEntrySource
 } from "./roster-entry.js";
+
+export {
+  isRosterComplete
+} from "./roster-completion.js";
+export type {
+  RosterRoleCounts
+} from "./roster-completion.js";

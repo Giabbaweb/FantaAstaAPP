@@ -23,6 +23,7 @@ function createCall(): AuctionCall {
     currentBid: null,
     currentLeaderAuctionSessionTeamId: null,
     currentTurnAuctionSessionTeamId: null,
+    currentTurnStartedAt: null,
     provisionalWinnerAuctionSessionTeamId: null,
     createdAt: "2026-07-30T00:00:00Z",
     updatedAt: "2026-07-30T00:00:00Z"

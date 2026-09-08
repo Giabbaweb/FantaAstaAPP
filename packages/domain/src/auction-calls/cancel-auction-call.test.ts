@@ -20,6 +20,7 @@ function createAuctionCall(
     currentBid: 5,
     currentLeaderAuctionSessionTeamId: "team-2",
     currentTurnAuctionSessionTeamId: "team-3",
+    currentTurnStartedAt: null,
     provisionalWinnerAuctionSessionTeamId: null,
     createdAt: "2026-07-30T00:00:00.000Z",
     updatedAt: "2026-07-30T00:00:00.000Z",
@@ -42,6 +43,7 @@ describe("cancelAuctionCall", () => {
       expect(result.auctionCall).toMatchObject({
         status: "CANCELLED",
         currentTurnAuctionSessionTeamId: null,
+        currentTurnStartedAt: null,
         provisionalWinnerAuctionSessionTeamId: null
       });
     }

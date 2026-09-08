@@ -881,29 +881,57 @@ separatamente da audit di dominio e `command_registry`.
 
 # v0.14.0 — Collaudo operativo
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
-## Obiettivi
+## Obiettivi raggiunti
 
-- simulare un’asta completa;
-- verificare più dispositivi;
-- misurare stabilità e tempi di risposta;
-- testare recovery;
-- correggere problemi UX;
-- preparare la release candidate.
+- simulazione completa di un'asta a otto squadre;
+- uso contemporaneo di più dispositivi;
+- cockpit amministrativo operativo;
+- telecomandi squadra e telecomando universale;
+- schermo pubblico e foglione rose;
+- sospensione e ripresa;
+- assegnazioni manuali e correzioni amministrative;
+- export finale FMS ReVo;
+- correzione dei problemi UX e di rotazione emersi durante il collaudo;
+- documentazione operativa della serata.
 
-## Attività previste
+## Collaudo end-to-end
 
-- simulazione con otto squadre;
-- operatori e osservatori;
-- schermo pubblico;
-- disconnessioni;
-- comandi simultanei;
-- sospensione;
-- ripresa;
-- assegnazioni manuali;
-- export finale;
-- recovery da backup.
+Il rehearsal operativo è stato completato fino allo stato:
+
+```text
+CLOSED
+```
+
+Sono stati verificati:
+
+- setup/readiness;
+- `READY -> RUNNING`;
+- chiamate, rilanci, PASS ed esclusioni automatiche;
+- aggiudicazioni definitive;
+- sospensione e ripresa;
+- gestione delle rose complete nella rotazione del chiamante;
+- prevenzione delle chiamate su ruoli già completi per il prossimo chiamante;
+- completamento delle rose ordinarie `2 P / 8 D / 8 C / 6 A`;
+- `RUNNING -> COMPLETED`;
+- selezione di 8 terzi portieri export-only;
+- vincolo di unicità del portiere export-only;
+- export session-wide FMS ReVo a 25 righe per squadra;
+- download multiplo browser;
+- verifica del contenuto rispetto all'archivio stagionale FMS ReVo;
+- `COMPLETED -> CLOSED`;
+- avvio/arresto controllato del runtime Windows.
+
+## Verifiche tecniche finali
+
+- 118 file di test server;
+- 762 test server superati;
+- typecheck completo del monorepo superato;
+- build completa del monorepo superata;
+- `git diff --check` pulito ai checkpoint;
+- fix operativi committati e verificati sul caso reale;
+- Vademecum operativo creato in `docs/VADEMECUM_OPERATIVO.md`.
 
 ---
 

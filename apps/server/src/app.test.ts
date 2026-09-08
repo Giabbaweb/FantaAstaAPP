@@ -18,16 +18,20 @@ import {
   buildApp
 } from "./app.js";
 import {
-  db
+  db,
+  sqlite
 } from "./db/client.js";
 import {
+  auctionCalls,
   auctionEvents,
   auctionSessions,
   auctionSessionTeams,
   commandRegistry,
   leagues,
+  owners,
   players,
   rosterEntries,
+  teamOwners,
   teams
 } from "./db/schema/index.js";
 
@@ -71,6 +75,35 @@ describe("application integration", () => {
     });
   });
 
+  describe("GET /api/system/lan-addresses", () => {
+    it("returns LAN address candidates", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/system/lan-addresses"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        data: Array<{
+          interfaceName: string;
+          address: string;
+        }>;
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+      expect(Array.isArray(body.data)).toBe(true);
+
+      for (const candidate of body.data) {
+        expect(candidate).toEqual({
+          interfaceName: expect.any(String),
+          address: expect.any(String)
+        });
+      }
+    });
+  });
+
   describe("GET /api/db-health", () => {
     it("returns the database health status", async () => {
       const response = await app.inject({
@@ -92,6 +125,436 @@ describe("application integration", () => {
       expect(
         Number.isNaN(Date.parse(body.timestamp))
       ).toBe(false);
+    });
+  });
+
+  describe("League API", () => {
+    it("creates, lists, gets and updates a league", async () => {
+      const createResponse = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: "  Lega Test M14  "
+        }
+      });
+
+      expect(createResponse.statusCode).toBe(201);
+
+      const created = createResponse.json<{
+        data: {
+          id: string;
+          name: string;
+          createdAt: string;
+          updatedAt: string;
+        };
+        error: null;
+      }>();
+
+      expect(created.data.name).toBe(
+        "Lega Test M14"
+      );
+
+      const leagueId =
+        created.data.id;
+
+      const listResponse = await app.inject({
+        method: "GET",
+        url: "/api/leagues"
+      });
+
+      expect(listResponse.statusCode).toBe(200);
+
+      const listBody = listResponse.json<{
+        data: Array<{
+          id: string;
+          name: string;
+        }>;
+        error: null;
+      }>();
+
+      expect(
+        listBody.data.some(
+          (league) =>
+            league.id === leagueId
+        )
+      ).toBe(true);
+
+      const detailResponse = await app.inject({
+        method: "GET",
+        url: `/api/leagues/${leagueId}`
+      });
+
+      expect(detailResponse.statusCode).toBe(200);
+
+      expect(
+        detailResponse.json<{
+          data: {
+            id: string;
+            name: string;
+          };
+          error: null;
+        }>().data
+      ).toMatchObject({
+        id: leagueId,
+        name: "Lega Test M14"
+      });
+
+      const updateResponse = await app.inject({
+        method: "PATCH",
+        url: `/api/leagues/${leagueId}`,
+        payload: {
+          name: "  Lega   Test   M14   Updated  "
+        }
+      });
+
+      expect(updateResponse.statusCode).toBe(200);
+
+      expect(
+        updateResponse.json<{
+          data: {
+            id: string;
+            name: string;
+          };
+          error: null;
+        }>().data
+      ).toMatchObject({
+        id: leagueId,
+        name: "Lega Test M14 Updated"
+      });
+    });
+
+    it("returns 404 for an unknown league", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/leagues/missing-league"
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      expect(response.json()).toEqual({
+        data: null,
+        error: {
+          code: "LEAGUE_NOT_FOUND",
+          message:
+            'League "missing-league" was not found'
+        }
+      });
+    });
+
+    it("rejects duplicate league names after normalization", async () => {
+      const firstResponse = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: "Lega Duplicate M14"
+        }
+      });
+
+      expect(firstResponse.statusCode).toBe(201);
+
+      const secondResponse = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: "  LEGA   DUPLICATE   M14  "
+        }
+      });
+
+      expect(secondResponse.statusCode).toBe(409);
+
+      expect(
+        secondResponse.json<{
+          data: null;
+          error: {
+            code: string;
+            message: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code:
+            "LEAGUE_NAME_ALREADY_EXISTS"
+        }
+      });
+    });
+
+    it("rejects an invalid create payload", async () => {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/leagues",
+        payload: {
+          name: ""
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "INVALID_REQUEST"
+        }
+      });
+    });
+  });
+
+  describe("Team access PIN API", () => {
+    it("returns PIN configuration status without exposing the hash", async () => {
+      await db.insert(leagues).values({
+        id: "league-team-access-status",
+        name: "League Team Access Status",
+        normalizedName:
+          "league team access status"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-team-access-status",
+        leagueId:
+          "league-team-access-status",
+        season: "2035/2036",
+        editionNumber: 502,
+        initialCredits: 300
+      });
+
+      await db.insert(teams).values([
+        {
+          id: "team-access-status-1",
+          leagueId:
+            "league-team-access-status",
+          name: "Team Access Status 1"
+        },
+        {
+          id: "team-access-status-2",
+          leagueId:
+            "league-team-access-status",
+          name: "Team Access Status 2"
+        }
+      ]);
+
+      await db.insert(auctionSessionTeams).values([
+        {
+          id: "session-team-access-status-1",
+          auctionSessionId:
+            "session-team-access-status",
+          teamId:
+            "team-access-status-1",
+          tableOrder: 1,
+          renewalCredits: 0,
+          remainingCredits: 300,
+          accessPinHash: "configured-test-hash"
+        },
+        {
+          id: "session-team-access-status-2",
+          auctionSessionId:
+            "session-team-access-status",
+          teamId:
+            "team-access-status-2",
+          tableOrder: 2,
+          renewalCredits: 0,
+          remainingCredits: 300
+        }
+      ]);
+
+      const response = await app.inject({
+        method: "GET",
+        url:
+          "/api/auction-sessions/session-team-access-status/team-access"
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      const body = response.json<{
+        data: Array<{
+          auctionSessionTeamId: string;
+          configured: boolean;
+        }>;
+        error: null;
+      }>();
+
+      expect(body.error).toBeNull();
+
+      expect(body.data).toEqual(
+        expect.arrayContaining([
+          {
+            auctionSessionTeamId:
+              "session-team-access-status-1",
+            configured: true
+          },
+          {
+            auctionSessionTeamId:
+              "session-team-access-status-2",
+            configured: false
+          }
+        ])
+      );
+
+      expect(
+        JSON.stringify(body)
+      ).not.toContain(
+        "configured-test-hash"
+      );
+
+      expect(body.data).toHaveLength(2);
+    });
+
+    it("configures the PIN without storing it in clear text", async () => {
+      await db.insert(leagues).values({
+        id: "league-team-access-pin",
+        name: "League Team Access PIN",
+        normalizedName:
+          "league team access pin"
+      });
+
+      await db.insert(auctionSessions).values({
+        id: "session-team-access-pin",
+        leagueId:
+          "league-team-access-pin",
+        season: "2026/2027",
+        editionNumber: 501,
+        initialCredits: 300
+      });
+
+      await db.insert(teams).values({
+        id: "team-team-access-pin",
+        leagueId:
+          "league-team-access-pin",
+        name: "Team Access PIN"
+      });
+
+      await db.insert(auctionSessionTeams).values({
+        id: "session-team-access-pin-1",
+        auctionSessionId:
+          "session-team-access-pin",
+        teamId:
+          "team-team-access-pin",
+        tableOrder: 1,
+        renewalCredits: 0,
+        remainingCredits: 300
+      });
+
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/session-team-access-pin-1/access-pin",
+        payload: {
+          pin: "1111"
+        }
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(response.body).toBe("");
+
+      const [credential] = await db
+        .select({
+          accessPinHash:
+            auctionSessionTeams.accessPinHash
+        })
+        .from(auctionSessionTeams)
+        .where(
+          eq(
+            auctionSessionTeams.id,
+            "session-team-access-pin-1"
+          )
+        );
+
+      expect(credential).toBeDefined();
+
+      expect(
+        credential?.accessPinHash
+      ).toMatch(/^scrypt\$/);
+
+      expect(
+        credential?.accessPinHash
+      ).not.toContain("1111");
+    });
+
+    it("rejects an invalid PIN", async () => {
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/any-session-team/access-pin",
+        payload: {
+          pin: "123"
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "INVALID_REQUEST"
+        }
+      });
+    });
+
+    it("rejects a non-numeric PIN", async () => {
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/any-session-team/access-pin",
+        payload: {
+          pin: "abcd"
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "INVALID_REQUEST"
+        }
+      });
+    });
+
+    it("returns 404 for an unknown auction session team", async () => {
+      const response = await app.inject({
+        method: "PUT",
+        url:
+          "/api/auction-session-teams/missing-session-team/access-pin",
+        payload: {
+          pin: "1111"
+        }
+      });
+
+      expect(response.statusCode).toBe(404);
+
+      expect(
+        response.json<{
+          data: null;
+          error: {
+            code: string;
+          };
+        }>()
+      ).toMatchObject({
+        data: null,
+        error: {
+          code: "TEAM_ACCESS_NOT_FOUND"
+        }
+      });
     });
   });
 
@@ -144,6 +607,7 @@ describe("application integration", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -229,6 +693,7 @@ describe("application integration", () => {
       suspensionReason: null,
       initialCredits: 330,
       maximumInitialRosterEntries: 11,
+      remoteBaseUrl: null,
       createdAt: expect.any(String),
       updatedAt: expect.any(String)
     });
@@ -321,11 +786,324 @@ describe("GET /api/auction-sessions", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
     });
   });
+  describe(
+    "POST /api/auction-sessions/setup",
+    () => {
+      async function createSetupLeague(
+        leagueId: string,
+        teamCount: number
+      ): Promise<void> {
+        await db.insert(leagues).values({
+          id: leagueId,
+          name: `Setup League ${leagueId}`,
+          normalizedName:
+            `setup league ${leagueId}`
+        });
+
+        if (teamCount === 0) {
+          return;
+        }
+
+        await db.insert(teams).values(
+          Array.from(
+            { length: teamCount },
+            (_, index) => ({
+              id:
+                `${leagueId}-team-${index + 1}`,
+              leagueId,
+              name:
+                `Team ${String(
+                  index + 1
+                ).padStart(2, "0")}`
+            })
+          )
+        );
+      }
+
+      it(
+        "creates a SETUP session and all 8 session teams atomically",
+        async () => {
+          const leagueId =
+            "league-atomic-session-setup";
+
+          await createSetupLeague(
+            leagueId,
+            8
+          );
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/setup",
+              payload: {
+                leagueId,
+                season: "2030/2031",
+                editionNumber: 101,
+                initialCredits: 300,
+                maximumInitialRosterEntries:
+                  11
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(201);
+
+          const body =
+            response.json<{
+              data: {
+                session: {
+                  id: string;
+                  leagueId: string;
+                  season: string;
+                  editionNumber: number;
+                  status: string;
+                  initialCredits: number;
+                  maximumInitialRosterEntries:
+                    number;
+                };
+                sessionTeams: Array<{
+                  id: string;
+                  auctionSessionId:
+                    string;
+                  teamId: string;
+                  tableOrder: number;
+                  renewalCredits: number;
+                  remainingCredits:
+                    number;
+                }>;
+              };
+              error: null;
+            }>();
+
+          expect(body.error).toBeNull();
+
+          expect(
+            body.data.session
+          ).toEqual(
+            expect.objectContaining({
+              leagueId,
+              season: "2030/2031",
+              editionNumber: 101,
+              status: "SETUP",
+              initialCredits: 300,
+              maximumInitialRosterEntries:
+                11
+            })
+          );
+
+          expect(
+            body.data.sessionTeams
+          ).toHaveLength(8);
+
+          expect(
+            body.data.sessionTeams.map(
+              (sessionTeam) => ({
+                tableOrder:
+                  sessionTeam.tableOrder,
+                renewalCredits:
+                  sessionTeam.renewalCredits,
+                remainingCredits:
+                  sessionTeam.remainingCredits
+              })
+            )
+          ).toEqual(
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                tableOrder: index + 1,
+                renewalCredits: 0,
+                remainingCredits: 300
+              })
+            )
+          );
+
+          const storedSessions =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.leagueId,
+                  leagueId
+                )
+              );
+
+          expect(
+            storedSessions
+          ).toHaveLength(1);
+
+          const storedSessionTeams =
+            await db
+              .select()
+              .from(
+                auctionSessionTeams
+              )
+              .where(
+                eq(
+                  auctionSessionTeams
+                    .auctionSessionId,
+                  body.data.session.id
+                )
+              );
+
+          expect(
+            storedSessionTeams
+          ).toHaveLength(8);
+        }
+      );
+
+      it(
+        "returns 409 and creates nothing when the league has 7 teams",
+        async () => {
+          const leagueId =
+            "league-atomic-session-seven";
+
+          await createSetupLeague(
+            leagueId,
+            7
+          );
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/setup",
+              payload: {
+                leagueId,
+                season: "2031/2032",
+                editionNumber: 102,
+                initialCredits: 300
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "INVALID_LEAGUE_TEAM_COUNT",
+              message: expect.any(String)
+            }
+          });
+
+          const storedSessions =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.leagueId,
+                  leagueId
+                )
+              );
+
+          expect(
+            storedSessions
+          ).toHaveLength(0);
+        }
+      );
+
+      it(
+        "returns 409 for a duplicate league season without creating another session",
+        async () => {
+          const leagueId =
+            "league-atomic-session-duplicate";
+
+          await createSetupLeague(
+            leagueId,
+            8
+          );
+
+          await db
+            .insert(auctionSessions)
+            .values({
+              id:
+                "existing-atomic-session",
+              leagueId,
+              season: "2032/2033",
+              editionNumber: 103,
+              initialCredits: 300
+            });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/setup",
+              payload: {
+                leagueId,
+                season: "2032/2033",
+                editionNumber: 104,
+                initialCredits: 300
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_SEASON_ALREADY_EXISTS",
+              message:
+                "An auction session already exists for this league and season"
+            }
+          });
+
+          const storedSessions =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.leagueId,
+                  leagueId
+                )
+              );
+
+          expect(
+            storedSessions
+          ).toHaveLength(1);
+
+          const storedSessionTeams =
+            await db
+              .select()
+              .from(
+                auctionSessionTeams
+              )
+              .where(
+                eq(
+                  auctionSessionTeams
+                    .auctionSessionId,
+                  "existing-atomic-session"
+                )
+              );
+
+          expect(
+            storedSessionTeams
+          ).toHaveLength(0);
+        }
+      );
+    }
+  );
+
   describe("POST /api/auction-sessions", () => {
     it("creates a new auction session", async () => {
       await db.insert(leagues).values({
@@ -372,6 +1150,7 @@ describe("GET /api/auction-sessions", () => {
         suspensionReason: null,
         initialCredits: 330,
         maximumInitialRosterEntries: 11,
+        remoteBaseUrl: null,
         createdAt: expect.any(String),
         updatedAt: expect.any(String)
       });
@@ -977,6 +1756,109 @@ describe("GET /api/auction-sessions", () => {
     );
 
     it(
+      "updates remote base URL while the session is RUNNING",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-running-remote-url",
+          name: "Patch Running Remote URL League",
+          normalizedName:
+            "patch running remote url league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: "session-patch-running-remote-url",
+          leagueId:
+            "league-patch-running-remote-url",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          maximumInitialRosterEntries: 11,
+          status: "RUNNING"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-running-remote-url",
+          payload: {
+            remoteBaseUrl:
+              "http://192.168.0.197:5173"
+          }
+        });
+
+        expect(response.statusCode).toBe(200);
+
+        expect(response.json()).toEqual({
+          data: expect.objectContaining({
+            id:
+              "session-patch-running-remote-url",
+            remoteBaseUrl:
+              "http://192.168.0.197:5173",
+            status: "RUNNING"
+          }),
+          error: null
+        });
+
+        const stored =
+          await db.query.auctionSessions.findFirst({
+            where: (table, { eq }) =>
+              eq(
+                table.id,
+                "session-patch-running-remote-url"
+              )
+          });
+
+        expect(stored?.remoteBaseUrl).toBe(
+          "http://192.168.0.197:5173"
+        );
+      }
+    );
+
+    it(
+      "rejects remote base URL changes when the session is COMPLETED",
+      async () => {
+        await db.insert(leagues).values({
+          id: "league-patch-completed-remote-url",
+          name:
+            "Patch Completed Remote URL League",
+          normalizedName:
+            "patch completed remote url league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id:
+            "session-patch-completed-remote-url",
+          leagueId:
+            "league-patch-completed-remote-url",
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 330,
+          maximumInitialRosterEntries: 11,
+          status: "COMPLETED"
+        });
+
+        const response = await app.inject({
+          method: "PATCH",
+          url:
+            "/api/auction-sessions/session-patch-completed-remote-url",
+          payload: {
+            remoteBaseUrl:
+              "http://192.168.0.197:5173"
+          }
+        });
+
+        expect(response.statusCode).toBe(409);
+
+        expect(response.json()).toEqual({
+          data: null,
+          error: expect.objectContaining({
+            code: "SESSION_READ_ONLY"
+          })
+        });
+      }
+    );
+
+    it(
       "returns 409 when the auction session is read-only",
       async () => {
         await db.insert(leagues).values({
@@ -1122,6 +2004,322 @@ describe("GET /api/auction-sessions", () => {
   describe(
     "POST /api/auction-sessions/:id/commands/:command",
     () => {
+      async function seedReadySessionForStart(
+        suffix: string,
+        stateVersion = 0
+      ): Promise<{
+        leagueId: string;
+        sessionId: string;
+      }> {
+        const leagueId =
+          `league-start-${suffix}`;
+        const sessionId =
+          `session-start-${suffix}`;
+
+        await db.insert(leagues).values({
+          id: leagueId,
+          name:
+            `Start ${suffix} League`,
+          normalizedName:
+            `start ${suffix} league`
+        });
+
+        await db.insert(auctionSessions).values({
+          id: sessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 35,
+          initialCredits: 300,
+          maximumInitialRosterEntries: 0,
+          status: "READY",
+          stateVersion
+        });
+
+        const readyTeams =
+          Array.from(
+            { length: 8 },
+            (_, index) => ({
+              id:
+                `team-start-${suffix}-${index + 1}`,
+              leagueId,
+              name:
+                `Start ${suffix} Team ${index + 1}`
+            })
+          );
+
+        await db
+          .insert(teams)
+          .values(readyTeams);
+
+        const readyOwners =
+          Array.from(
+            { length: 8 },
+            (_, index) => ({
+              id:
+                `owner-start-${suffix}-${index + 1}`,
+              name:
+                `Start ${suffix} Owner ${index + 1}`
+            })
+          );
+
+        await db
+          .insert(owners)
+          .values(readyOwners);
+
+        await db
+          .insert(teamOwners)
+          .values(
+            readyTeams.map(
+              (team, index) => ({
+                teamId: team.id,
+                ownerId:
+                  readyOwners[index]!.id
+              })
+            )
+          );
+
+        await db
+          .insert(auctionSessionTeams)
+          .values(
+            readyTeams.map(
+              (team, index) => ({
+                id:
+                  `session-team-start-${suffix}-${index + 1}`,
+                auctionSessionId:
+                  sessionId,
+                teamId: team.id,
+                tableOrder:
+                  index + 1,
+                renewalCredits: 0,
+                remainingCredits: 300
+              })
+            )
+          );
+
+        await db.insert(players).values({
+          id:
+            `player-start-${suffix}`,
+          auctionSessionId:
+            sessionId,
+          fmsCode:
+            `START-${suffix.toUpperCase()}-001`,
+          name:
+            `Start ${suffix} Player`,
+          normalizedName:
+            `start ${suffix} player`,
+          role: "P",
+          availabilityStatus:
+            "AVAILABLE"
+        });
+
+        return {
+          leagueId,
+          sessionId
+        };
+      }
+
+      it(
+        "returns auction session readiness through HTTP",
+        async () => {
+          const leagueId =
+            "league-readiness-http";
+          const sessionId =
+            "session-readiness-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name: "Readiness HTTP League",
+            normalizedName:
+              "readiness http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 135,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 0,
+            status: "SETUP"
+          });
+
+          const readinessTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-readiness-http-${index + 1}`,
+                leagueId,
+                name:
+                  `Readiness Team ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(readinessTeams);
+
+          const readinessOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-readiness-http-${index + 1}`,
+                name:
+                  `Readiness Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(owners)
+            .values(readinessOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              readinessTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    readinessOwners[index]!.id
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              readinessTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-readiness-http-${index + 1}`,
+                  auctionSessionId:
+                    sessionId,
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  renewalCredits: 0,
+                  remainingCredits: 300
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id: "player-readiness-http",
+            auctionSessionId: sessionId,
+            fmsCode: "READINESS-HTTP-001",
+            name: "Readiness HTTP Player",
+            normalizedName:
+              "readiness http player",
+            role: "P",
+            availabilityStatus: "AVAILABLE"
+          });
+
+          const response =
+            await app.inject({
+              method: "GET",
+              url:
+                `/api/auction-sessions/${sessionId}/readiness`
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(200);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: expect.objectContaining({
+              auctionSessionId:
+                sessionId,
+              ready: true,
+              summary:
+                expect.objectContaining({
+                  teamCount: 8,
+                  minimumTeamCount: 8,
+                  teamsWithOwnerCount: 8,
+                  playerCount: 1,
+                  maximumInitialRosterEntries:
+                    0
+                })
+            }),
+            error: null
+          });
+        }
+      );
+
+      it(
+        "rejects READY when setup is incomplete",
+        async () => {
+          const leagueId =
+            "league-not-ready-http";
+          const sessionId =
+            "session-not-ready-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Not Ready HTTP League",
+            normalizedName:
+              "not ready http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 136,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 11,
+            status: "SETUP"
+          });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                `/api/auction-sessions/${sessionId}/commands/ready`
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code:
+                "AUCTION_SESSION_NOT_READY",
+              readiness:
+                expect.objectContaining({
+                  auctionSessionId:
+                    sessionId,
+                  ready: false
+                })
+            })
+          });
+
+          const [storedSession] =
+            await db
+              .select({
+                status:
+                  auctionSessions.status
+              })
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.id,
+                  sessionId
+                )
+              );
+
+          expect(
+            storedSession?.status
+          ).toBe("SETUP");
+        }
+      );
+
       it(
         "executes the complete auction session lifecycle",
         async () => {
@@ -1138,8 +2336,81 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
-            maximumInitialRosterEntries: 11,
+            maximumInitialRosterEntries: 0,
             status: "SETUP"
+          });
+
+          const lifecycleTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-command-lifecycle-${index + 1}`,
+                leagueId:
+                  "league-command-lifecycle",
+                name:
+                  `Lifecycle Team ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(lifecycleTeams);
+
+          const lifecycleOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-command-lifecycle-${index + 1}`,
+                name:
+                  `Lifecycle Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(owners)
+            .values(lifecycleOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              lifecycleTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    lifecycleOwners[index]!.id
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              lifecycleTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-command-lifecycle-${index + 1}`,
+                  auctionSessionId:
+                    "session-command-lifecycle",
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  renewalCredits: 0,
+                  remainingCredits: 330
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id: "player-command-lifecycle",
+            auctionSessionId:
+              "session-command-lifecycle",
+            fmsCode: "LIFECYCLE-001",
+            name: "Lifecycle Player",
+            normalizedName:
+              "lifecycle player",
+            role: "P",
+            availabilityStatus: "AVAILABLE"
           });
 
           const executeCommand = async (
@@ -1170,7 +2441,14 @@ describe("GET /api/auction-sessions", () => {
           });
 
           const startResponse =
-            await executeCommand("start");
+            await executeCommand(
+              "start",
+              {
+                commandId:
+                  "session-lifecycle-start",
+                stateVersion: 0
+              }
+            );
 
           expect(startResponse.statusCode).toBe(200);
           expect(startResponse.json()).toEqual({
@@ -1178,6 +2456,8 @@ describe("GET /api/auction-sessions", () => {
               id: "session-command-lifecycle",
               status: "RUNNING"
             }),
+            stateVersion: 1,
+            idempotentReplay: false,
             error: null
           });
 
@@ -1187,7 +2467,7 @@ describe("GET /api/auction-sessions", () => {
               {
                 commandId:
                   "session-lifecycle-suspend",
-                stateVersion: 0,
+                stateVersion: 1,
                 reason: "PIZZA_BREAK"
               }
             );
@@ -1200,7 +2480,7 @@ describe("GET /api/auction-sessions", () => {
               suspensionReason:
                 "PIZZA_BREAK"
             }),
-            stateVersion: 1,
+            stateVersion: 2,
             idempotentReplay: false,
             error: null
           });
@@ -1211,7 +2491,7 @@ describe("GET /api/auction-sessions", () => {
               {
                 commandId:
                   "session-lifecycle-resume",
-                stateVersion: 1
+                stateVersion: 2
               }
             );
 
@@ -1222,10 +2502,74 @@ describe("GET /api/auction-sessions", () => {
               status: "RUNNING",
               suspensionReason: null
             }),
-            stateVersion: 2,
+            stateVersion: 3,
             idempotentReplay: false,
             error: null
           });
+
+          /*
+           * Normal completion is allowed only when
+           * every ordinary roster is complete:
+           * 2P / 8D / 8C / 6A.
+           */
+          const lifecycleRosterRoles = [
+            "P", "P",
+            "D", "D", "D", "D",
+            "D", "D", "D", "D",
+            "C", "C", "C", "C",
+            "C", "C", "C", "C",
+            "A", "A", "A",
+            "A", "A", "A"
+          ] as const;
+
+          const lifecycleRosterPlayers =
+            lifecycleTeams.flatMap(
+              (_team, teamIndex) =>
+                lifecycleRosterRoles.map(
+                  (role, playerIndex) => ({
+                    id:
+                      `player-command-lifecycle-${teamIndex + 1}-${playerIndex + 1}`,
+                    auctionSessionId:
+                      "session-command-lifecycle",
+                    fmsCode:
+                      `LIFECYCLE-${teamIndex + 1}-${playerIndex + 1}`,
+                    name:
+                      `Lifecycle Player ${teamIndex + 1}-${playerIndex + 1}`,
+                    normalizedName:
+                      `lifecycle player ${teamIndex + 1}-${playerIndex + 1}`,
+                    role,
+                    availabilityStatus:
+                      "ROSTERED" as const
+                  })
+                )
+            );
+
+          await db
+            .insert(players)
+            .values(lifecycleRosterPlayers);
+
+          const lifecycleRosterEntries =
+            lifecycleTeams.flatMap(
+              (_team, teamIndex) =>
+                lifecycleRosterRoles.map(
+                  (_role, playerIndex) => ({
+                    id:
+                      `roster-command-lifecycle-${teamIndex + 1}-${playerIndex + 1}`,
+                    auctionSessionTeamId:
+                      `session-team-command-lifecycle-${teamIndex + 1}`,
+                    playerId:
+                      `player-command-lifecycle-${teamIndex + 1}-${playerIndex + 1}`,
+                    acquisitionCost: 1,
+                    contractYear: 1,
+                    source:
+                      "AUCTION" as const
+                  })
+                )
+            );
+
+          await db
+            .insert(rosterEntries)
+            .values(lifecycleRosterEntries);
 
           const completeResponse =
             await executeCommand("complete");
@@ -1235,6 +2579,63 @@ describe("GET /api/auction-sessions", () => {
             data: expect.objectContaining({
               id: "session-command-lifecycle",
               status: "COMPLETED"
+            }),
+            error: null
+          });
+
+          const closeWithoutExportResponse =
+            await executeCommand("close");
+
+          expect(
+            closeWithoutExportResponse.statusCode
+          ).toBe(409);
+          expect(
+            closeWithoutExportResponse.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code: "FMS_EXPORT_REQUIRED",
+              message:
+                "FMS ReVo roster export must be completed before closing the auction session"
+            }
+          });
+
+          const sessionAfterRejectedCloseResponse =
+            await app.inject({
+              method: "GET",
+              url:
+                "/api/auction-sessions/session-command-lifecycle"
+            });
+
+          expect(
+            sessionAfterRejectedCloseResponse.statusCode
+          ).toBe(200);
+          expect(
+            sessionAfterRejectedCloseResponse.json()
+          ).toEqual({
+            data: expect.objectContaining({
+              id: "session-command-lifecycle",
+              status: "COMPLETED"
+            }),
+            error: null
+          });
+
+          const confirmExportResponse =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/session-command-lifecycle/fms-export-state/confirm"
+            });
+
+          expect(
+            confirmExportResponse.statusCode
+          ).toBe(200);
+          expect(
+            confirmExportResponse.json()
+          ).toEqual({
+            data: expect.objectContaining({
+              auctionSessionId:
+                "session-command-lifecycle"
             }),
             error: null
           });
@@ -1249,6 +2650,366 @@ describe("GET /api/auction-sessions", () => {
               status: "CLOSED"
             }),
             error: null
+          });
+        }
+      );
+
+      it(
+        "force-completes a running session with incomplete rosters",
+        async () => {
+          await db.insert(leagues).values({
+            id: "league-force-complete",
+            name: "Force Complete League",
+            normalizedName:
+              "force complete league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: "session-force-complete",
+            leagueId: "league-force-complete",
+            season: "2026/2027",
+            editionNumber: 1,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 0,
+            status: "RUNNING"
+          });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-force-complete/" +
+                "force-complete"
+            });
+
+          expect(response.statusCode).toBe(200);
+          expect(response.json()).toEqual({
+            data: expect.objectContaining({
+              id: "session-force-complete",
+              status: "COMPLETED"
+            }),
+            error: null
+          });
+
+          const storedSession =
+            await db.query.auctionSessions
+              .findFirst({
+                where: (
+                  auctionSession,
+                  { eq }
+                ) =>
+                  eq(
+                    auctionSession.id,
+                    "session-force-complete"
+                  )
+              });
+
+          expect(
+            storedSession?.status
+          ).toBe("COMPLETED");
+        }
+      );
+
+      it(
+        "rejects forced completion when an operational auction call exists",
+        async () => {
+          await db.insert(leagues).values({
+            id:
+              "league-force-complete-call",
+            name:
+              "Force Complete Call League",
+            normalizedName:
+              "force complete call league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id:
+              "session-force-complete-call",
+            leagueId:
+              "league-force-complete-call",
+            season: "2026/2027",
+            editionNumber: 1,
+            initialCredits: 300,
+            maximumInitialRosterEntries: 0,
+            status: "RUNNING"
+          });
+
+          await db.insert(teams).values({
+            id: "team-force-complete-call",
+            leagueId:
+              "league-force-complete-call",
+            name:
+              "Force Complete Call Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id:
+                "session-team-force-complete-call",
+              auctionSessionId:
+                "session-force-complete-call",
+              teamId:
+                "team-force-complete-call",
+              tableOrder: 1,
+              renewalCredits: 0,
+              remainingCredits: 300
+            });
+
+          await db.insert(players).values({
+            id:
+              "player-force-complete-call",
+            auctionSessionId:
+              "session-force-complete-call",
+            fmsCode: "FORCE-CALL-001",
+            name:
+              "Force Complete Call Player",
+            normalizedName:
+              "force complete call player",
+            role: "A",
+            availabilityStatus:
+              "AVAILABLE"
+          });
+
+          await db
+            .insert(auctionCalls)
+            .values({
+              id:
+                "call-force-complete",
+              auctionSessionId:
+                "session-force-complete-call",
+              playerId:
+                "player-force-complete-call",
+              callerAuctionSessionTeamId:
+                "session-team-force-complete-call",
+              status: "OPEN",
+              openingBid: 1,
+              currentBid: 1
+            });
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-force-complete-call/" +
+                "force-complete"
+            });
+
+          expect(response.statusCode).toBe(409);
+          expect(response.json()).toEqual({
+            data: null,
+            error: expect.objectContaining({
+              code:
+                "OPERATIONAL_AUCTION_CALL_EXISTS"
+            })
+          });
+
+          const storedSession =
+            await db.query.auctionSessions
+              .findFirst({
+                where: (
+                  auctionSession,
+                  { eq }
+                ) =>
+                  eq(
+                    auctionSession.id,
+                    "session-force-complete-call"
+                  )
+              });
+
+          expect(
+            storedSession?.status
+          ).toBe("RUNNING");
+        }
+      );
+
+      it(
+        "returns 400 for an invalid start payload",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                "session-invalid-start-payload/" +
+                "commands/start",
+              payload: {
+                commandId:
+                  "invalid-start-command"
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(400);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "INVALID_REQUEST",
+              message:
+                '"commandId" and "stateVersion" are required and must be valid'
+            }
+          });
+        }
+      );
+
+      it(
+        "returns an idempotent replay for an identical start command",
+        async () => {
+          const {
+            sessionId
+          } =
+            await seedReadySessionForStart(
+              "replay"
+            );
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/start",
+            payload: {
+              commandId:
+                "start-replay-command",
+              stateVersion: 0
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            firstResponse.json()
+          ).toEqual({
+            data:
+              expect.objectContaining({
+                id: sessionId,
+                status: "RUNNING",
+                suspensionReason: null
+              }),
+            stateVersion: 1,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(
+            retryResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            retryResponse.json()
+          ).toEqual({
+            data:
+              expect.objectContaining({
+                id: sessionId,
+                status: "RUNNING",
+                suspensionReason: null
+              }),
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "SESSION_STARTED"
+            );
+
+          expect(
+            matchingEvents
+          ).toHaveLength(1);
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "start-replay-command"
+            );
+
+          expect(
+            matchingCommands
+          ).toHaveLength(1);
+
+          expect(
+            matchingCommands[0]
+          ).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "START_SESSION",
+              expectedStateVersion: 0,
+              resultStateVersion: 1
+            })
+          );
+        }
+      );
+
+      it(
+        "returns 409 for a stale start state version",
+        async () => {
+          const {
+            sessionId
+          } =
+            await seedReadySessionForStart(
+              "stale",
+              3
+            );
+
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/" +
+                sessionId +
+                "/commands/start",
+              payload: {
+                commandId:
+                  "start-stale-command",
+                stateVersion: 2
+              }
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(409);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error:
+              expect.objectContaining({
+                code: "STALE_STATE"
+              })
           });
         }
       );
@@ -1750,8 +3511,84 @@ describe("GET /api/auction-sessions", () => {
             season: "2026/2027",
             editionNumber: 35,
             initialCredits: 330,
-            maximumInitialRosterEntries: 11,
+            maximumInitialRosterEntries: 0,
             status: "SETUP"
+          });
+
+          const invalidTransitionTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-command-invalid-transition-${index + 1}`,
+                leagueId:
+                  "league-command-invalid-transition",
+                name:
+                  `Invalid Transition Team ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(invalidTransitionTeams);
+
+          const invalidTransitionOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-command-invalid-transition-${index + 1}`,
+                name:
+                  `Invalid Transition Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(owners)
+            .values(invalidTransitionOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              invalidTransitionTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    invalidTransitionOwners[index]!.id
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              invalidTransitionTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-command-invalid-transition-${index + 1}`,
+                  auctionSessionId:
+                    "session-command-invalid-transition",
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  renewalCredits: 0,
+                  remainingCredits: 330
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id:
+              "player-command-invalid-transition",
+            auctionSessionId:
+              "session-command-invalid-transition",
+            fmsCode:
+              "INVALID-TRANSITION-001",
+            name:
+              "Invalid Transition Player",
+            normalizedName:
+              "invalid transition player",
+            role: "P",
+            availabilityStatus: "AVAILABLE"
           });
 
           const response = await app.inject({
@@ -1759,7 +3596,12 @@ describe("GET /api/auction-sessions", () => {
             url:
               "/api/auction-sessions/" +
               "session-command-invalid-transition/" +
-              "commands/start"
+              "commands/start",
+            payload: {
+              commandId:
+                "invalid-start-transition-command",
+              stateVersion: 0
+            }
           });
 
           expect(response.statusCode).toBe(409);
@@ -1774,7 +3616,7 @@ describe("GET /api/auction-sessions", () => {
       );
 
       it(
-        "returns 409 when another session is already active for the league",
+        "allows another session to become ready when one is already ready",
         async () => {
           await db.insert(leagues).values({
             id: "league-command-active-conflict",
@@ -1801,10 +3643,87 @@ describe("GET /api/auction-sessions", () => {
               season: "2026/2027",
               editionNumber: 35,
               initialCredits: 330,
-              maximumInitialRosterEntries: 11,
+              maximumInitialRosterEntries: 0,
               status: "SETUP"
             }
           ]);
+
+          const conflictingTeams =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `team-command-conflicting-${index + 1}`,
+                leagueId:
+                  "league-command-active-conflict",
+                name:
+                  `Conflicting Team ${index + 1}`
+              })
+            );
+
+          const conflictingOwners =
+            Array.from(
+              { length: 8 },
+              (_, index) => ({
+                id:
+                  `owner-command-conflicting-${index + 1}`,
+                name:
+                  `Conflicting Owner ${index + 1}`
+              })
+            );
+
+          await db
+            .insert(teams)
+            .values(conflictingTeams);
+
+          await db
+            .insert(owners)
+            .values(conflictingOwners);
+
+          await db
+            .insert(teamOwners)
+            .values(
+              conflictingTeams.map(
+                (team, index) => ({
+                  teamId: team.id,
+                  ownerId:
+                    `owner-command-conflicting-${index + 1}`
+                })
+              )
+            );
+
+          await db
+            .insert(auctionSessionTeams)
+            .values(
+              conflictingTeams.map(
+                (team, index) => ({
+                  id:
+                    `session-team-command-conflicting-${index + 1}`,
+                  auctionSessionId:
+                    "session-command-conflicting",
+                  teamId: team.id,
+                  tableOrder: index + 1,
+                  remainingCredits: 330,
+                  renewalCredits: 0
+                })
+              )
+            );
+
+          await db.insert(players).values({
+            id:
+              "player-command-conflicting",
+            auctionSessionId:
+              "session-command-conflicting",
+            fmsCode:
+              "command-conflicting-001",
+            name:
+              "Conflicting Player",
+            normalizedName:
+              "conflicting player",
+            role: "P",
+            availabilityStatus:
+              "AVAILABLE"
+          });
 
           const response = await app.inject({
             method: "POST",
@@ -1814,15 +3733,55 @@ describe("GET /api/auction-sessions", () => {
               "commands/ready"
           });
 
-          expect(response.statusCode).toBe(409);
+          expect(response.statusCode).toBe(200);
 
           expect(response.json()).toEqual({
-            data: null,
-            error: expect.objectContaining({
-              code:
-                "ACTIVE_SESSION_ALREADY_EXISTS"
-            })
+            data: expect.objectContaining({
+              id:
+                "session-command-conflicting",
+              status: "READY"
+            }),
+            error: null
           });
+
+          const sessionsResponse =
+            await app.inject({
+              method: "GET",
+              url:
+                "/api/auction-sessions"
+            });
+
+          expect(
+            sessionsResponse.statusCode
+          ).toBe(200);
+
+          const sessionsPayload =
+            sessionsResponse.json();
+
+          const readySessionIds =
+            sessionsPayload.data
+              .filter(
+                (session: {
+                  status: string;
+                }) =>
+                  session.status ===
+                  "READY"
+              )
+              .map(
+                (session: {
+                  id: string;
+                }) =>
+                  session.id
+              );
+
+          expect(
+            readySessionIds
+          ).toEqual(
+            expect.arrayContaining([
+              "session-command-active",
+              "session-command-conflicting"
+            ])
+          );
         }
       );
     }
@@ -2859,6 +4818,303 @@ describe("GET /api/auction-sessions", () => {
   );
 
   describe(
+    "POST /api/auction-sessions/:id/commands/remove-roster-assignment",
+    () => {
+      it(
+        "removes a roster assignment atomically and replays the same command idempotently",
+        async () => {
+          const leagueId =
+            "league-roster-removal-http";
+          const sessionId =
+            "session-roster-removal-http";
+          const teamId =
+            "team-roster-removal-http";
+          const sessionTeamId =
+            "session-team-roster-removal-http";
+          const playerId =
+            "player-roster-removal-http";
+          const rosterEntryId =
+            "roster-entry-roster-removal-http";
+
+          await db.insert(leagues).values({
+            id: leagueId,
+            name:
+              "Roster Removal HTTP League",
+            normalizedName:
+              "roster removal http league"
+          });
+
+          await db.insert(auctionSessions).values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 45,
+            initialCredits: 330,
+            status: "SUSPENDED",
+            suspensionReason:
+              "TECHNICAL_BREAK",
+            stateVersion: 0
+          });
+
+          await db.insert(teams).values({
+            id: teamId,
+            leagueId,
+            name:
+              "Roster Removal HTTP Team"
+          });
+
+          await db
+            .insert(auctionSessionTeams)
+            .values({
+              id: sessionTeamId,
+              auctionSessionId:
+                sessionId,
+              teamId,
+              tableOrder: 1,
+              remainingCredits: 80,
+              renewalCredits: 0
+            });
+
+          await db.insert(players).values({
+            id: playerId,
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "roster-removal-http-001",
+            name:
+              "Roster Removal HTTP Player",
+            normalizedName:
+              "roster removal http player",
+            role: "C",
+            availabilityStatus:
+              "ROSTERED"
+          });
+
+          await db.insert(rosterEntries).values({
+            id: rosterEntryId,
+            auctionSessionTeamId:
+              sessionTeamId,
+            playerId,
+            acquisitionCost: 20,
+            contractYear: 1,
+            source: "AUCTION"
+          });
+
+          const request = {
+            method: "POST" as const,
+            url:
+              "/api/auction-sessions/" +
+              sessionId +
+              "/commands/remove-roster-assignment",
+            payload: {
+              commandId:
+                "roster-removal-http-command",
+              stateVersion: 0,
+              rosterEntryId,
+              actor: {
+                name:
+                  "Integration Tester",
+                role:
+                  "ADMINISTRATOR"
+              },
+              comment:
+                "Rimozione amministrativa"
+            }
+          };
+
+          const firstResponse =
+            await app.inject(request);
+
+          expect(
+            firstResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            firstResponse.json()
+          ).toEqual({
+            data: {
+              removed: {
+                rosterEntry:
+                  expect.objectContaining({
+                    id:
+                      rosterEntryId,
+                    auctionSessionTeamId:
+                      sessionTeamId,
+                    playerId,
+                    acquisitionCost: 20,
+                    contractYear: 1,
+                    source:
+                      "AUCTION"
+                  }),
+                auctionSessionTeamId:
+                  sessionTeamId,
+                playerId,
+                acquisitionCost: 20
+              },
+              remainingCreditsAfterRemoval:
+                100
+            },
+            stateVersion: 1,
+            idempotentReplay: false,
+            error: null
+          });
+
+          const retryResponse =
+            await app.inject(request);
+
+          expect(
+            retryResponse.statusCode
+          ).toBe(200);
+
+          expect(
+            retryResponse.json()
+          ).toEqual({
+            data:
+              firstResponse.json().data,
+            stateVersion: 1,
+            idempotentReplay: true,
+            error: null
+          });
+
+          const [storedEntry] =
+            await db
+              .select()
+              .from(rosterEntries)
+              .where(
+                eq(
+                  rosterEntries.id,
+                  rosterEntryId
+                )
+              );
+
+          expect(storedEntry).toBeUndefined();
+
+          const [storedSessionTeam] =
+            await db
+              .select()
+              .from(auctionSessionTeams)
+              .where(
+                eq(
+                  auctionSessionTeams.id,
+                  sessionTeamId
+                )
+              );
+
+          expect(
+            storedSessionTeam
+              ?.remainingCredits
+          ).toBe(100);
+
+          const [storedPlayer] =
+            await db
+              .select()
+              .from(players)
+              .where(
+                eq(
+                  players.id,
+                  playerId
+                )
+              );
+
+          expect(
+            storedPlayer
+              ?.availabilityStatus
+          ).toBe("AVAILABLE");
+
+          const matchingEvents =
+            (
+              await db
+                .select()
+                .from(auctionEvents)
+            ).filter(
+              (event) =>
+                event.auctionSessionId ===
+                  sessionId &&
+                event.eventType ===
+                  "ROSTER_ASSIGNMENT_REMOVED"
+            );
+
+          expect(
+            matchingEvents
+          ).toHaveLength(1);
+
+          expect(
+            matchingEvents[0]
+          ).toEqual(
+            expect.objectContaining({
+              actorName:
+                "Integration Tester",
+              actorRole:
+                "ADMINISTRATOR",
+              comment:
+                "Rimozione amministrativa",
+              beforeAuctionSessionTeamId:
+                sessionTeamId,
+              beforePlayerId:
+                playerId,
+              beforeAmount: 20,
+              beforeContractYear: 1,
+              afterAuctionSessionTeamId:
+                null,
+              afterPlayerId:
+                null,
+              afterAmount:
+                null,
+              afterContractYear:
+                null
+            })
+          );
+
+          const matchingCommands =
+            (
+              await db
+                .select()
+                .from(commandRegistry)
+            ).filter(
+              (command) =>
+                command.auctionSessionId ===
+                  sessionId &&
+                command.commandId ===
+                  "roster-removal-http-command"
+            );
+
+          expect(
+            matchingCommands
+          ).toHaveLength(1);
+
+          expect(
+            matchingCommands[0]
+          ).toEqual(
+            expect.objectContaining({
+              commandScope:
+                "AUCTION_SESSION",
+              commandType:
+                "REMOVE_ROSTER_ASSIGNMENT",
+              expectedStateVersion: 0,
+              resultStateVersion: 1
+            })
+          );
+
+          const [updatedSession] =
+            await db
+              .select()
+              .from(auctionSessions)
+              .where(
+                eq(
+                  auctionSessions.id,
+                  sessionId
+                )
+              );
+
+          expect(
+            updatedSession?.stateVersion
+          ).toBe(1);
+        }
+      );
+    }
+  );
+
+  describe(
     "POST /api/auction-sessions/:id/commands/technical-roster-correction",
     () => {
       it(
@@ -3501,6 +5757,746 @@ describe("GET /api/auction-sessions", () => {
     }
   );
 
+  describe(
+    "POST /api/auction-sessions/:id/reset-development-session",
+    () => {
+      const leagueId =
+        "league-http-development-reset";
+      const sessionId =
+        "session-http-development-reset";
+      const teamId =
+        "team-http-development-reset";
+      const sessionTeamId =
+        "session-team-http-development-reset";
+      const playerId =
+        "player-http-development-reset";
+
+      async function createFixture(
+        status:
+          | "COMPLETED"
+          | "CLOSED"
+      ): Promise<void> {
+        await db.insert(leagues).values({
+          id: leagueId,
+          name: "HTTP Development Reset League",
+          normalizedName:
+            "http development reset league"
+        });
+
+        await db.insert(auctionSessions).values({
+          id: sessionId,
+          leagueId,
+          season: "2026/2027",
+          editionNumber: 94,
+          status,
+          initialCredits: 300,
+          stateVersion: 7
+        });
+
+        await db.insert(teams).values({
+          id: teamId,
+          leagueId,
+          name: "HTTP Development Reset Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: sessionTeamId,
+            auctionSessionId:
+              sessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 247
+          });
+
+        await db.insert(players).values({
+          id: playerId,
+          auctionSessionId:
+            sessionId,
+          fmsCode:
+            "HTTP-DEV-RESET-001",
+          name:
+            "HTTP Development Reset Player",
+          normalizedName:
+            "http development reset player",
+          role: "A",
+          availabilityStatus:
+            "AVAILABLE"
+        });
+      }
+
+      async function cleanupFixture():
+        Promise<void> {
+        await db
+          .delete(players)
+          .where(
+            eq(
+              players.auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams
+                .auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(teams)
+          .where(
+            eq(
+              teams.id,
+              teamId
+            )
+          );
+
+        await db
+          .delete(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(leagues)
+          .where(
+            eq(
+              leagues.id,
+              leagueId
+            )
+          );
+      }
+
+      it(
+        "resets a completed development session to SETUP",
+        async () => {
+          await createFixture(
+            "COMPLETED"
+          );
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-development-session`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(200);
+
+            const body = response.json<{
+              data: {
+                auctionSessionId: string;
+                status: string;
+                stateVersion: number;
+                deletedPlayers: number;
+                resetAuctionSessionTeams:
+                  number;
+              };
+              error: null;
+            }>();
+
+            expect(body).toMatchObject({
+              data: {
+                auctionSessionId:
+                  sessionId,
+                status: "SETUP",
+                stateVersion: 0,
+                deletedPlayers: 1,
+                resetAuctionSessionTeams:
+                  1
+              },
+              error: null
+            });
+
+            const [storedSession] =
+              await db
+                .select()
+                .from(auctionSessions)
+                .where(
+                  eq(
+                    auctionSessions.id,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedSession
+            ).toMatchObject({
+              status: "SETUP",
+              stateVersion: 0,
+              suspensionReason: null
+            });
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(auctionSessionTeams)
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(300);
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(0);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 409 for a CLOSED session without changing it",
+        async () => {
+          await createFixture(
+            "CLOSED"
+          );
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-development-session`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(
+              response.json()
+            ).toEqual({
+              data: null,
+              error: {
+                code:
+                  "AUCTION_SESSION_CLOSED",
+                message:
+                  `Auction session "${sessionId}" is closed and cannot be reset`
+              }
+            });
+
+            const [storedSession] =
+              await db
+                .select()
+                .from(auctionSessions)
+                .where(
+                  eq(
+                    auctionSessions.id,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedSession
+            ).toMatchObject({
+              status: "CLOSED",
+              stateVersion: 7
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(1);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 404 for a missing development session",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/missing-development-reset/reset-development-session"
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(404);
+
+          expect(
+            response.json()
+          ).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                'Auction session "missing-development-reset" was not found'
+            }
+          });
+        }
+      );
+    }
+  );
+
+  describe(
+    "POST /api/auction-sessions/:id/reset-setup-data",
+    () => {
+      const resetLeagueId =
+        "league-http-setup-reset";
+      const resetSessionId =
+        "session-http-setup-reset";
+      const resetTeamId =
+        "team-http-setup-reset";
+      const resetSessionTeamId =
+        "session-team-http-setup-reset";
+      const resetPlayerId =
+        "player-http-setup-reset";
+      const resetRosterEntryId =
+        "roster-http-setup-reset";
+
+      async function createResetFixture(
+        status:
+          | "SETUP"
+          | "READY" = "SETUP"
+      ): Promise<void> {
+        await db.insert(leagues).values({
+          id: resetLeagueId,
+          name: "HTTP Setup Reset League",
+          normalizedName:
+            "http setup reset league"
+        });
+
+        await db
+          .insert(auctionSessions)
+          .values({
+            id: resetSessionId,
+            leagueId: resetLeagueId,
+            season: "2026/2027",
+            editionNumber: 92,
+            status,
+            initialCredits: 300
+          });
+
+        await db.insert(teams).values({
+          id: resetTeamId,
+          leagueId: resetLeagueId,
+          name: "HTTP Setup Reset Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: resetSessionTeamId,
+            auctionSessionId:
+              resetSessionId,
+            teamId: resetTeamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 247
+          });
+
+        await db.insert(players).values({
+          id: resetPlayerId,
+          auctionSessionId:
+            resetSessionId,
+          fmsCode: "HTTP-RESET-001",
+          name: "HTTP Reset Player",
+          normalizedName:
+            "http reset player",
+          role: "A",
+          availabilityStatus:
+            "ROSTERED"
+        });
+
+        await db
+          .insert(rosterEntries)
+          .values({
+            id: resetRosterEntryId,
+            auctionSessionTeamId:
+              resetSessionTeamId,
+            playerId: resetPlayerId,
+            acquisitionCost: 53,
+            contractYear: 1,
+            source: "INITIAL_ROSTER"
+          });
+      }
+
+      async function cleanupResetFixture():
+        Promise<void> {
+        await db
+          .delete(rosterEntries)
+          .where(
+            eq(
+              rosterEntries
+                .auctionSessionTeamId,
+              resetSessionTeamId
+            )
+          );
+
+        await db
+          .delete(players)
+          .where(
+            eq(
+              players.auctionSessionId,
+              resetSessionId
+            )
+          );
+
+        await db
+          .delete(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams
+                .auctionSessionId,
+              resetSessionId
+            )
+          );
+
+        await db
+          .delete(teams)
+          .where(
+            eq(
+              teams.id,
+              resetTeamId
+            )
+          );
+
+        await db
+          .delete(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              resetSessionId
+            )
+          );
+
+        await db
+          .delete(leagues)
+          .where(
+            eq(
+              leagues.id,
+              resetLeagueId
+            )
+          );
+      }
+
+      it(
+        "resets setup archive roster and credits",
+        async () => {
+          await createResetFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${resetSessionId}/reset-setup-data`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(200);
+
+            expect(response.json()).toEqual({
+              data: {
+                deletedRosterEntries: 1,
+                deletedPlayers: 1,
+                resetTeams: 1
+              },
+              error: null
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    resetSessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(0);
+
+            const storedRosterEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedRosterEntries
+            ).toHaveLength(0);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(auctionSessionTeams)
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(300);
+          } finally {
+            await cleanupResetFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 409 when operational history exists in SETUP",
+        async () => {
+          await createResetFixture(
+            "SETUP"
+          );
+
+          const operationalCallId =
+            "call-http-setup-reset";
+
+          await db
+            .insert(auctionCalls)
+            .values({
+              id: operationalCallId,
+              auctionSessionId:
+                resetSessionId,
+              playerId:
+                resetPlayerId,
+              callerAuctionSessionTeamId:
+                resetSessionTeamId,
+              status: "CANCELLED",
+              openingBid: 1,
+              currentBid: 1
+            });
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${resetSessionId}/reset-setup-data`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(
+              response.json()
+            ).toEqual({
+              data: null,
+              error: {
+                code:
+                  "OPERATIONAL_DATA_EXISTS",
+                message:
+                  "Setup data cannot be reset because the auction session contains operational history. Use the complete development session reset instead."
+              }
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    resetSessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(1);
+
+            const storedRosterEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedRosterEntries
+            ).toHaveLength(1);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(247);
+          } finally {
+            await db
+              .delete(auctionCalls)
+              .where(
+                eq(
+                  auctionCalls.id,
+                  operationalCallId
+                )
+              );
+          }
+        }
+      );
+
+      it(
+        "returns 409 outside SETUP without changing data",
+        async () => {
+          await createResetFixture(
+            "READY"
+          );
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${resetSessionId}/reset-setup-data`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(response.json()).toEqual({
+              data: null,
+              error: {
+                code:
+                  "INVALID_SESSION_STATUS",
+                message:
+                  "Setup data can only be reset while the auction session is in SETUP"
+              }
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    resetSessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(1);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(auctionSessionTeams)
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    resetSessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(247);
+          } finally {
+            await cleanupResetFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 404 for a missing session",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/missing-setup-reset/reset-setup-data"
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(404);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                'Auction session "missing-setup-reset" was not found'
+            }
+          });
+        }
+      );
+    }
+  );
+
   describe("POST /api/player-import/archive", () => {
     const validArchiveContent = [
       "Archivio giocatori FMS ReVo",
@@ -3683,6 +6679,59 @@ describe("GET /api/auction-sessions", () => {
     );
 
     it(
+      "rolls back the whole archive when a database write fails",
+      async () => {
+        await createImportSession();
+
+        sqlite.exec(`
+          CREATE TRIGGER
+            player_import_force_failure
+          BEFORE INSERT ON players
+          WHEN NEW.auction_session_id =
+            'session-player-import'
+           AND NEW.fms_code = '1002'
+          BEGIN
+            SELECT RAISE(
+              ABORT,
+              'forced player import failure'
+            );
+          END;
+        `);
+
+        try {
+          const response = await app.inject({
+            method: "POST",
+            url: "/api/player-import/archive",
+            payload: {
+              auctionSessionId:
+                "session-player-import",
+              content: validArchiveContent
+            }
+          });
+
+          expect(response.statusCode).toBe(500);
+
+          const storedPlayers = await db
+            .select()
+            .from(players)
+            .where(
+              eq(
+                players.auctionSessionId,
+                "session-player-import"
+              )
+            );
+
+          expect(storedPlayers).toHaveLength(0);
+        } finally {
+          sqlite.exec(`
+            DROP TRIGGER IF EXISTS
+              player_import_force_failure;
+          `);
+        }
+      }
+    );
+
+    it(
       "returns 409 for a duplicated FMS code in the archive",
       async () => {
         const content = [
@@ -3766,5 +6815,671 @@ describe("GET /api/auction-sessions", () => {
       }
     );
   });
+
+
+  describe(
+    "POST /api/player-import/initial-rosters with resolutions",
+    () => {
+      const leagueId =
+        "league-initial-roster-resolution";
+      const sessionId =
+        "session-initial-roster-resolution";
+      const teamId =
+        "team-initial-roster-resolution";
+      const sessionTeamId =
+        "session-team-initial-roster-resolution";
+
+      const rosterContent = [
+        "Resolution Team",
+        "\tRuolo\tNome\tSquadra\tCon\t$Acq",
+        "\tAttaccante\tLOOKMAN Ademola\tAtalanta\t4\t7",
+        "\tPortiere\tSOMMER Yann\tInter\t1\t18",
+        ""
+      ].join("\n");
+
+      async function createFixture():
+        Promise<void> {
+        await db.insert(leagues).values({
+          id: leagueId,
+          name:
+            "Initial Roster Resolution League",
+          normalizedName:
+            "initial roster resolution league"
+        });
+
+        await db
+          .insert(auctionSessions)
+          .values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 93,
+            status: "SETUP",
+            initialCredits: 300
+          });
+
+        await db.insert(teams).values({
+          id: teamId,
+          leagueId,
+          name: "Resolution Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: sessionTeamId,
+            auctionSessionId: sessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 300
+          });
+
+        await db.insert(players).values([
+          {
+            id:
+              "player-resolution-lookman",
+            auctionSessionId: sessionId,
+            fmsCode: "101814",
+            name: "LOOKMAN Ademola",
+            normalizedName:
+              "lookman ademola",
+            realTeamName: "Atalanta",
+            role: "A",
+            availabilityStatus:
+              "AVAILABLE"
+          },
+          {
+            id:
+              "player-resolution-sommer",
+            auctionSessionId: sessionId,
+            fmsCode: "100001",
+            name: "SOMMER Yann",
+            normalizedName:
+              "sommer yann",
+            realTeamName: "Inter",
+            role: "P",
+            availabilityStatus:
+              "AVAILABLE"
+          }
+        ]);
+      }
+
+      async function cleanupFixture():
+        Promise<void> {
+        await db
+          .delete(rosterEntries)
+          .where(
+            eq(
+              rosterEntries
+                .auctionSessionTeamId,
+              sessionTeamId
+            )
+          );
+
+        await db
+          .delete(players)
+          .where(
+            eq(
+              players.auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(auctionSessionTeams)
+          .where(
+            eq(
+              auctionSessionTeams
+                .auctionSessionId,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(teams)
+          .where(
+            eq(
+              teams.id,
+              teamId
+            )
+          );
+
+        await db
+          .delete(auctionSessions)
+          .where(
+            eq(
+              auctionSessions.id,
+              sessionId
+            )
+          );
+
+        await db
+          .delete(leagues)
+          .where(
+            eq(
+              leagues.id,
+              leagueId
+            )
+          );
+      }
+
+      it(
+        "imports an invalid contract year row after SET_CONTRACT_YEAR resolution",
+        async () => {
+          await createFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  "/api/player-import/initial-rosters",
+                payload: {
+                  auctionSessionId:
+                    sessionId,
+                  content:
+                    rosterContent,
+                  resolutions: [
+                    {
+                      rowNumber: 3,
+                      action:
+                        "SET_CONTRACT_YEAR",
+                      contractYear: 3
+                    }
+                  ]
+                }
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(201);
+
+            const body =
+              response.json<{
+                data: {
+                  importedEntries:
+                    number;
+                  totalCost: number;
+                  summary: {
+                    parsedRows:
+                      number;
+                    validEntries:
+                      number;
+                    parserIssueCount:
+                      number;
+                    planningIssueCount:
+                      number;
+                  };
+                };
+                error: null;
+              }>();
+
+            expect(body.error).toBeNull();
+
+            expect(body.data).toEqual({
+              importedEntries: 2,
+              totalCost: 25,
+              summary: {
+                parsedRows: 2,
+                validEntries: 2,
+                parserIssueCount: 0,
+                planningIssueCount: 0
+              }
+            });
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(2);
+
+            const lookmanEntry =
+              storedEntries.find(
+                (entry) =>
+                  entry.playerId ===
+                  "player-resolution-lookman"
+              );
+
+            expect(
+              lookmanEntry
+                ?.contractYear
+            ).toBe(3);
+
+            expect(
+              lookmanEntry
+                ?.acquisitionCost
+            ).toBe(7);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(275);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "skips an invalid contract year row after SKIP_ROW resolution",
+        async () => {
+          await createFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  "/api/player-import/initial-rosters",
+                payload: {
+                  auctionSessionId:
+                    sessionId,
+                  content:
+                    rosterContent,
+                  resolutions: [
+                    {
+                      rowNumber: 3,
+                      action: "SKIP_ROW"
+                    }
+                  ]
+                }
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(201);
+
+            const body =
+              response.json<{
+                data: {
+                  importedEntries:
+                    number;
+                  totalCost: number;
+                  summary: {
+                    parsedRows:
+                      number;
+                    validEntries:
+                      number;
+                    parserIssueCount:
+                      number;
+                    planningIssueCount:
+                      number;
+                  };
+                };
+                error: null;
+              }>();
+
+            expect(body.error).toBeNull();
+
+            expect(body.data).toEqual({
+              importedEntries: 1,
+              totalCost: 18,
+              summary: {
+                parsedRows: 1,
+                validEntries: 1,
+                parserIssueCount: 0,
+                planningIssueCount: 0
+              }
+            });
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(1);
+
+            expect(
+              storedEntries[0]?.playerId
+            ).toBe(
+              "player-resolution-sommer"
+            );
+
+            expect(
+              storedEntries[0]
+                ?.acquisitionCost
+            ).toBe(18);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(282);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+    }
+  );
+
+
+  describe(
+    "POST /api/auction-sessions/:id/reset-initial-rosters",
+    () => {
+      const leagueId =
+        "league-http-initial-roster-reset";
+      const sessionId =
+        "session-http-initial-roster-reset";
+      const teamId =
+        "team-http-initial-roster-reset";
+      const sessionTeamId =
+        "session-team-http-initial-roster-reset";
+
+      async function cleanupFixture():
+        Promise<void> {
+        await db.delete(rosterEntries);
+        await db.delete(players);
+        await db.delete(auctionSessionTeams);
+        await db.delete(teams);
+        await db.delete(auctionSessions);
+        await db.delete(leagues);
+      }
+
+      async function createFixture(
+        status:
+          | "SETUP"
+          | "READY" = "SETUP"
+      ): Promise<void> {
+        await cleanupFixture();
+
+        await db.insert(leagues).values({
+          id: leagueId,
+          name:
+            "HTTP Initial Roster Reset League",
+          normalizedName:
+            "http initial roster reset league"
+        });
+
+        await db
+          .insert(auctionSessions)
+          .values({
+            id: sessionId,
+            leagueId,
+            season: "2026/2027",
+            editionNumber: 95,
+            status,
+            initialCredits: 300
+          });
+
+        await db.insert(teams).values({
+          id: teamId,
+          leagueId,
+          name:
+            "HTTP Initial Roster Reset Team"
+        });
+
+        await db
+          .insert(auctionSessionTeams)
+          .values({
+            id: sessionTeamId,
+            auctionSessionId:
+              sessionId,
+            teamId,
+            tableOrder: 1,
+            renewalCredits: 0,
+            remainingCredits: 250
+          });
+
+        await db.insert(players).values([
+          {
+            id:
+              "http-initial-reset-rostered",
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "HTTP-INITIAL-RESET-001",
+            name:
+              "HTTP Rostered Player",
+            normalizedName:
+              "http rostered player",
+            realTeamName:
+              "Inter",
+            role: "A",
+            availabilityStatus:
+              "ROSTERED"
+          },
+          {
+            id:
+              "http-initial-reset-available",
+            auctionSessionId:
+              sessionId,
+            fmsCode:
+              "HTTP-INITIAL-RESET-002",
+            name:
+              "HTTP Available Player",
+            normalizedName:
+              "http available player",
+            realTeamName:
+              "Milan",
+            role: "D",
+            availabilityStatus:
+              "AVAILABLE"
+          }
+        ]);
+
+        await db
+          .insert(rosterEntries)
+          .values({
+            id:
+              "http-initial-reset-entry",
+            auctionSessionTeamId:
+              sessionTeamId,
+            playerId:
+              "http-initial-reset-rostered",
+            acquisitionCost: 50,
+            contractYear: 2,
+            source: "INITIAL_ROSTER"
+          });
+      }
+
+      it(
+        "resets initial rosters while preserving the player archive",
+        async () => {
+          await createFixture();
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-initial-rosters`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(200);
+
+            expect(response.json()).toEqual({
+              data: {
+                deletedRosterEntries: 1,
+                resetPlayers: 1,
+                resetTeams: 1
+              },
+              error: null
+            });
+
+            const storedPlayers =
+              await db
+                .select()
+                .from(players)
+                .where(
+                  eq(
+                    players.auctionSessionId,
+                    sessionId
+                  )
+                );
+
+            expect(
+              storedPlayers
+            ).toHaveLength(2);
+
+            expect(
+              storedPlayers.find(
+                (player) =>
+                  player.id ===
+                  "http-initial-reset-rostered"
+              )?.availabilityStatus
+            ).toBe("AVAILABLE");
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(0);
+
+            const [storedSessionTeam] =
+              await db
+                .select()
+                .from(
+                  auctionSessionTeams
+                )
+                .where(
+                  eq(
+                    auctionSessionTeams.id,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedSessionTeam
+                ?.remainingCredits
+            ).toBe(300);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 409 outside SETUP without changing data",
+        async () => {
+          await createFixture("READY");
+
+          try {
+            const response =
+              await app.inject({
+                method: "POST",
+                url:
+                  `/api/auction-sessions/${sessionId}/reset-initial-rosters`
+              });
+
+            expect(
+              response.statusCode
+            ).toBe(409);
+
+            expect(response.json()).toEqual({
+              data: null,
+              error: {
+                code:
+                  "INVALID_SESSION_STATUS",
+                message:
+                  "Initial rosters can only be reset while the auction session is in SETUP"
+              }
+            });
+
+            const storedEntries =
+              await db
+                .select()
+                .from(rosterEntries)
+                .where(
+                  eq(
+                    rosterEntries
+                      .auctionSessionTeamId,
+                    sessionTeamId
+                  )
+                );
+
+            expect(
+              storedEntries
+            ).toHaveLength(1);
+          } finally {
+            await cleanupFixture();
+          }
+        }
+      );
+
+      it(
+        "returns 404 for a missing auction session",
+        async () => {
+          const response =
+            await app.inject({
+              method: "POST",
+              url:
+                "/api/auction-sessions/missing-initial-roster-reset/reset-initial-rosters"
+            });
+
+          expect(
+            response.statusCode
+          ).toBe(404);
+
+          expect(response.json()).toEqual({
+            data: null,
+            error: {
+              code:
+                "AUCTION_SESSION_NOT_FOUND",
+              message:
+                'Auction session "missing-initial-roster-reset" was not found'
+            }
+          });
+        }
+      );
+    }
+  );
 
 });

@@ -25,12 +25,14 @@ import type {
 import type {
   RosterEntryRepository
 } from "../repositories/roster-entry.repository.js";
+import type {
+  FmsSessionExportStateService
+} from "./fms-session-export-state.service.js";
 
 const selectableAuctionSessionStatuses:
   ReadonlySet<AuctionSessionStatus> =
     new Set([
-      "COMPLETED",
-      "CLOSED"
+      "COMPLETED"
     ]);
 
 export type FmsExportGoalkeeperSelectionServiceErrorCode =
@@ -85,8 +87,39 @@ export class FmsExportGoalkeeperSelectionService {
         "findByPlayerIdWithExecutor"
       >,
     private readonly goalkeeperRepository:
-      FmsExportGoalkeeperRepository
+      FmsExportGoalkeeperRepository,
+    private readonly fmsSessionExportStateService?:
+      Pick<
+        FmsSessionExportStateService,
+        "invalidateWithExecutor"
+      >
   ) {}
+
+  getSelected(
+    auctionSessionTeamId: string
+  ): FmsExportGoalkeeperPersistenceRecord | null {
+    return db.transaction((tx) => {
+      const auctionSessionTeam =
+        this.auctionSessionTeamRepository
+          .findByIdWithExecutor(
+            tx,
+            auctionSessionTeamId
+          );
+
+      if (!auctionSessionTeam) {
+        throw new FmsExportGoalkeeperSelectionServiceError(
+          "AUCTION_SESSION_TEAM_NOT_FOUND",
+          `Auction session team "${auctionSessionTeamId}" was not found`
+        );
+      }
+
+      return this.goalkeeperRepository
+        .findByAuctionSessionTeamIdWithExecutor(
+          tx,
+          auctionSessionTeamId
+        );
+    });
+  }
 
   select(
     auctionSessionTeamId: string,
@@ -246,6 +279,13 @@ export class FmsExportGoalkeeperSelectionService {
     );
 
     if (existingTeamSelection) {
+      if (
+        existingTeamSelection.playerId ===
+        candidate.id
+      ) {
+        return existingTeamSelection;
+      }
+
       const updated =
         this.goalkeeperRepository
           .updateWithExecutor(
@@ -262,18 +302,33 @@ export class FmsExportGoalkeeperSelectionService {
         );
       }
 
+      this.fmsSessionExportStateService
+        ?.invalidateWithExecutor(
+          executor,
+          auctionSession.id
+        );
+
       return updated;
     }
 
-    return this.goalkeeperRepository
-      .createWithExecutor(
+    const created =
+      this.goalkeeperRepository
+        .createWithExecutor(
+          executor,
+          {
+            auctionSessionTeamId:
+              auctionSessionTeam.id,
+            playerId: candidate.id
+          }
+        );
+
+    this.fmsSessionExportStateService
+      ?.invalidateWithExecutor(
         executor,
-        {
-          auctionSessionTeamId:
-            auctionSessionTeam.id,
-          playerId: candidate.id
-        }
+        auctionSession.id
       );
+
+    return created;
   }
 
   private assertRosterGoalkeepersValid(

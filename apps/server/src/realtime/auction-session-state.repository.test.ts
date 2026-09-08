@@ -60,6 +60,75 @@ describe("SqliteAuctionSessionStateRepository", () => {
     });
   });
 
+  it("ignores another ready session when looking for an operational session", async () => {
+    await db.insert(leagues).values({
+      id: "league-state-ready",
+      name: "League State Ready",
+      normalizedName:
+        "league state ready"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-state-ready",
+      leagueId: "league-state-ready",
+      season: "2026/2027",
+      editionNumber: 2,
+      status: "READY",
+      suspensionReason: null,
+      initialCredits: 300,
+      stateVersion: 0
+    });
+
+    const result = db.transaction((tx) =>
+      repository
+        .findOperationalExcludingWithExecutor(
+          tx,
+          auctionSessionId
+        )
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("finds another running or suspended operational session", async () => {
+    await db.insert(leagues).values({
+      id: "league-state-operational",
+      name: "League State Operational",
+      normalizedName:
+        "league state operational"
+    });
+
+    await db.insert(auctionSessions).values({
+      id: "session-state-operational",
+      leagueId:
+        "league-state-operational",
+      season: "2026/2027",
+      editionNumber: 3,
+      status: "SUSPENDED",
+      suspensionReason:
+        "TECHNICAL_BREAK",
+      initialCredits: 300,
+      stateVersion: 4
+    });
+
+    const result = db.transaction((tx) =>
+      repository
+        .findOperationalExcludingWithExecutor(
+          tx,
+          auctionSessionId
+        )
+    );
+
+    expect(result).toEqual({
+      auctionSessionId:
+        "session-state-operational",
+      status: "SUSPENDED",
+      suspensionReason:
+        "TECHNICAL_BREAK",
+      stateVersion: 4
+    });
+  });
+
   it("suspends the session and increments stateVersion atomically", async () => {
     const result =
       await repository.updateOperationalStateIfMatches(

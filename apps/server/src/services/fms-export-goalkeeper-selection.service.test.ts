@@ -525,6 +525,59 @@ describe(
       );
     });
 
+    it("rejects goalkeeper selection from a closed session", async () => {
+      const {
+        sessionId,
+        sessionTeamId
+      } = await seedSession(
+        "closed-session"
+      );
+
+      await db
+        .update(auctionSessions)
+        .set({
+          status: "CLOSED"
+        })
+        .where(
+          eq(
+            auctionSessions.id,
+            sessionId
+          )
+        );
+
+      await addRosterGoalkeeper({
+        sessionId,
+        sessionTeamId,
+        id: "goalkeeper-closed-a",
+        realTeamName: "Milan"
+      });
+
+      await addRosterGoalkeeper({
+        sessionId,
+        sessionTeamId,
+        id: "goalkeeper-closed-b",
+        realTeamName: "Milan"
+      });
+
+      await addCandidateGoalkeeper({
+        sessionId,
+        id: "goalkeeper-closed-c",
+        realTeamName: "Milan"
+      });
+
+      expect(() =>
+        service.select(
+          sessionTeamId,
+          "goalkeeper-closed-c"
+        )
+      ).toThrowError(
+        expect.objectContaining({
+          code:
+            "AUCTION_SESSION_NOT_SELECTABLE"
+        })
+      );
+    });
+
     it("rejects a roster that does not contain exactly two valid goalkeepers", async () => {
       const {
         sessionId,

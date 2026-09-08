@@ -277,4 +277,45 @@ describe("RealtimeConnectionManager", () => {
     );
 
   });
+
+  it("registers an admin for a session", () => {
+    const manager =
+      new RealtimeConnectionManager();
+
+    manager.connect({
+      socketId: "admin-socket"
+    });
+
+    const registeredConnection =
+      manager.register(
+        "admin-socket",
+        {
+          kind: "ADMIN",
+          deviceId: "admin-device-1",
+          auctionSessionId: "session-1"
+        }
+      );
+
+    expect(registeredConnection).toEqual(
+      expect.objectContaining({
+        status: "REGISTERED",
+        kind: "ADMIN",
+        socketId: "admin-socket",
+        deviceId: "admin-device-1",
+        auctionSessionId: "session-1"
+      })
+    );
+
+    expect(
+      manager.listSessionConnections(
+        "session-1"
+      )
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: "ADMIN",
+        socketId: "admin-socket"
+      })
+    );
+
+  });
 });

@@ -43,6 +43,20 @@ describe("realtime registration contracts", () => {
     ).toEqual(registration);
   });
 
+  it("accepts an ADMIN registration", () => {
+    const registration = {
+      kind: "ADMIN",
+      deviceId: "admin-device-1",
+      auctionSessionId: "session-1"
+    };
+
+    expect(
+      realtimeRegistrationRequestSchema.parse(
+        registration
+      )
+    ).toEqual(registration);
+  });
+
   it("rejects a registration without kind", () => {
     expect(
       realtimeRegistrationRequestSchema.safeParse({
@@ -63,10 +77,16 @@ describe("realtime registration contracts", () => {
     ).toBe(false);
   });
 
-  it("keeps PUBLIC_DISPLAY outside RealtimeRole", () => {
+  it("keeps non-team kinds outside RealtimeRole", () => {
     expect(
       realtimeRoleSchema.safeParse(
         "PUBLIC_DISPLAY"
+      ).success
+    ).toBe(false);
+
+    expect(
+      realtimeRoleSchema.safeParse(
+        "ADMIN"
       ).success
     ).toBe(false);
 
@@ -106,6 +126,24 @@ describe("realtime registration contracts", () => {
       kind: "PUBLIC_DISPLAY",
       socketId: "socket-2",
       deviceId: "public-display-1",
+      auctionSessionId: "session-1",
+      connectedAt:
+        "2026-08-09T09:00:00.000Z",
+      registeredAt:
+        "2026-08-09T09:00:01.000Z"
+    };
+
+    expect(
+      realtimeRegisteredPayloadSchema.parse(
+        payload
+      )
+    ).toEqual(payload);
+  });
+  it("accepts an ADMIN registered payload", () => {
+    const payload = {
+      kind: "ADMIN",
+      socketId: "socket-3",
+      deviceId: "admin-device-1",
       auctionSessionId: "session-1",
       connectedAt:
         "2026-08-09T09:00:00.000Z",

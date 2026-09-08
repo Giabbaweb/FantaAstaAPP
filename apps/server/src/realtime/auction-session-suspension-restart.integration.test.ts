@@ -79,7 +79,8 @@ describe(
             new SqliteAuctionSessionRepository(),
             new SqliteAuctionSessionStateRepository(),
             new SqliteCommandRegistryRepository(),
-            new SqliteAuctionEventRepository()
+            new SqliteAuctionEventRepository(),
+            new SqliteAuctionCallRepository()
           );
 
         const firstService =
@@ -156,7 +157,8 @@ describe(
             new SqliteAuctionSessionRepository(),
             new SqliteAuctionSessionStateRepository(),
             new SqliteCommandRegistryRepository(),
-            new SqliteAuctionEventRepository()
+            new SqliteAuctionEventRepository(),
+            new SqliteAuctionCallRepository()
           );
 
         const restartedService =

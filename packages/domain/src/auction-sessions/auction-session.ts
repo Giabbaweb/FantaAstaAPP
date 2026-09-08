@@ -65,7 +65,6 @@ const statusTransitions: Record<
 
 const operationalStatuses: ReadonlySet<AuctionSessionStatus> =
   new Set([
-    "READY",
     "RUNNING",
     "SUSPENDED"
   ]);

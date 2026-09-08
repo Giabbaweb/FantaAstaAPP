@@ -1,21 +1,37 @@
 import {
+  createRandomUuid
+} from "../shared/random-uuid.js";
+
+import {
   useEffect,
   useState
 } from "react";
 
 import type {
   AuctionSession,
+  League,
+  PublicDisplayControlState,
   RealtimeAuctionSnapshot,
   RealtimeError
 } from "@fantaastaapp/contracts";
 
 import {
-  fetchActiveAuctionSession
+  fetchActiveAuctionSession,
+  fetchAuctionSessions,
+  selectCurrentAuctionSession
 } from "./public-display-api.js";
+
+import {
+  fetchLeagues
+} from "../shared/app-api.js";
 
 import {
   createPublicDisplayRealtimeClient
 } from "./public-display-realtime.js";
+
+import {
+  fetchPublicDisplayControl
+} from "../shared/public-display-control-api.js";
 
 import {
   RosterOverview
@@ -30,15 +46,106 @@ type PublicDisplayStatus =
   | "LIVE"
   | "ERROR";
 
-type PublicDisplayMode =
-  | "STANDARD"
-  | "HIGH_CONTRAST_OUTDOOR"
-  | "COMPACT"
-  | "DARK";
+function parseServerTime(
+  value: string
+): number {
+  const normalized =
+    value.includes("T")
+      ? value
+      : `${value.replace(" ", "T")}Z`;
 
-type PublicDisplayView =
-  | "AUCTION"
-  | "ROSTER_OVERVIEW";
+  return new Date(normalized).getTime();
+}
+
+function formatPublicClock(
+  now: number
+): string {
+  return new Intl.DateTimeFormat(
+    "it-IT",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }
+  ).format(new Date(now));
+}
+
+function formatPublicTurnElapsed(
+  startedAt: string | null,
+  endAt: number
+): string {
+  if (!startedAt) {
+    return "--:--";
+  }
+
+  const started =
+    parseServerTime(startedAt);
+
+  if (Number.isNaN(started)) {
+    return "--:--";
+  }
+
+  const elapsedSeconds =
+    Math.max(
+      0,
+      Math.floor(
+        (endAt - started) / 1000
+      )
+    );
+
+  const minutes =
+    Math.floor(
+      elapsedSeconds / 60
+    );
+
+  const seconds =
+    elapsedSeconds % 60;
+
+  return [
+    String(minutes).padStart(2, "0"),
+    String(seconds).padStart(2, "0")
+  ].join(":");
+}
+
+function formatPublicPlayerRole(
+  role: string
+): string {
+  switch (role) {
+    case "P":
+      return "PORTIERE";
+
+    case "D":
+      return "DIFENSORE";
+
+    case "C":
+      return "CENTROCAMPISTA";
+
+    case "A":
+      return "ATTACCANTE";
+
+    default:
+      return role;
+  }
+}
+
+const publicSelectedAuctionSessionStorageKey =
+  "fantaastaapp.publicDisplay.selectedAuctionSessionId";
+
+function loadSelectedPublicAuctionSessionId():
+  string | null {
+  return window.localStorage.getItem(
+    publicSelectedAuctionSessionStorageKey
+  );
+}
+
+function persistSelectedPublicAuctionSessionId(
+  auctionSessionId: string
+): void {
+  window.localStorage.setItem(
+    publicSelectedAuctionSessionStorageKey,
+    auctionSessionId
+  );
+}
 
 function createPublicDisplayDeviceId(): string {
   const storageKey =
@@ -54,7 +161,7 @@ function createPublicDisplayDeviceId(): string {
   }
 
   const deviceId =
-    `public-display-${crypto.randomUUID()}`;
+    `public-display-${createRandomUuid()}`;
 
   window.localStorage.setItem(
     storageKey,
@@ -81,6 +188,29 @@ export function PublicDisplay():
   );
 
   const [
+    selectedAuctionSessionId,
+    setSelectedAuctionSessionId
+  ] = useState<string | null>(
+    () =>
+      loadSelectedPublicAuctionSessionId()
+  );
+
+  const [
+    auctionSessions,
+    setAuctionSessions
+  ] = useState<AuctionSession[]>([]);
+
+  const [
+    leagues,
+    setLeagues
+  ] = useState<League[]>([]);
+
+  const [
+    sessionSelectorOpen,
+    setSessionSelectorOpen
+  ] = useState(false);
+
+  const [
     snapshot,
     setSnapshot
   ] = useState<RealtimeAuctionSnapshot | null>(
@@ -94,21 +224,133 @@ export function PublicDisplay():
     null
   );
 
+  const [
+    now,
+    setNow
+  ] = useState(
+    () => Date.now()
+  );
+
+
+  const [
+    displayControl,
+    setDisplayControl
+  ] = useState<PublicDisplayControlState>({
+    displayMode: "STANDARD",
+    activeView: "AUCTION"
+  });
+
+  useEffect(() => {
+    const timer =
+      window.setInterval(
+        () => {
+          setNow(Date.now());
+        },
+        1000
+      );
+
+    return () => {
+      window.clearInterval(
+        timer
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    let disposed = false;
+
+    const refreshControl =
+      async (): Promise<void> => {
+        try {
+          const next =
+            await fetchPublicDisplayControl(
+              session.id
+            );
+
+          if (!disposed) {
+            setDisplayControl(next);
+          }
+        } catch {
+          /*
+           * Presentation control is non-critical.
+           * Keep the last valid display state.
+           */
+        }
+      };
+
+    void refreshControl();
+
+    const timer =
+      window.setInterval(
+        () => {
+          void refreshControl();
+        },
+        750
+      );
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [session?.id]);
+
   useEffect(() => {
     let disposed = false;
     let disconnect:
       (() => void) | null = null;
 
     async function start(): Promise<void> {
+      setStatus("LOADING");
+      setSession(null);
+      setSnapshot(null);
+      setErrorMessage(null);
+
       try {
-        const activeSession =
-          await fetchActiveAuctionSession();
+        const [
+          activeSession,
+          availableSessions,
+          availableLeagues
+        ] = await Promise.all([
+          fetchActiveAuctionSession(),
+          fetchAuctionSessions(),
+          fetchLeagues()
+        ]);
 
         if (disposed) {
           return;
         }
 
-        if (!activeSession) {
+        setAuctionSessions(
+          availableSessions
+        );
+
+        setLeagues(
+          availableLeagues
+        );
+
+        const persistedSession =
+          selectedAuctionSessionId
+            ? (
+                availableSessions.find(
+                  (candidate) =>
+                    candidate.id ===
+                      selectedAuctionSessionId
+                ) ?? null
+              )
+            : null;
+
+        const selectedSession =
+          persistedSession ??
+          selectCurrentAuctionSession(
+            activeSession,
+            availableSessions
+          );
+
+        if (!selectedSession) {
           setStatus(
             "NO_ACTIVE_SESSION"
           );
@@ -116,7 +358,20 @@ export function PublicDisplay():
           return;
         }
 
-        setSession(activeSession);
+        persistSelectedPublicAuctionSessionId(
+          selectedSession.id
+        );
+
+        if (
+          selectedAuctionSessionId !==
+            selectedSession.id
+        ) {
+          setSelectedAuctionSessionId(
+            selectedSession.id
+          );
+        }
+
+        setSession(selectedSession);
         setStatus("CONNECTING");
 
         const client =
@@ -124,7 +379,7 @@ export function PublicDisplay():
             deviceId:
               createPublicDisplayDeviceId(),
             auctionSessionId:
-              activeSession.id,
+              selectedSession.id,
 
             onRegistered: () => {
               if (!disposed) {
@@ -185,7 +440,9 @@ export function PublicDisplay():
       disposed = true;
       disconnect?.();
     };
-  }, []);
+  }, [
+    selectedAuctionSessionId
+  ]);
 
   if (
     status === "LOADING" ||
@@ -205,9 +462,53 @@ export function PublicDisplay():
     return (
       <main>
         <h1>FantaAstaAPP</h1>
-        <p>
-          Nessuna sessione d'asta attiva.
-        </p>
+
+        {auctionSessions.length > 0 ? (
+          <>
+            <p>
+              Seleziona la sessione da visualizzare.
+            </p>
+
+            <div>
+              {auctionSessions.map(
+                (candidate) => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    onClick={() => {
+                      persistSelectedPublicAuctionSessionId(
+                        candidate.id
+                      );
+
+                      setSelectedAuctionSessionId(
+                        candidate.id
+                      );
+                    }}
+                  >
+                    {
+                      leagues.find(
+                        (league) =>
+                          league.id ===
+                            candidate.leagueId
+                      )?.name ??
+                      candidate.leagueId
+                    }
+                    {" · "}
+                    {candidate.season}
+                    {" · "}
+                    {candidate.editionNumber}ª
+                    {" · "}
+                    {candidate.status}
+                  </button>
+                )
+              )}
+            </div>
+          </>
+        ) : (
+          <p>
+            Nessuna sessione d'asta disponibile.
+          </p>
+        )}
       </main>
     );
   }
@@ -329,14 +630,14 @@ export function PublicDisplay():
         )
       : "-";
 
-  const displayMode: PublicDisplayMode =
-    "STANDARD";
+  const displayMode =
+    displayControl.displayMode;
 
   const activeView =
-    "AUCTION" as PublicDisplayView;
+    displayControl.activeView;
 
   const displayModeLabel: Record<
-    PublicDisplayMode,
+    PublicDisplayControlState["displayMode"],
     string
   > = {
     STANDARD: "Standard",
@@ -353,32 +654,40 @@ export function PublicDisplay():
         <div className="public-display__app-brand">
           <img
             className="public-display__app-logo"
-            src="/branding/fantaastaapp-logo.png"
+            src="/branding/fantaastaapp-banner-faded.png"
             alt="FantaAstaAPP"
           />
-
-          <h1 className="public-display__title">
-            Schermo Pubblico
-          </h1>
 
           <span className="public-display__mode-label">
             Mod. {displayModeLabel[displayMode]}
           </span>
         </div>
 
-        <div className="public-display__league-brand">
-          <img
-            className="public-display__league-logo"
-            src={
-              `/league-logos/${snapshot.publicDisplay.league.id}.png`
-            }
-            alt=""
-            aria-hidden="true"
-            onError={(event) => {
-              event.currentTarget.style.display =
-                "none";
-            }}
-          />
+        <button
+          className="public-display__league-brand"
+          type="button"
+          aria-expanded={sessionSelectorOpen}
+          aria-label="Cambia sessione d'asta"
+          onClick={() => {
+            setSessionSelectorOpen(
+              (current) => !current
+            );
+          }}
+        >
+          {snapshot.publicDisplay.league.logoPath && (
+            <img
+              className="public-display__league-logo"
+              src={
+                snapshot.publicDisplay.league.logoPath
+              }
+              alt=""
+              aria-hidden="true"
+              onError={(event) => {
+                event.currentTarget.style.display =
+                  "none";
+              }}
+            />
+          )}
 
           <div className="public-display__league-copy">
             <strong className="public-display__league-name">
@@ -395,27 +704,123 @@ export function PublicDisplay():
               <span>
                 {session.editionNumber}ª edizione
               </span>
+
+              <span
+                className="public-display__session-selector-chevron"
+                aria-hidden="true"
+              >
+                {sessionSelectorOpen ? "▴" : "▾"}
+              </span>
             </div>
           </div>
-        </div>
+        </button>
 
-        <div className="public-display__session-meta">
-          <span
-            className="public-display__status"
-            data-status={
-              snapshot.session.status
-            }
+        {sessionSelectorOpen && (
+          <div
+            className="public-display__session-selector"
+            role="dialog"
+            aria-label="Seleziona sessione d'asta"
           >
-            {snapshot.session.status}
-          </span>
+            <strong className="public-display__session-selector-title">
+              Cambia sessione
+            </strong>
 
-          <small>
-            Stato #{snapshot.stateVersion}
-          </small>
+            <div className="public-display__session-selector-list">
+              {auctionSessions.map(
+                (candidate) => {
+                  const candidateLeague =
+                    leagues.find(
+                      (league) =>
+                        league.id ===
+                          candidate.leagueId
+                    )?.name ??
+                    candidate.leagueId;
+
+                  const isSelected =
+                    candidate.id === session.id;
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      className="public-display__session-selector-option"
+                      data-selected={isSelected}
+                      disabled={isSelected}
+                      onClick={() => {
+                        persistSelectedPublicAuctionSessionId(
+                          candidate.id
+                        );
+
+                        setSessionSelectorOpen(
+                          false
+                        );
+
+                        setSelectedAuctionSessionId(
+                          candidate.id
+                        );
+                      }}
+                    >
+                      <span>
+                        <strong>
+                          {candidateLeague}
+                        </strong>
+
+                        <small>
+                          {candidate.season}
+                          {" · "}
+                          {candidate.editionNumber}ª edizione
+                        </small>
+                      </span>
+
+                      <span
+                        className="public-display__session-selector-status"
+                        data-status={
+                          candidate.status
+                        }
+                      >
+                        {candidate.status}
+                      </span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="public-display__runtime">
+          {activeView === "AUCTION" && (
+            <div
+              className="public-display__stadium-clock"
+              aria-label="Ora attuale"
+            >
+              <span>ORA</span>
+
+              <strong>
+                {formatPublicClock(now)}
+              </strong>
+            </div>
+          )}
+
+          <div className="public-display__session-meta">
+            <span
+              className="public-display__status"
+              data-status={
+                snapshot.session.status
+              }
+            >
+              {snapshot.session.status}
+            </span>
+
+            <small>
+              Aggiornamento #{snapshot.stateVersion}
+            </small>
+          </div>
         </div>
       </header>
 
-      {snapshot.session.status === "SUSPENDED" && (
+      {snapshot.session.status === "SUSPENDED" &&
+        activeView === "AUCTION" && (
         <section className="public-display__suspended-banner">
           <strong>
             ASTA TEMPORANEAMENTE SOSPESA
@@ -454,7 +859,7 @@ export function PublicDisplay():
             <>
               <img
                 className="public-display__player-photo"
-                src={`/player-photos/${currentPlayer.id}.png`}
+                src={`/api/player-photos/${currentPlayer.fmsCode}`}
                 alt=""
                 aria-hidden="true"
                 onError={(event) => {
@@ -473,7 +878,9 @@ export function PublicDisplay():
                     className="public-display__player-role"
                     data-role={currentPlayer.role}
                   >
-                    {currentPlayer.role}
+                    {formatPublicPlayerRole(
+                      currentPlayer.role
+                    )}
                   </span>
 
                   {currentPlayer.realTeamName && (
@@ -515,14 +922,45 @@ export function PublicDisplay():
             </strong>
           </article>
 
-          <article className="public-display__metric">
-            <span>
-              Turno
-            </span>
+          <article className="public-display__metric public-display__metric--turn">
+            <div className="public-display__turn-team">
+              <span>
+                Turno
+              </span>
 
-            <strong>
-              {currentTurn}
-            </strong>
+              <strong>
+                {currentTurn}
+              </strong>
+            </div>
+
+            <div className="public-display__turn-timer">
+              <span
+                className="public-display__turn-timer-icon"
+                aria-hidden="true"
+              >
+                ⏱
+              </span>
+
+              <div>
+                <strong>
+                  {formatPublicTurnElapsed(
+                    operationalCall?.call
+                      .currentTurnStartedAt ??
+                      null,
+                    snapshot.session.status ===
+                      "SUSPENDED"
+                      ? parseServerTime(
+                          snapshot.session.updatedAt
+                        )
+                      : now
+                  )}
+                </strong>
+
+                <small>
+                  tempo trascorso
+                </small>
+              </div>
+            </div>
           </article>
         </div>
       </section>
@@ -723,7 +1161,10 @@ export function PublicDisplay():
                             <div
                               key={role}
                               className="public-display__team-role"
-                                data-role={role}
+                              data-role={role}
+                              data-complete={
+                                data.count >= data.limit
+                              }
                             >
                               <span>
                                 {role}
@@ -744,6 +1185,15 @@ export function PublicDisplay():
           }
         </div>
       </section>
+
+      <footer className="public-display__signature">
+        <span>Powered by</span>
+
+        <img
+          src="/branding/arti-john-logo.png"
+          alt="Arti John"
+        />
+      </footer>
     </main>
   );
 }

@@ -44,6 +44,7 @@ export interface RealtimeSnapshotTeamReader {
 export type RealtimePublicDisplayLeagueData = {
   id: string;
   name: string;
+  logoPath: string | null;
 };
 
 export type RealtimePublicDisplayTeamData = {
@@ -74,6 +75,7 @@ export type RealtimePublicDisplayTeamData = {
 
 export type RealtimePublicDisplayPlayerData = {
   id: string;
+  fmsCode: string;
   name: string;
   realTeamName: string | null;
   role: PlayerRole;
@@ -129,6 +131,8 @@ export class SqliteRealtimeSnapshotSessionReader
           auctionSessions.initialCredits,
         maximumInitialRosterEntries:
           auctionSessions.maximumInitialRosterEntries,
+        remoteBaseUrl:
+          auctionSessions.remoteBaseUrl,
         stateVersion:
           auctionSessions.stateVersion,
         createdAt: auctionSessions.createdAt,
@@ -200,7 +204,8 @@ export class SqliteRealtimePublicDisplayReader
     const [record] = await db
       .select({
         id: leagues.id,
-        name: leagues.name
+        name: leagues.name,
+        logoPath: leagues.logoPath
       })
       .from(auctionSessions)
       .innerJoin(
@@ -396,6 +401,27 @@ export class SqliteRealtimePublicDisplayReader
         )
       )
       .innerJoin(
+        rosterEntries,
+        and(
+          eq(
+            rosterEntries.playerId,
+            auctionEvents.playerId
+          ),
+          eq(
+            rosterEntries.auctionSessionTeamId,
+            auctionEvents.auctionSessionTeamId
+          ),
+          eq(
+            rosterEntries.acquisitionCost,
+            auctionEvents.amount
+          ),
+          eq(
+            rosterEntries.source,
+            "AUCTION"
+          )
+        )
+      )
+      .innerJoin(
         teams,
         eq(
           auctionSessionTeams.teamId,
@@ -419,29 +445,48 @@ export class SqliteRealtimePublicDisplayReader
         desc(auctionEvents.id)
       );
 
-    return records.map((record) => {
-      if (
-        record.auctionSessionTeamId === null ||
-        record.amount === null
-      ) {
-        throw new Error(
-          `Invalid AUCTION_AWARD_CONFIRMED event "${record.eventId}"`
-        );
-      }
+    const seenPlayerIds =
+      new Set<string>();
 
-      return {
-        eventId: record.eventId,
-        playerId: record.playerId,
-        playerName: record.playerName,
-        role: record.role,
-        auctionSessionTeamId:
-          record.auctionSessionTeamId,
-        teamName: record.teamName,
-        amount: record.amount,
-        confirmedAt:
-          record.confirmedAt
-      };
-    });
+    return records
+      .filter((record) => {
+        if (
+          seenPlayerIds.has(
+            record.playerId
+          )
+        ) {
+          return false;
+        }
+
+        seenPlayerIds.add(
+          record.playerId
+        );
+
+        return true;
+      })
+      .map((record) => {
+        if (
+          record.auctionSessionTeamId === null ||
+          record.amount === null
+        ) {
+          throw new Error(
+            `Invalid AUCTION_AWARD_CONFIRMED event "${record.eventId}"`
+          );
+        }
+
+        return {
+          eventId: record.eventId,
+          playerId: record.playerId,
+          playerName: record.playerName,
+          role: record.role,
+          auctionSessionTeamId:
+            record.auctionSessionTeamId,
+          teamName: record.teamName,
+          amount: record.amount,
+          confirmedAt:
+            record.confirmedAt
+        };
+      });
   }
 
   async findPlayerById(
@@ -450,6 +495,7 @@ export class SqliteRealtimePublicDisplayReader
     const [record] = await db
       .select({
         id: players.id,
+        fmsCode: players.fmsCode,
         name: players.name,
         realTeamName: players.realTeamName,
         role: players.role

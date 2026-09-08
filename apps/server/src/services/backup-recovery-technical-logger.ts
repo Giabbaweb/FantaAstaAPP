@@ -88,14 +88,26 @@ export class BackupRecoveryTechnicalLogger {
   private readonly logger:
     pino.Logger;
 
+  private readonly destination:
+    ReturnType<
+      typeof pino.destination
+    >;
+
   readonly logPath: string;
 
   private constructor(
     logger: pino.Logger,
+    destination:
+      ReturnType<
+        typeof pino.destination
+      >,
     logPath: string
   ) {
     this.logger =
       logger;
+
+    this.destination =
+      destination;
 
     this.logPath =
       logPath;
@@ -147,6 +159,7 @@ export class BackupRecoveryTechnicalLogger {
 
     return new BackupRecoveryTechnicalLogger(
       logger,
+      destination,
       logPath
     );
   }
@@ -183,5 +196,10 @@ export class BackupRecoveryTechnicalLogger {
 
   flush(): void {
     this.logger.flush();
+  }
+
+  close(): void {
+    this.destination.flushSync();
+    this.destination.destroy();
   }
 }

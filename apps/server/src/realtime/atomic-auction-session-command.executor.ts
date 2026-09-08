@@ -13,6 +13,9 @@ import type {
   CreateAuctionEventInput
 } from "../repositories/auction-event.repository.js";
 import type {
+  AuctionCallRepository
+} from "../repositories/auction-call.repository.js";
+import type {
   AuctionSessionOperationalStateUpdate,
   AuctionSessionStateRepository
 } from "./auction-session-state.repository.js";
@@ -25,6 +28,7 @@ export type AtomicAuctionSessionCommandExecutorErrorCode =
   | "AUCTION_SESSION_NOT_FOUND"
   | "STALE_STATE"
   | "COMMAND_ID_CONFLICT"
+  | "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS"
   | "AUCTION_SESSION_SAVE_FAILED";
 
 export class AtomicAuctionSessionCommandExecutorError
@@ -75,7 +79,12 @@ export class AtomicAuctionSessionCommandExecutor {
     private readonly commandRegistryRepository:
       CommandRegistryRepository,
     private readonly auctionEventRepository:
-      AuctionEventRepository
+      AuctionEventRepository,
+    private readonly auctionCallRepository:
+      AuctionCallRepository,
+    private readonly now:
+      () => string =
+        () => new Date().toISOString()
   ) {}
 
   async execute(
@@ -102,6 +111,8 @@ export class AtomicAuctionSessionCommandExecutor {
         }
 
         if (
+          existingCommand.commandType !==
+            "START_SESSION" &&
           existingCommand.commandType !==
             "SUSPEND_SESSION" &&
           existingCommand.commandType !==
@@ -171,6 +182,25 @@ export class AtomicAuctionSessionCommandExecutor {
         currentSession
       );
 
+      if (
+        input.commandType ===
+          "START_SESSION"
+      ) {
+        const operationalSession =
+          this.stateRepository
+            .findOperationalExcludingWithExecutor(
+              tx,
+              input.auctionSessionId
+            );
+
+        if (operationalSession) {
+          throw new AtomicAuctionSessionCommandExecutorError(
+            "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS",
+            `Auction session "${operationalSession.auctionSessionId}" is already running or suspended`
+          );
+        }
+      }
+
       const updatedState =
         this.stateRepository
           .updateOperationalStateIfMatchesWithExecutor(
@@ -185,6 +215,30 @@ export class AtomicAuctionSessionCommandExecutor {
           "STALE_STATE",
           `Auction session "${input.auctionSessionId}" no longer matches state version ${input.expectedStateVersion}`
         );
+      }
+
+      if (
+        input.commandType ===
+          "RESUME_SESSION"
+      ) {
+        const operationalCall =
+          this.auctionCallRepository
+            .findOperationalByAuctionSessionIdWithExecutor(
+              tx,
+              input.auctionSessionId
+            );
+
+        if (
+          operationalCall?.call
+            .currentTurnAuctionSessionTeamId
+        ) {
+          this.auctionCallRepository
+            .updateCurrentTurnStartedAtWithExecutor(
+              tx,
+              operationalCall.call.id,
+              this.now()
+            );
+        }
       }
 
       const persistedSession =

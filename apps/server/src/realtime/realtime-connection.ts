@@ -30,9 +30,20 @@ export type RegisteredPublicDisplayRealtimeConnection = {
   registeredAt: string;
 };
 
+export type RegisteredAdminRealtimeConnection = {
+  status: "REGISTERED";
+  kind: "ADMIN";
+  socketId: string;
+  deviceId: string;
+  auctionSessionId: string;
+  connectedAt: string;
+  registeredAt: string;
+};
+
 export type RegisteredRealtimeConnection =
   | RegisteredTeamRealtimeConnection
-  | RegisteredPublicDisplayRealtimeConnection;
+  | RegisteredPublicDisplayRealtimeConnection
+  | RegisteredAdminRealtimeConnection;
 
 export type RealtimeConnection =
   | UnregisteredRealtimeConnection
@@ -69,6 +80,12 @@ export function registerRealtimeConnection(
         auctionSessionId: string;
         registeredAt?: string;
       }
+    | {
+        kind: "ADMIN";
+        deviceId: string;
+        auctionSessionId: string;
+        registeredAt?: string;
+      }
 ): RegisteredRealtimeConnection {
   const baseConnection = {
     status: "REGISTERED" as const,
@@ -91,8 +108,15 @@ export function registerRealtimeConnection(
     };
   }
 
+  if (input.kind === "PUBLIC_DISPLAY") {
+    return {
+      ...baseConnection,
+      kind: "PUBLIC_DISPLAY"
+    };
+  }
+
   return {
     ...baseConnection,
-    kind: "PUBLIC_DISPLAY"
+    kind: "ADMIN"
   };
 }

@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 
 import type {
@@ -34,11 +35,27 @@ import {
   SqliteFmsExportGoalkeeperRepository
 } from "./repositories/fms-export-goalkeeper.repository.js";
 import {
+  SqliteFmsSessionExportRepository
+} from "./repositories/fms-session-export.repository.js";
+import {
   SqliteRosterEntryRepository
 } from "./repositories/roster-entry.repository.js";
 import {
   SqliteTeamRepository
 } from "./repositories/team.repository.js";
+import {
+  AuctionSessionCompletionService
+} from "./services/auction-session-completion.service.js";
+
+import {
+  adminActivityRoutes
+} from "./routes/admin-activity.routes.js";
+import {
+  publicDisplayControlRoutes
+} from "./routes/public-display-control.routes.js";
+import {
+  runtimeAssetRoutes
+} from "./routes/runtime-asset.routes.js";
 import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
@@ -58,8 +75,17 @@ import {
   fmsSessionRosterExportRoutes
 } from "./routes/fms-session-roster-export.routes.js";
 import {
+  fmsSessionExportStateRoutes
+} from "./routes/fms-session-export-state.routes.js";
+import {
   fmsExportGoalkeeperRoutes
 } from "./routes/fms-export-goalkeeper.routes.js";
+import {
+  leagueLogoRoutes
+} from "./routes/league-logo.routes.js";
+import {
+  leagueRoutes
+} from "./routes/league.routes.js";
 import {
   manualBackupRoutes
 } from "./routes/manual-backup.routes.js";
@@ -85,11 +111,38 @@ import {
   playerRoutes
 } from "./routes/player.routes.js";
 import {
+  playerPhotoRoutes
+} from "./routes/player-photo.routes.js";
+import {
+  teamAccessRoutes
+} from "./routes/team-access.routes.js";
+import {
+  systemRoutes
+} from "./routes/system.routes.js";
+import {
+  teamLogoRoutes
+} from "./routes/team-logo.routes.js";
+import {
+  setupDataResetRoutes
+} from "./routes/setup-data-reset.routes.js";
+import {
+  initialRosterResetRoutes
+} from "./routes/initial-roster-reset.routes.js";
+import {
+  developmentSessionResetRoutes
+} from "./routes/development-session-reset.routes.js";
+import {
+  teamOwnerRoutes
+} from "./routes/team-owner.routes.js";
+import {
   teamRoutes
 } from "./routes/team.routes.js";
 import {
   AtomicAuctionCallCommandService
 } from "./realtime/atomic-auction-call-command.service.js";
+import {
+  AtomicAuctionCallCreationExecutor
+} from "./realtime/atomic-auction-call-creation.executor.js";
 import {
   AtomicAuctionCommandExecutor
 } from "./realtime/atomic-auction-command.executor.js";
@@ -115,17 +168,29 @@ import {
   AtomicTechnicalRosterCorrectionCommandService
 } from "./realtime/atomic-technical-roster-correction-command.service.js";
 import {
+  AtomicRosterAssignmentRemovalCommandExecutor
+} from "./realtime/atomic-roster-assignment-removal-command.executor.js";
+import {
+  AtomicRosterAssignmentRemovalCommandService
+} from "./realtime/atomic-roster-assignment-removal-command.service.js";
+import {
   FmsRosterExportService
 } from "./services/fms-roster-export.service.js";
 import {
   FmsSessionRosterExportService
 } from "./services/fms-session-roster-export.service.js";
 import {
+  FmsSessionExportStateService
+} from "./services/fms-session-export-state.service.js";
+import {
   FmsExportGoalkeeperSelectionService
 } from "./services/fms-export-goalkeeper-selection.service.js";
 import {
   AuctionCallCommandCoordinator
 } from "./realtime/auction-call-command-coordinator.js";
+import {
+  AuctionCallCreationCoordinator
+} from "./realtime/auction-call-creation-coordinator.js";
 import {
   AuctionCommandSocketHandler
 } from "./realtime/auction-command-socket.handler.js";
@@ -175,6 +240,9 @@ import type {
   BackupRecoveryTechnicalLogger
 } from "./services/backup-recovery-technical-logger.js";
 import {
+  AuctionCallCreationService
+} from "./services/auction-call-creation.service.js";
+import {
   AuctionCallService
 } from "./services/auction-call.service.js";
 import {
@@ -186,6 +254,15 @@ import {
 import {
   ManualBackupService
 } from "./services/manual-backup.service.js";
+import {
+  SetupDataResetService
+} from "./services/setup-data-reset.service.js";
+import {
+  InitialRosterResetService
+} from "./services/initial-roster-reset.service.js";
+import {
+  DevelopmentSessionResetService
+} from "./services/development-session-reset.service.js";
 import {
   RecoveryPointCatalogService
 } from "./services/recovery-point-catalog.service.js";
@@ -210,6 +287,9 @@ import {
 import {
   TechnicalRosterCorrectionService
 } from "./services/technical-roster-correction.service.js";
+import {
+  RosterAssignmentRemovalService
+} from "./services/roster-assignment-removal.service.js";
 
 export type BuildAppOptions = {
   backupRecoveryTechnicalLogger?:
@@ -295,6 +375,42 @@ export async function buildApp(
       auctionCallCommandHandler
     );
 
+  const atomicAuctionCallCreationExecutor =
+    new AtomicAuctionCallCreationExecutor(
+      auctionCallRepository,
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository()
+    );
+
+  const auctionCallCreationService =
+    new AuctionCallCreationService(
+      atomicAuctionCallCreationExecutor,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqlitePlayerRepository(),
+      new SqliteRosterEntryRepository()
+    );
+
+  const auctionCallCreationCoordinator =
+    new AuctionCallCreationCoordinator(
+      auctionCallCreationService,
+      auctionSnapshotDispatcher,
+      ({
+        stage,
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: stage,
+            error
+          },
+          "Failed to publish auction call creation snapshot"
+        );
+      }
+    );
+
   const atomicAuctionCommandExecutor =
     new AtomicAuctionCommandExecutor(
       auctionCallRepository,
@@ -310,12 +426,32 @@ export async function buildApp(
       auctionSessionRepository,
       new SqliteAuctionSessionStateRepository(),
       new SqliteCommandRegistryRepository(),
-      new SqliteAuctionEventRepository()
+      new SqliteAuctionEventRepository(),
+      auctionCallRepository
     );
 
   const auctionSessionOperationalCommandService =
     new AuctionSessionOperationalCommandService(
       atomicAuctionSessionCommandExecutor
+    );
+
+  const developmentSessionResetService =
+    new DevelopmentSessionResetService();
+
+  const initialRosterResetService =
+    new InitialRosterResetService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const setupDataResetService =
+    new SetupDataResetService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
     );
 
   const manualInitialRosterEntryService =
@@ -412,6 +548,15 @@ export async function buildApp(
     options.restoreRuntimeCoordinator ??
     new RestoreRuntimeCoordinator();
 
+  const fmsSessionExportRepository =
+    new SqliteFmsSessionExportRepository();
+
+  const fmsSessionExportStateService =
+    new FmsSessionExportStateService(
+      auctionSessionRepository,
+      fmsSessionExportRepository
+    );
+
   const manualRosterAssignmentService =
     new ManualRosterAssignmentService(
       auctionSessionRepository,
@@ -425,8 +570,10 @@ export async function buildApp(
       new SqliteAuctionSessionStateRepository(),
       new SqliteCommandRegistryRepository(),
       manualRosterAssignmentService,
+      auctionCallRepository,
       new SqliteAuctionSessionTeamRepository(),
-      new SqliteAuctionEventRepository()
+      new SqliteAuctionEventRepository(),
+      fmsSessionExportStateService
     );
 
   const atomicManualRosterAssignmentCommandService =
@@ -446,6 +593,79 @@ export async function buildApp(
             error
           },
           "Post-commit manual assignment backup failed"
+        );
+      },
+      auctionSnapshotDispatcher,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: "SNAPSHOT",
+            eventType:
+              "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+            error
+          },
+          "Failed to publish manual assignment snapshot"
+        );
+      }
+    );
+
+  const rosterAssignmentRemovalService =
+    new RosterAssignmentRemovalService(
+      auctionSessionRepository,
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository()
+    );
+
+  const atomicRosterAssignmentRemovalCommandExecutor =
+    new AtomicRosterAssignmentRemovalCommandExecutor(
+      new SqliteAuctionSessionStateRepository(),
+      new SqliteCommandRegistryRepository(),
+      rosterAssignmentRemovalService,
+      auctionCallRepository,
+      new SqliteAuctionEventRepository(),
+      fmsSessionExportStateService
+    );
+
+  const atomicRosterAssignmentRemovalCommandService =
+    new AtomicRosterAssignmentRemovalCommandService(
+      atomicRosterAssignmentRemovalCommandExecutor,
+      auctionBackupRequester,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "backup",
+            auctionSessionId,
+            backupType:
+              "TECHNICAL_CORRECTION",
+            error
+          },
+          "Post-commit roster assignment removal backup failed"
+        );
+      },
+      auctionSnapshotDispatcher,
+      ({
+        auctionSessionId,
+        error
+      }) => {
+        app.log.error(
+          {
+            module: "realtime",
+            auctionSessionId,
+            dispatchStage: "SNAPSHOT",
+            eventType:
+              "ROSTER_ASSIGNMENT_REMOVED",
+            error
+          },
+          "Failed to publish roster assignment removal snapshot"
         );
       }
     );
@@ -543,7 +763,8 @@ export async function buildApp(
       new SqliteAuctionSessionTeamRepository(),
       new SqlitePlayerRepository(),
       new SqliteRosterEntryRepository(),
-      new SqliteFmsExportGoalkeeperRepository()
+      new SqliteFmsExportGoalkeeperRepository(),
+      fmsSessionExportStateService
     );
 
   const atomicAuctionCallCommandService =
@@ -609,6 +830,9 @@ export async function buildApp(
   );
 
   await app.register(dbHealthRoutes);
+  await app.register(leagueRoutes);
+  await app.register(adminActivityRoutes);
+  await app.register(publicDisplayControlRoutes);
   await app.register(
     manualBackupRoutes(
       manualBackupService
@@ -631,24 +855,67 @@ export async function buildApp(
     )
   );
   await app.register(
+    initialRosterResetRoutes(
+      initialRosterResetService
+    )
+  );
+
+  await app.register(
+    setupDataResetRoutes(
+      setupDataResetService
+    )
+  );
+
+  await app.register(
+    developmentSessionResetRoutes(
+      developmentSessionResetService
+    )
+  );
+
+  const auctionSessionCompletionService =
+    new AuctionSessionCompletionService(
+      new SqliteAuctionSessionTeamRepository(),
+      new SqliteRosterEntryRepository(),
+      new SqlitePlayerRepository(),
+      auctionCallRepository
+    );
+
+  await app.register(
     auctionSessionRoutes(
       auctionSessionOperationalCommandCoordinator,
       atomicManualInitialRosterCommandService,
       atomicManualRosterAssignmentCommandService,
       atomicTechnicalRosterCorrectionCommandService,
+      atomicRosterAssignmentRemovalCommandService,
+      auctionSessionCompletionService,
       auctionBackupRequester
     )
   );
   await app.register(
     auctionCallRoutes(
       auctionCallService,
-      auctionCallCommandCoordinator
+      auctionCallCommandCoordinator,
+      auctionCallCreationCoordinator
     )
   );
+  await app.register(multipart, {
+    limits: {
+      files: 1,
+      fileSize: 2 * 1024 * 1024
+    }
+  });
+
+  await app.register(runtimeAssetRoutes);
+  await app.register(leagueLogoRoutes);
+  await app.register(systemRoutes);
+  await app.register(teamAccessRoutes);
+  await app.register(teamLogoRoutes);
   await app.register(teamRoutes);
   await app.register(ownerRoutes);
+  await app.register(teamOwnerRoutes);
   await app.register(auctionSessionTeamRoutes);
   await app.register(playerRoutes);
+  await app.register(playerPhotoRoutes);
   await app.register(playerImportRoutes);
   await app.register(initialRosterImportRoutes);
 
@@ -668,6 +935,12 @@ export async function buildApp(
   await app.register(
     fmsExportGoalkeeperRoutes(
       fmsExportGoalkeeperSelectionService
+    )
+  );
+
+  await app.register(
+    fmsSessionExportStateRoutes(
+      fmsSessionExportStateService
     )
   );
 

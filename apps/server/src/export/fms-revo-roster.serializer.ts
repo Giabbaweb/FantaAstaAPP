@@ -48,14 +48,21 @@ export function serializeFmsRevoRoster(
     }
   );
 
-  return sortedEntries
-    .map((entry) =>
-      [
-        fmsRoleLabels[entry.role],
-        entry.name,
-        entry.acquisitionCost,
-        entry.contractYear
-      ].join("\t")
-    )
-    .join("\n");
+  if (sortedEntries.length === 0) {
+    return "";
+  }
+
+  return (
+    sortedEntries
+      .map((entry) =>
+        [
+          fmsRoleLabels[entry.role],
+          entry.name,
+          entry.acquisitionCost,
+          entry.contractYear
+        ].join("\t")
+      )
+      .join("\r\n") +
+    "\r\n"
+  );
 }

@@ -1,6 +1,8 @@
 import {
   and,
   eq,
+  inArray,
+  ne,
   sql
 } from "drizzle-orm";
 
@@ -47,6 +49,11 @@ export interface AuctionSessionStateRepository {
   findByAuctionSessionIdWithExecutor(
     executor: DatabaseWriteExecutor,
     auctionSessionId: string
+  ): AuctionSessionState | null;
+
+  findOperationalExcludingWithExecutor(
+    executor: DatabaseWriteExecutor,
+    excludedAuctionSessionId: string
   ): AuctionSessionState | null;
 
   getCurrentStateVersion(
@@ -115,6 +122,43 @@ export class SqliteAuctionSessionStateRepository
         eq(
           auctionSessions.id,
           auctionSessionId
+        )
+      )
+      .limit(1)
+      .all();
+
+    return state ?? null;
+  }
+
+  findOperationalExcludingWithExecutor(
+    executor: DatabaseWriteExecutor,
+    excludedAuctionSessionId: string
+  ): AuctionSessionState | null {
+    const [state] = executor
+      .select({
+        auctionSessionId:
+          auctionSessions.id,
+        status:
+          auctionSessions.status,
+        suspensionReason:
+          auctionSessions.suspensionReason,
+        stateVersion:
+          auctionSessions.stateVersion
+      })
+      .from(auctionSessions)
+      .where(
+        and(
+          inArray(
+            auctionSessions.status,
+            [
+              "RUNNING",
+              "SUSPENDED"
+            ]
+          ),
+          ne(
+            auctionSessions.id,
+            excludedAuctionSessionId
+          )
         )
       )
       .limit(1)

@@ -14,6 +14,7 @@ export const leagues = sqliteTable(
     id: text("id").primaryKey(),
     name: text("name").notNull(),
     normalizedName: text("normalized_name").notNull(),
+    logoPath: text("logo_path"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -73,6 +74,8 @@ export const auctionSessions = sqliteTable(
       integer("maximum_initial_roster_entries")
         .notNull()
         .default(11),
+
+    remoteBaseUrl: text("remote_base_url"),
 
     stateVersion: integer("state_version")
       .notNull()
@@ -377,6 +380,21 @@ export const fmsExportGoalkeepers = sqliteTable(
   ]
 );
 
+export const fmsSessionExports = sqliteTable(
+  "fms_session_exports",
+  {
+    auctionSessionId: text("auction_session_id")
+      .primaryKey()
+      .references(() => auctionSessions.id, {
+        onDelete: "cascade"
+      }),
+
+    exportedAt: text("exported_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`)
+  }
+);
+
 export const auctionCalls = sqliteTable(
   "auction_calls",
   {
@@ -431,6 +449,10 @@ export const auctionCalls = sqliteTable(
     ).references(() => auctionSessionTeams.id, {
       onDelete: "restrict"
     }),
+
+    currentTurnStartedAt: text(
+      "current_turn_started_at"
+    ),
 
     provisionalWinnerAuctionSessionTeamId: text(
       "provisional_winner_auction_session_team_id"
@@ -550,18 +572,21 @@ export const commandRegistry = sqliteTable(
 
     commandType: text("command_type", {
       enum: [
+        "CREATE",
         "OPEN",
         "BID",
         "PASS",
         "UNDO_PASS",
         "CONFIRM",
         "CANCEL",
+        "START_SESSION",
         "SUSPEND_SESSION",
         "RESUME_SESSION",
         "REOPEN_SESSION",
         "ADD_MANUAL_INITIAL_ROSTER_ENTRY",
         "ADD_MANUAL_ROSTER_ASSIGNMENT",
-        "TECHNICAL_ROSTER_CORRECTION"
+        "TECHNICAL_ROSTER_CORRECTION",
+        "REMOVE_ROSTER_ASSIGNMENT"
       ]
     }).notNull(),
 
@@ -641,6 +666,8 @@ export const auctionEvents = sqliteTable(
         "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
         "MANUAL_ROSTER_ASSIGNMENT_ADDED",
         "TECHNICAL_ROSTER_CORRECTION",
+        "ROSTER_ASSIGNMENT_REMOVED",
+        "SESSION_STARTED",
         "SESSION_SUSPENDED",
         "SESSION_RESUMED",
         "SESSION_REOPENED"
@@ -863,6 +890,55 @@ export const auctionEvents = sqliteTable(
           AND ${table.afterPlayerId} IS NOT NULL
           AND ${table.afterAmount} IS NOT NULL
           AND ${table.afterContractYear} IS NOT NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'ROSTER_ASSIGNMENT_REMOVED'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NULL
+          AND ${table.playerId} IS NULL
+          AND ${table.amount} IS NULL
+          AND ${table.creditsBefore} IS NULL
+          AND ${table.creditsAfter} IS NULL
+          AND ${table.contractYear} IS NULL
+          AND ${table.actorName} IS NOT NULL
+          AND ${table.actorRole} IS NOT NULL
+          AND ${table.comment} IS NOT NULL
+          AND length(trim(${table.comment})) > 0
+          AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NOT NULL
+          AND ${table.beforePlayerId} IS NOT NULL
+          AND ${table.beforeAmount} IS NOT NULL
+          AND ${table.beforeContractYear} IS NOT NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
+          AND ${table.suspensionReason} IS NULL
+        )
+        OR
+        (
+          ${table.eventType} = 'SESSION_STARTED'
+          AND ${table.auctionCallId} IS NULL
+          AND ${table.auctionSessionTeamId} IS NULL
+          AND ${table.playerId} IS NULL
+          AND ${table.amount} IS NULL
+          AND ${table.creditsBefore} IS NULL
+          AND ${table.creditsAfter} IS NULL
+          AND ${table.contractYear} IS NULL
+          AND ${table.actorName} IS NULL
+          AND ${table.actorRole} IS NULL
+          AND ${table.comment} IS NULL
+          AND ${table.manualAssignmentReason} IS NULL
+          AND ${table.beforeAuctionSessionTeamId} IS NULL
+          AND ${table.beforePlayerId} IS NULL
+          AND ${table.beforeAmount} IS NULL
+          AND ${table.beforeContractYear} IS NULL
+          AND ${table.afterAuctionSessionTeamId} IS NULL
+          AND ${table.afterPlayerId} IS NULL
+          AND ${table.afterAmount} IS NULL
+          AND ${table.afterContractYear} IS NULL
           AND ${table.suspensionReason} IS NULL
         )
         OR

@@ -90,7 +90,9 @@ export type InitialRosterImportParseResult = {
 
 export type InitialRosterPlayerLookup = {
   id: string;
+  fmsCode: string;
   name: string;
+  realTeamName: string | null;
   role: PlayerRole;
 };
 
@@ -112,6 +114,7 @@ export type InitialRosterImportPlanIssueCode =
   | "TEAM_NOT_FOUND"
   | "PLAYER_NOT_FOUND"
   | "PLAYER_ROLE_MISMATCH"
+  | "PLAYER_REAL_TEAM_MISMATCH"
   | "DUPLICATE_PLAYER_IN_IMPORT";
 
 export type InitialRosterImportPlanIssue = {
@@ -121,6 +124,17 @@ export type InitialRosterImportPlanIssue = {
   teamName: string;
   playerName: string;
 };
+
+export type InitialRosterImportResolution =
+  | {
+      rowNumber: number;
+      action: "SET_CONTRACT_YEAR";
+      contractYear: 1 | 2 | 3;
+    }
+  | {
+      rowNumber: number;
+      action: "SKIP_ROW";
+    };
 
 export type InitialRosterImportPlan = {
   entries: InitialRosterImportPlanEntry[];

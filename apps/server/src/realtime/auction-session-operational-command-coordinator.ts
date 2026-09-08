@@ -23,7 +23,7 @@ import type {
 
 type OperationalCommandService = Pick<
   AuctionSessionOperationalCommandService,
-  "suspend" | "resume" | "reopen"
+  "start" | "suspend" | "resume" | "reopen"
 >;
 
 type SessionRealtimeDispatcher = Pick<
@@ -68,6 +68,32 @@ export class AuctionSessionOperationalCommandCoordinator {
       AuctionSessionOperationalDispatchFailureHandler =
         () => {}
   ) {}
+
+  async start(
+    input: Parameters<
+      AuctionSessionOperationalCommandService["start"]
+    >[0]
+  ): Promise<
+    Awaited<
+      ReturnType<
+        AuctionSessionOperationalCommandService["start"]
+      >
+    >
+  > {
+    const result =
+      await this.service.start(input);
+
+    if (result.idempotentReplay) {
+      return result;
+    }
+
+    await this.dispatchPostCommit(
+      "SESSION_STARTED",
+      input.auctionSessionId
+    );
+
+    return result;
+  }
 
   async suspend(
     input: SuspendAuctionSessionCommandInput

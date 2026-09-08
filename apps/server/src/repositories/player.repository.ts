@@ -55,6 +55,12 @@ export interface PlayerRepository {
     ids: string[]
   ): Player[];
 
+  findByFmsCodeWithExecutor(
+    executor: PlayerWriteExecutor,
+    auctionSessionId: string,
+    fmsCode: string
+  ): Player | null;
+
   findByFmsCode(
     auctionSessionId: string,
     fmsCode: string
@@ -69,6 +75,11 @@ export interface PlayerRepository {
     input: CreatePlayerPersistenceInput
   ): Promise<Player>;
 
+  createWithExecutor(
+    executor: PlayerWriteExecutor,
+    input: CreatePlayerPersistenceInput
+  ): Player;
+
   update(
     id: string,
     input: UpdatePlayerPersistenceInput
@@ -81,6 +92,11 @@ export interface PlayerRepository {
   ): Player | null;
 
   delete(id: string): Promise<boolean>;
+
+  deleteByAuctionSessionIdWithExecutor(
+    executor: PlayerWriteExecutor,
+    auctionSessionId: string
+  ): number;
 }
 
 export class SqlitePlayerRepository
@@ -146,11 +162,12 @@ export class SqlitePlayerRepository
       .all();
   }
 
-  async findByFmsCode(
+  findByFmsCodeWithExecutor(
+    executor: PlayerWriteExecutor,
     auctionSessionId: string,
     fmsCode: string
-  ): Promise<Player | null> {
-    const [player] = await db
+  ): Player | null {
+    const [player] = executor
       .select()
       .from(players)
       .where(
@@ -162,9 +179,21 @@ export class SqlitePlayerRepository
           eq(players.fmsCode, fmsCode)
         )
       )
-      .limit(1);
+      .limit(1)
+      .all();
 
     return player ?? null;
+  }
+
+  async findByFmsCode(
+    auctionSessionId: string,
+    fmsCode: string
+  ): Promise<Player | null> {
+    return this.findByFmsCodeWithExecutor(
+      db,
+      auctionSessionId,
+      fmsCode
+    );
   }
 
   async findByNormalizedName(
@@ -194,13 +223,24 @@ export class SqlitePlayerRepository
   async create(
     input: CreatePlayerPersistenceInput
   ): Promise<Player> {
-    const [player] = await db
+    return this.createWithExecutor(
+      db,
+      input
+    );
+  }
+
+  createWithExecutor(
+    executor: PlayerWriteExecutor,
+    input: CreatePlayerPersistenceInput
+  ): Player {
+    const [player] = executor
       .insert(players)
       .values({
         id: randomUUID(),
         ...input
       })
-      .returning();
+      .returning()
+      .all();
 
     if (!player) {
       throw new Error("Failed to create player");
@@ -252,5 +292,22 @@ export class SqlitePlayerRepository
       });
 
     return deletedPlayers.length > 0;
+  }
+
+  deleteByAuctionSessionIdWithExecutor(
+    executor: PlayerWriteExecutor,
+    auctionSessionId: string
+  ): number {
+    const result = executor
+      .delete(players)
+      .where(
+        eq(
+          players.auctionSessionId,
+          auctionSessionId
+        )
+      )
+      .run();
+
+    return result.changes;
   }
 }

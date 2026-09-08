@@ -6,6 +6,9 @@ import {
   AtomicAuctionSessionCommandExecutorError
 } from "../realtime/atomic-auction-session-command.executor.js";
 import {
+  AuctionSessionCompletionError
+} from "../services/auction-session-completion.service.js";
+import {
   AuctionSessionServiceError
 } from "../services/auction-session.service.js";
 
@@ -26,7 +29,10 @@ export type AuctionSessionConflictResponse = {
       | "INITIAL_CREDITS_LOCKED"
       | "SESSION_DELETE_NOT_ALLOWED"
       | "INVALID_STATUS_TRANSITION"
-      | "ACTIVE_SESSION_ALREADY_EXISTS";
+      | "ACTIVE_SESSION_ALREADY_EXISTS"
+      | "OPERATIONAL_AUCTION_CALL_EXISTS"
+      | "AUCTION_SESSION_ROSTERS_INCOMPLETE"
+      | "FMS_EXPORT_REQUIRED";
     message: string;
   };
 };
@@ -69,6 +75,7 @@ export type AuctionSessionOperationalCommandErrorResponse = {
       | "AUCTION_SESSION_NOT_FOUND"
       | "STALE_STATE"
       | "COMMAND_ID_CONFLICT"
+      | "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS"
       | "AUCTION_SESSION_SAVE_FAILED";
     message: string;
   };
@@ -82,6 +89,22 @@ export type AuctionSessionOperationalCommandErrorMapping = {
 export function mapAuctionSessionError(
   error: unknown
 ): AuctionSessionErrorMapping | null {
+  if (
+    error instanceof
+    AuctionSessionCompletionError
+  ) {
+    return {
+      statusCode: 409,
+      body: {
+        data: null,
+        error: {
+          code: error.code,
+          message: error.message
+        }
+      }
+    };
+  }
+
   if (error instanceof AuctionSessionServiceError) {
     switch (error.code) {
       case "SESSION_NOT_FOUND":
@@ -166,6 +189,7 @@ export function mapAuctionSessionOperationalCommandError(
 
     case "STALE_STATE":
     case "COMMAND_ID_CONFLICT":
+    case "OPERATIONAL_AUCTION_SESSION_ALREADY_EXISTS":
       return {
         statusCode: 409,
         body: {

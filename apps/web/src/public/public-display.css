@@ -462,6 +462,7 @@ body {
 /* STANDARD header compact three-zone layout */
 
 .public-display__header {
+  position: relative;
   display: grid;
   grid-template-columns:
     minmax(260px, 1fr)
@@ -496,7 +497,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: clamp(10px, 1vw, 16px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   text-align: left;
+  cursor: pointer;
 }
 
 .public-display__league-logo {
@@ -524,6 +531,94 @@ body {
   justify-content: flex-start;
   margin-top: 5px;
   font-size: clamp(12px, 0.9vw, 16px);
+}
+
+.public-display__session-selector-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1em;
+  font-size: 0.85em;
+  line-height: 1;
+}
+
+
+.public-display__session-selector {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% - 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.22);
+  color: #172033;
+}
+
+.public-display__session-selector-title {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.public-display__session-selector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.public-display__session-selector-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 11px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 9px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.public-display__session-selector-option > span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.public-display__session-selector-option strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-display__session-selector-option small {
+  opacity: 0.72;
+}
+
+.public-display__session-selector-option:hover:not(:disabled) {
+  background: #f4f7fb;
+}
+
+.public-display__session-selector-option[data-selected="true"] {
+  background: #eef3f8;
+  cursor: default;
+}
+
+.public-display__session-selector-status {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .public-display__session-meta {
@@ -2780,4 +2875,671 @@ body {
 .public-display--dark
 .public-display__suspended-banner small {
   color: #e4b765;
+}
+
+/* ==========================================================
+ * Public Display runtime clock + turn timer
+ * ========================================================== */
+
+.public-display__header {
+  min-height: 94px;
+  padding-top: 8px;
+  padding-bottom: 12px;
+}
+
+.public-display__runtime {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.2vw, 20px);
+}
+
+.public-display__stadium-clock {
+  min-width: clamp(150px, 12vw, 205px);
+  padding:
+    clamp(7px, 0.6vw, 10px)
+    clamp(12px, 1vw, 18px);
+  border: 2px solid #34445b;
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      180deg,
+      #182536 0%,
+      #0c1624 100%
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 5px 14px rgba(19, 33, 52, 0.16);
+  text-align: center;
+}
+
+.public-display__stadium-clock span {
+  display: block;
+  margin-bottom: 2px;
+  color: #a9bad0;
+  font-size: clamp(9px, 0.65vw, 12px);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+}
+
+.public-display__stadium-clock strong {
+  display: block;
+  color: #f3fbff;
+  font-size: clamp(25px, 2.35vw, 39px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow:
+    0 0 9px rgba(110, 196, 255, 0.38);
+}
+
+.public-display__session-meta {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  margin-top: 0;
+}
+
+.public-display__metric--turn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(14px, 1.4vw, 24px);
+  text-align: left;
+}
+
+.public-display__turn-team {
+  min-width: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.public-display__turn-team > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-display__turn-timer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 0.75vw, 13px);
+  padding-left: clamp(12px, 1vw, 18px);
+  border-left: 2px solid rgba(40, 111, 184, 0.18);
+  text-align: right;
+}
+
+.public-display__turn-timer-icon {
+  margin: 0;
+  color: #1976d2;
+  font-size: clamp(22px, 1.8vw, 31px);
+  line-height: 1;
+}
+
+.public-display__turn-timer > div {
+  min-width: clamp(74px, 6.5vw, 105px);
+}
+
+.public-display__turn-timer > div > strong {
+  overflow: visible;
+  color: #1565c0;
+  font-size: clamp(27px, 2.55vw, 42px);
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.9;
+}
+
+.public-display__turn-timer small {
+  display: block;
+  margin-top: 5px;
+  color: #65758a;
+  font-size: clamp(8px, 0.58vw, 11px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* OUTDOOR: stronger luminous clock */
+.public-display--high_contrast_outdoor
+.public-display__stadium-clock {
+  border-width: 3px;
+  border-color: #142033;
+  background: #06101b;
+}
+
+.public-display--high_contrast_outdoor
+.public-display__stadium-clock strong {
+  color: #ffffff;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.48);
+}
+
+/* DARK */
+.public-display--dark
+.public-display__stadium-clock {
+  border-color: #566c86;
+  background:
+    linear-gradient(
+      180deg,
+      #080d13,
+      #020406
+    );
+}
+
+.public-display--dark
+.public-display__turn-timer {
+  border-left-color:
+    rgba(132, 185, 255, 0.22);
+}
+
+.public-display--dark
+.public-display__turn-timer > div > strong,
+.public-display--dark
+.public-display__turn-timer-icon {
+  color: #79b8ff;
+}
+
+/* COMPACT */
+.public-display--compact
+.public-display__header {
+  min-height: 74px;
+}
+
+.public-display--compact
+.public-display__stadium-clock {
+  min-width: 125px;
+  padding: 5px 9px;
+}
+
+.public-display--compact
+.public-display__stadium-clock strong {
+  font-size: clamp(20px, 1.8vw, 29px);
+}
+
+.public-display--compact
+.public-display__turn-timer > div > strong {
+  font-size: clamp(21px, 2vw, 32px);
+}
+
+/* ==========================================================
+ * OUTDOOR refinement 2026-08-20
+ * Stronger daylight readability without changing layout.
+ * ========================================================== */
+
+.public-display--high_contrast_outdoor {
+  background:
+    linear-gradient(
+      180deg,
+      #f4f0e5 0%,
+      #fffaf0 24%,
+      #f8f5ec 100%
+    );
+  color: #101820;
+}
+
+/* Header: slightly warmer and more separated from content */
+.public-display--high_contrast_outdoor
+.public-display__header {
+  border-bottom:
+    2px solid #768395;
+  background:
+    linear-gradient(
+      180deg,
+      #eef2f5 0%,
+      #e4e9ee 100%
+    );
+}
+
+/* Stronger primary branding */
+.public-display--high_contrast_outdoor
+.public-display__title,
+.public-display--high_contrast_outdoor
+.public-display__league-name {
+  color: #07182c;
+  text-shadow:
+    0 1px 0
+    rgba(255, 255, 255, 0.8);
+}
+
+.public-display--high_contrast_outdoor
+.public-display__mode-label,
+.public-display--high_contrast_outdoor
+.public-display__league-meta {
+  color: #45566b;
+  font-weight: 800;
+}
+
+/* Stadium clock: retain dark display, increase daylight edge */
+.public-display--high_contrast_outdoor
+.public-display__stadium-clock {
+  border:
+    3px solid #293a4e;
+  background:
+    linear-gradient(
+      180deg,
+      #16283a,
+      #07121f
+    );
+  box-shadow:
+    0 4px 10px
+      rgba(17, 34, 52, 0.22),
+    inset 0 0 0 1px
+      rgba(255, 255, 255, 0.12);
+}
+
+.public-display--high_contrast_outdoor
+.public-display__stadium-clock span {
+  color: #d7e2ed;
+}
+
+.public-display--high_contrast_outdoor
+.public-display__stadium-clock strong {
+  color: #ffffff;
+  text-shadow:
+    0 0 7px
+      rgba(133, 207, 255, 0.42);
+}
+
+/* Main auction panels */
+.public-display--high_contrast_outdoor
+.public-display__auction,
+.public-display--high_contrast_outdoor
+.public-display__recent-awards,
+.public-display--high_contrast_outdoor
+.public-display__teams {
+  border:
+    2px solid #9aa5b1;
+  background: #fffdf8;
+  box-shadow:
+    0 4px 10px
+      rgba(42, 51, 61, 0.12);
+}
+
+/* Section labels become easier to pick out from distance */
+.public-display--high_contrast_outdoor
+.public-display__section-label {
+  color: #24364a;
+  font-weight: 950;
+  letter-spacing: 0.11em;
+}
+
+/* Player name gets maximum contrast */
+.public-display--high_contrast_outdoor
+.public-display__player-name {
+  color: #07182c;
+  font-weight: 950;
+}
+
+/* Current price */
+.public-display--high_contrast_outdoor
+.public-display__metric:nth-child(1) {
+  border:
+    2px solid #2979c9;
+  background:
+    linear-gradient(
+      180deg,
+      #eaf4ff,
+      #dceeff
+    );
+}
+
+/* Leader */
+.public-display--high_contrast_outdoor
+.public-display__metric:nth-child(2) {
+  border:
+    2px solid #3f9955;
+  background:
+    linear-gradient(
+      180deg,
+      #eaf8ed,
+      #dff2e4
+    );
+}
+
+/* Turn */
+.public-display--high_contrast_outdoor
+.public-display__metric:nth-child(3) {
+  border:
+    2px solid #d58a12;
+  background:
+    linear-gradient(
+      180deg,
+      #fff4d7,
+      #ffe8b2
+    );
+}
+
+/* Stronger metric typography */
+.public-display--high_contrast_outdoor
+.public-display__metric span {
+  font-weight: 950;
+}
+
+.public-display--high_contrast_outdoor
+.public-display__metric strong {
+  color: #0b1b2d;
+  font-weight: 950;
+}
+
+/* Turn timer remains clearly distinct */
+.public-display--high_contrast_outdoor
+.public-display__turn-timer {
+  border-left:
+    2px solid
+    rgba(137, 86, 7, 0.35);
+}
+
+.public-display--high_contrast_outdoor
+.public-display__turn-timer-icon,
+.public-display--high_contrast_outdoor
+.public-display__turn-timer > div > strong {
+  color: #8a4c00;
+}
+
+.public-display--high_contrast_outdoor
+.public-display__turn-timer small {
+  color: #5e4a2b;
+}
+
+/* Team cards: stronger separation in bright ambient light */
+.public-display--high_contrast_outdoor
+.public-display__team-card {
+  border:
+    2px solid #8e9aaa;
+  background: #fffefa;
+  box-shadow:
+    0 2px 6px
+      rgba(40, 49, 58, 0.11);
+}
+
+.public-display--high_contrast_outdoor
+.public-display__team-card-header {
+  border-bottom:
+    1px solid #aeb8c2;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff,
+      #f3f5f6
+    );
+}
+
+.public-display--high_contrast_outdoor
+.public-display__team-card h3 {
+  color: #08192c;
+  font-weight: 950;
+}
+
+/* Credits */
+.public-display--high_contrast_outdoor
+.public-display__team-summary
+> div:first-child {
+  background: #edf3f8;
+}
+
+/* Maximum bid: slightly stronger amber emphasis */
+.public-display--high_contrast_outdoor
+.public-display__team-summary
+> div:last-child {
+  background:
+    linear-gradient(
+      180deg,
+      #ffe8af,
+      #ffd887
+    );
+}
+
+.public-display--high_contrast_outdoor
+.public-display__team-summary
+> div:last-child span,
+.public-display--high_contrast_outdoor
+.public-display__team-summary
+> div:last-child strong {
+  color: #683700;
+  font-weight: 950;
+}
+
+/* Roster row remains white with darker separators */
+.public-display--high_contrast_outdoor
+.public-display__team-roster {
+  border-top:
+    1px solid #aeb8c2;
+  background: #ffffff;
+}
+
+/* PASS / EXCLUDED overlay visibility */
+.public-display--high_contrast_outdoor
+.public-display__team-status-overlay--passed {
+  border-color: #d68a00;
+  background:
+    rgba(255, 226, 121, 0.94);
+  color: #5a3400;
+}
+
+.public-display--high_contrast_outdoor
+.public-display__team-status-overlay--excluded {
+  border-color: #c7372f;
+  background:
+    rgba(255, 206, 202, 0.95);
+  color: #761d19;
+}
+
+/* Suspended banner: stronger than STANDARD, without becoming alarming */
+.public-display--high_contrast_outdoor
+.public-display__suspended-banner {
+  border:
+    2px solid #cf7c00;
+  background:
+    linear-gradient(
+      180deg,
+      #ffd99a,
+      #ffc970
+    );
+  color: #603400;
+  box-shadow:
+    0 3px 8px
+      rgba(125, 75, 0, 0.15);
+}
+
+.public-display--high_contrast_outdoor
+.public-display__suspended-banner strong {
+  color: #613500;
+  font-weight: 950;
+}
+
+/* ==========================================================
+   M14 — Public display branding alignment
+   Horizontal FantaAstaAPP faded banner
+   ========================================================== */
+
+.public-display__app-logo {
+  width: clamp(300px, 26vw, 460px);
+  max-width: 100%;
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+
+/* Public role colors — cockpit parity */
+
+/* Current called-player role: full Italian label */
+.public-display__player-role {
+  min-width: 0;
+  width: auto;
+  padding: 7px 12px;
+  font-size: clamp(13px, 1.15vw, 19px);
+  white-space: nowrap;
+}
+
+.public-display__player-role[data-role="P"] {
+  background: #1565c0;
+}
+
+.public-display__player-role[data-role="D"] {
+  background: #218838;
+}
+
+.public-display__player-role[data-role="C"] {
+  background: #795548;
+}
+
+.public-display__player-role[data-role="A"] {
+  background: #d32f2f;
+}
+
+/* Incomplete roster slots */
+.public-display__team-role[data-role="P"] {
+  background: #e3f0ff;
+}
+
+.public-display__team-role[data-role="P"] span,
+.public-display__team-role[data-role="P"] strong {
+  color: #1565c0;
+}
+
+.public-display__team-role[data-role="D"] {
+  background: #e6f5ea;
+}
+
+.public-display__team-role[data-role="D"] span,
+.public-display__team-role[data-role="D"] strong {
+  color: #218838;
+}
+
+.public-display__team-role[data-role="C"] {
+  background: #ffffc2;
+}
+
+.public-display__team-role[data-role="C"] span,
+.public-display__team-role[data-role="C"] strong {
+  color: #795548;
+}
+
+.public-display__team-role[data-role="A"] {
+  background: #fdeaea;
+}
+
+.public-display__team-role[data-role="A"] span,
+.public-display__team-role[data-role="A"] strong {
+  color: #d32f2f;
+}
+
+/* Completed roster slots: visually switched off */
+.public-display__team-role[data-complete="true"] {
+  background: #f8fafc;
+}
+
+.public-display__team-role[data-complete="true"] span,
+.public-display__team-role[data-complete="true"] strong {
+  color: #94a3b8;
+}
+
+
+/* Public final polish — mode label, completed slots, signature */
+
+/* Header: only the compact display-mode label remains */
+.public-display__app-brand {
+  align-items: center;
+}
+
+.public-display__mode-label {
+  margin-left: clamp(8px, 0.8vw, 14px);
+  font-size: clamp(10px, 0.7vw, 12px);
+  font-weight: 800;
+  color: #718095;
+  white-space: nowrap;
+}
+
+/*
+ * Completed roster roles must stay visually muted in every
+ * display mode. These rules intentionally come last so they
+ * win over STANDARD / DARK / OUTDOOR / COMPACT role colors.
+ */
+.public-display
+  .public-display__team-role[data-complete="true"] {
+  background: #f8fafc;
+}
+
+.public-display
+  .public-display__team-role[data-complete="true"] span,
+.public-display
+  .public-display__team-role[data-complete="true"] strong {
+  color: #94a3b8;
+}
+
+/* Preserve muted semantics also in DARK mode */
+.public-display--dark
+  .public-display__team-role[data-complete="true"] {
+  background: #202a36;
+}
+
+.public-display--dark
+  .public-display__team-role[data-complete="true"] span,
+.public-display--dark
+  .public-display__team-role[data-complete="true"] strong {
+  color: #7f8b99;
+}
+
+/* Outdoor stays high-contrast but clearly switched off */
+.public-display--high_contrast_outdoor
+  .public-display__team-role[data-complete="true"] {
+  background: #eef1f4;
+}
+
+.public-display--high_contrast_outdoor
+  .public-display__team-role[data-complete="true"] span,
+.public-display--high_contrast_outdoor
+  .public-display__team-role[data-complete="true"] strong {
+  color: #7c8794;
+}
+
+/* Compact mode follows the standard muted palette */
+.public-display--compact
+  .public-display__team-role[data-complete="true"] {
+  background: #f8fafc;
+}
+
+.public-display--compact
+  .public-display__team-role[data-complete="true"] span,
+.public-display--compact
+  .public-display__team-role[data-complete="true"] strong {
+  color: #94a3b8;
+}
+
+/* Discreet author signature */
+.public-display__signature {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 0.5vw, 9px);
+  min-height: 24px;
+  margin-top: 5px;
+  padding: 3px 8px 2px;
+  color: #8a96a6;
+  font-size: clamp(8px, 0.62vw, 11px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.public-display__signature img {
+  display: block;
+  width: auto;
+  height: clamp(28px, 2.2vw, 38px);
+  max-width: clamp(130px, 11vw, 190px);
+  object-fit: contain;
+}
+
+/* Signature must remain understated in alternate modes */
+.public-display--dark .public-display__signature {
+  color: #7f8b99;
+}
+
+.public-display--high_contrast_outdoor
+  .public-display__signature {
+  color: #59636f;
 }

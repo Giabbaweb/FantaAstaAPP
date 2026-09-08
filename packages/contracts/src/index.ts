@@ -17,6 +17,50 @@ const nullableOptionalStringSchema = (
   schema: z.ZodString
 ) => schema.nullable().optional();
 
+export const leagueSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  logoPath: z.string().trim().min(1).max(500).nullable(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export type League = z.infer<
+  typeof leagueSchema
+>;
+
+export const createLeagueSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  logoPath: nullableOptionalStringSchema(
+    z.string().trim().min(1).max(500)
+  )
+});
+
+export type CreateLeagueInput = z.infer<
+  typeof createLeagueSchema
+>;
+
+export const updateLeagueSchema = z
+  .object({
+    name: z.string().trim().min(1).max(100).optional(),
+    logoPath: nullableOptionalStringSchema(
+      z.string().trim().min(1).max(500)
+    )
+  })
+  .refine(
+    (value) =>
+      Object.values(value).some(
+        (field) => field !== undefined
+      ),
+    {
+      message: "At least one field must be provided"
+    }
+  );
+
+export type UpdateLeagueInput = z.infer<
+  typeof updateLeagueSchema
+>;
+
 export const teamSchema = z.object({
   id: z.string().min(1),
   leagueId: z.string().min(1),
@@ -124,10 +168,24 @@ export type UpdateTeamOwnerInput = z.infer<
   typeof updateTeamOwnerSchema
 >;
 
+export const setTeamAccessPinSchema = z.object({
+  pin: z
+    .string()
+    .regex(/^\d{4}$/, {
+      message: "PIN must contain exactly 4 digits"
+    })
+});
+
+export type SetTeamAccessPinInput = z.infer<
+  typeof setTeamAccessPinSchema
+>;
+
 export const auctionSessionTeamSchema = z.object({
+  id: z.string().min(1),
   auctionSessionId: z.string().min(1),
   teamId: z.string().min(1),
-  tableOrder: z.number().int().positive(),
+  tableOrder:
+    z.number().int().min(1).max(8),
   renewalCredits: z.number().int().nonnegative(),
   remainingCredits: z.number().int().nonnegative()
 });
@@ -138,7 +196,8 @@ export type AuctionSessionTeam = z.infer<
 
 export const createAuctionSessionTeamSchema = z.object({
   teamId: z.string().min(1),
-  tableOrder: z.number().int().positive(),
+  tableOrder:
+    z.number().int().min(1).max(8),
   renewalCredits: z.number().int().nonnegative().default(0),
   remainingCredits: z.number().int().nonnegative()
 });
@@ -149,7 +208,8 @@ export type CreateAuctionSessionTeamInput = z.infer<
 
 export const updateAuctionSessionTeamSchema = z
   .object({
-    tableOrder: z.number().int().positive().optional(),
+    tableOrder:
+      z.number().int().min(1).max(8).optional(),
     renewalCredits: z.number().int().nonnegative().optional(),
     remainingCredits: z.number().int().nonnegative().optional()
   })
@@ -201,6 +261,8 @@ export const auctionSessionSchema = z.object({
   initialCredits: z.number().int().nonnegative(),
   maximumInitialRosterEntries:
     z.number().int().min(0).max(24),
+  remoteBaseUrl:
+    z.string().url().nullable(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1)
 });
@@ -227,7 +289,9 @@ export const updateAuctionSessionSchema = z
     editionNumber: z.number().int().positive().optional(),
     initialCredits: z.number().int().nonnegative().optional(),
     maximumInitialRosterEntries:
-      z.number().int().min(0).max(24).optional()
+      z.number().int().min(0).max(24).optional(),
+    remoteBaseUrl:
+      z.string().url().nullable().optional()
   })
   .refine(
     (value) => Object.values(value).some((field) => field !== undefined),
@@ -582,6 +646,21 @@ export type TechnicalRosterCorrectionCommand =
     typeof technicalRosterCorrectionCommandSchema
   >;
 
+export const removeRosterAssignmentCommandSchema =
+  realtimeCommandMetadataSchema.extend({
+    rosterEntryId:
+      z.string().trim().min(1).max(100),
+    actor:
+      manualInitialRosterCommandActorSchema,
+    comment:
+      z.string().trim().min(1).max(500)
+  });
+
+export type RemoveRosterAssignmentCommand =
+  z.infer<
+    typeof removeRosterAssignmentCommandSchema
+  >;
+
 export const auctionCommandTypeSchema = z.enum([
   "OPEN",
   "BID",
@@ -750,10 +829,19 @@ export const realtimePublicDisplayRegistrationRequestSchema =
       z.string().trim().min(1).max(100)
   });
 
+export const realtimeAdminRegistrationRequestSchema =
+  z.object({
+    kind: z.literal("ADMIN"),
+    deviceId: z.string().trim().min(1).max(100),
+    auctionSessionId:
+      z.string().trim().min(1).max(100)
+  });
+
 export const realtimeRegistrationRequestSchema =
   z.discriminatedUnion("kind", [
     realtimeTeamRegistrationRequestSchema,
-    realtimePublicDisplayRegistrationRequestSchema
+    realtimePublicDisplayRegistrationRequestSchema,
+    realtimeAdminRegistrationRequestSchema
   ]);
 
 export type RealtimeRegistrationRequest = z.infer<
@@ -791,10 +879,21 @@ export const realtimePublicDisplayRegisteredPayloadSchema =
     registeredAt: z.string().min(1)
   });
 
+export const realtimeAdminRegisteredPayloadSchema =
+  z.object({
+    kind: z.literal("ADMIN"),
+    socketId: z.string().min(1),
+    deviceId: z.string().min(1),
+    auctionSessionId: z.string().min(1),
+    connectedAt: z.string().min(1),
+    registeredAt: z.string().min(1)
+  });
+
 export const realtimeRegisteredPayloadSchema =
   z.discriminatedUnion("kind", [
     realtimeTeamRegisteredPayloadSchema,
-    realtimePublicDisplayRegisteredPayloadSchema
+    realtimePublicDisplayRegisteredPayloadSchema,
+    realtimeAdminRegisteredPayloadSchema
   ]);
 
 export type RealtimeRegisteredPayload = z.infer<
@@ -815,6 +914,7 @@ export type RealtimeAuctionCallEventType = z.infer<
 >;
 
 export const realtimeAuctionSessionEventTypeSchema = z.enum([
+  "SESSION_STARTED",
   "SESSION_SUSPENDED",
   "SESSION_RESUMED",
   "SESSION_REOPENED"
@@ -852,6 +952,12 @@ export type RealtimeAuctionCallEvent = z.infer<
   typeof realtimeAuctionCallEventSchema
 >;
 
+export const realtimeAuctionSessionStartedEventSchema =
+  realtimeAuctionEventCommonSchema.extend({
+    type: z.literal("SESSION_STARTED"),
+    auctionCallId: z.null()
+  });
+
 export const realtimeAuctionSessionSuspendedEventSchema =
   realtimeAuctionEventCommonSchema.extend({
     type: z.literal("SESSION_SUSPENDED"),
@@ -871,6 +977,7 @@ export const realtimeAuctionSessionReopenedEventSchema =
   });
 
 export const realtimeAuctionSessionEventSchema = z.union([
+  realtimeAuctionSessionStartedEventSchema,
   realtimeAuctionSessionSuspendedEventSchema,
   realtimeAuctionSessionResumedEventSchema,
   realtimeAuctionSessionReopenedEventSchema
@@ -882,6 +989,7 @@ export type RealtimeAuctionSessionEvent = z.infer<
 
 export const realtimeAuctionEventSchema = z.union([
   realtimeAuctionCallEventSchema,
+  realtimeAuctionSessionStartedEventSchema,
   realtimeAuctionSessionSuspendedEventSchema,
   realtimeAuctionSessionResumedEventSchema,
   realtimeAuctionSessionReopenedEventSchema
@@ -916,6 +1024,8 @@ export const auctionCallSchema = z.object({
   currentLeaderAuctionSessionTeamId:
     z.string().min(1).nullable(),
   currentTurnAuctionSessionTeamId:
+    z.string().min(1).nullable(),
+  currentTurnStartedAt:
     z.string().min(1).nullable(),
   provisionalWinnerAuctionSessionTeamId:
     z.string().min(1).nullable(),
@@ -1051,6 +1161,7 @@ export type RealtimePublicDisplayTeam = z.infer<
 export const realtimePublicDisplayPlayerSchema =
   z.object({
     id: z.string().min(1),
+    fmsCode: z.string().trim().min(1).max(50),
     name: z.string().min(1),
     realTeamName: z.string().min(1).nullable(),
     role: playerRoleSchema
@@ -1079,7 +1190,8 @@ export type RealtimePublicDisplayRecentAward = z.infer<
 export const realtimePublicDisplayLeagueSchema =
 z.object({
 id: z.string().min(1),
-name: z.string().min(1)
+name: z.string().min(1),
+logoPath: z.string().min(1).nullable()
 });
 
 export type RealtimePublicDisplayLeague = z.infer<
@@ -1112,10 +1224,146 @@ export const realtimeAuctionSnapshotSchema = z.object({
   ),
   operationalAuctionCall:
     realtimeOperationalAuctionCallSchema.nullable(),
+  nextCallerAuctionSessionTeamId:
+    z.string().min(1).nullable(),
   publicDisplay:
     realtimePublicDisplayProjectionSchema
 });
 
 export type RealtimeAuctionSnapshot = z.infer<
   typeof realtimeAuctionSnapshotSchema
+>;
+
+export const adminActivityEventTypeSchema = z.enum([
+  "AUCTION_AWARD_CONFIRMED",
+  "INITIAL_ROSTER_ENTRY_ADDED_MANUALLY",
+  "MANUAL_ROSTER_ASSIGNMENT_ADDED",
+  "TECHNICAL_ROSTER_CORRECTION",
+  "ROSTER_ASSIGNMENT_REMOVED",
+  "SESSION_STARTED",
+  "SESSION_SUSPENDED",
+  "SESSION_RESUMED",
+  "SESSION_REOPENED"
+]);
+
+export type AdminActivityEventType = z.infer<
+  typeof adminActivityEventTypeSchema
+>;
+
+export const adminActivityItemSchema = z.object({
+  eventId: z.string().min(1),
+  eventType: adminActivityEventTypeSchema,
+  createdAt: z.string().min(1),
+
+  playerName: z.string().min(1).nullable(),
+  teamName: z.string().min(1).nullable(),
+  amount: z.number().int().nonnegative().nullable(),
+
+  actorName: z.string().min(1).nullable(),
+  actorRole: z
+    .enum([
+      "ADMINISTRATOR",
+      "AUCTIONEER"
+    ])
+    .nullable(),
+
+  comment: z.string().nullable(),
+
+  manualAssignmentReason: z
+    .enum([
+      "OPTION_EXERCISED_MANUALLY",
+      "OPTION_NO_EXTERNAL_BID",
+      "TECHNICAL_CORRECTION",
+      "OTHER"
+    ])
+    .nullable(),
+
+  suspensionReason: z
+    .enum([
+      "PIZZA_BREAK",
+      "TECHNICAL_BREAK",
+      "ORGANIZATIONAL_BREAK",
+      "NETWORK_ISSUE",
+      "RECOVERY_RESTART",
+      "OTHER"
+    ])
+    .nullable(),
+
+  beforeTeamName: z.string().min(1).nullable(),
+  beforePlayerName: z.string().min(1).nullable(),
+  beforeAmount: z.number().int().positive().nullable(),
+  beforeContractYear:
+    z.number().int().min(1).max(3).nullable(),
+
+  afterTeamName: z.string().min(1).nullable(),
+  afterPlayerName: z.string().min(1).nullable(),
+  afterAmount: z.number().int().positive().nullable(),
+  afterContractYear:
+    z.number().int().min(1).max(3).nullable()
+});
+
+export type AdminActivityItem = z.infer<
+  typeof adminActivityItemSchema
+>;
+
+export const publicDisplayModeSchema = z.enum([
+  "STANDARD",
+  "HIGH_CONTRAST_OUTDOOR",
+  "COMPACT",
+  "DARK"
+]);
+
+export type PublicDisplayMode = z.infer<
+  typeof publicDisplayModeSchema
+>;
+
+export const publicDisplayViewSchema = z.enum([
+  "AUCTION",
+  "ROSTER_OVERVIEW"
+]);
+
+export type PublicDisplayView = z.infer<
+  typeof publicDisplayViewSchema
+>;
+
+export const publicDisplayControlStateSchema =
+  z.object({
+    displayMode:
+      publicDisplayModeSchema,
+    activeView:
+      publicDisplayViewSchema
+  });
+
+export type PublicDisplayControlState = z.infer<
+  typeof publicDisplayControlStateSchema
+>;
+
+export const publicDisplayControlPatchSchema =
+  z.object({
+    displayMode:
+      publicDisplayModeSchema.optional(),
+    activeView:
+      publicDisplayViewSchema.optional()
+  });
+
+export type PublicDisplayControlPatch = z.infer<
+  typeof publicDisplayControlPatchSchema
+>;
+
+export const reorderAuctionSessionTeamsSchema = z.object({
+  teamIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(8)
+    .refine(
+      (teamIds) =>
+        new Set(teamIds).size === teamIds.length,
+      {
+        message: "Team IDs must be unique"
+      }
+    )
+});
+
+export type ReorderAuctionSessionTeamsInput = z.infer<
+  typeof reorderAuctionSessionTeamsSchema
 >;
