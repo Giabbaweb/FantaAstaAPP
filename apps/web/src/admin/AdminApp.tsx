@@ -2931,6 +2931,34 @@ export function AdminApp() {
         )
       : null;
 
+  const selectedCallPlayer =
+    players.find(
+      (player) =>
+        player.availabilityStatus ===
+          "AVAILABLE" &&
+        player.fmsCode ===
+          selectedPlayerFmsCode.trim()
+    ) ?? null;
+
+  const nextCallerTeam =
+    cockpit?.teams.find(
+      (team) =>
+        team.auctionSessionTeamId ===
+        snapshot?.nextCallerAuctionSessionTeamId
+    ) ?? null;
+
+  const selectedCallRoleComplete =
+    Boolean(
+      selectedCallPlayer &&
+      nextCallerTeam &&
+      nextCallerTeam.rosterRoles[
+        selectedCallPlayer.role
+      ].count >=
+        nextCallerTeam.rosterRoles[
+          selectedCallPlayer.role
+        ].limit
+    );
+
   const remainingRoleSlots =
     cockpit
       ? (["P", "D", "C", "A"] as const).reduce(
@@ -3574,19 +3602,21 @@ export function AdminApp() {
               <button
                 className="admin-prepare-call"
                 type="button"
+                title={
+                  selectedCallRoleComplete &&
+                  nextCallerTeam
+                    ? `Ruolo gia completo per ${nextCallerTeam.teamName}`
+                    : undefined
+                }
                 disabled={
                   createCallPending ||
                   session?.status !== "RUNNING" ||
                   Boolean(
                     snapshot?.operationalAuctionCall
                   ) ||
-                  !players.some(
-                    (player) =>
-                      player.availabilityStatus ===
-                        "AVAILABLE" &&
-                      player.fmsCode ===
-                        selectedPlayerFmsCode.trim()
-                  )
+                  !selectedCallPlayer ||
+                  !nextCallerTeam ||
+                  selectedCallRoleComplete
                 }
                 onClick={() => {
                   void createDraftAuctionCall();
