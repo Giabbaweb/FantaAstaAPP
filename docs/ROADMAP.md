@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.13.0
+v0.14.0
 ```
 
 Milestone completate:
@@ -116,17 +116,29 @@ Milestone completate:
 - logging tecnico persistente di backup e recovery;
 - Emergency Recovery offline con selezione esplicita del recovery point;
 - preservazione del database danneggiato e dei sidecar WAL/SHM;
-- 82 file di test server verdi;
-- 511 test server verdi;
-- 15 file di test domain verdi;
-- 135 test domain verdi;
-- 646 test automatici complessivi;
-- typecheck e build completi del monorepo superati.
+- cockpit amministrativo `/admin` e setup `/admin/config` operativi;
+- telecomando squadra `/remote` operativo;
+- telecomando universale `/remote/all` operativo;
+- accesso remoto tramite PIN e QR;
+- controllo dello schermo pubblico;
+- rotazione del chiamante con salto delle rose complete;
+- operazioni straordinarie e correzioni amministrative;
+- completamento delle rose ordinarie e chiusura dell'asta;
+- selezione dei portieri export-only e export finale FMS ReVo;
+- launcher Windows AVVIA/ARRESTA;
+- Vademecum operativo;
+- 118 file di test server verdi;
+- 762 test server verdi;
+- 18 file di test domain verdi;
+- 150 test domain verdi;
+- 912 test automatici complessivi;
+- typecheck e build completi del monorepo superati;
+- collaudo end-to-end a otto squadre completato fino a `CLOSED`.
 
 Milestone corrente:
 
 ```text
-v0.14.0 — Collaudo operativo
+v1.0.0 — Release stabile
 ```
 
 Stato:
@@ -937,7 +949,7 @@ Sono stati verificati:
 
 # v1.0.0 — Release stabile
 
-**Stato:** `PLANNED`
+**Stato:** `NEXT`
 
 ## Obiettivi
 

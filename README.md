@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.13.0-blue" alt="Version v0.13.0">
+  <img src="https://img.shields.io/badge/version-v0.14.0-blue" alt="Version v0.14.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.13.0**
+**v0.14.0**
 
 Completed milestones
 

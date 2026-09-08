@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 13 completata
-- **Versione corrente:** v0.13.0
-- **Prossimo obiettivo:** Versione 0.14 – Collaudo operativo
+- **Stato:** Milestone 14 completata
+- **Versione corrente:** v0.14.0
+- **Prossimo obiettivo:** Versione 1.0 – Release stabile
 
 ## Regole immutabili
 
