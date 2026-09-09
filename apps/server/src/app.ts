@@ -57,6 +57,9 @@ import {
   runtimeAssetRoutes
 } from "./routes/runtime-asset.routes.js";
 import {
+  webFrontendRoutes
+} from "./routes/web-frontend.routes.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -906,6 +909,7 @@ export async function buildApp(
   });
 
   await app.register(runtimeAssetRoutes);
+  await app.register(webFrontendRoutes);
   await app.register(leagueLogoRoutes);
   await app.register(systemRoutes);
   await app.register(teamAccessRoutes);
