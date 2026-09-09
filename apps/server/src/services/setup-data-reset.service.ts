@@ -196,7 +196,7 @@ export class SetupDataResetService {
       ) {
         throw new SetupDataResetServiceError(
           "OPERATIONAL_DATA_EXISTS",
-          "Setup data cannot be reset because the auction session contains operational history. Use the complete development session reset instead."
+          "Setup data cannot be reset because the auction session contains operational history."
         );
       }
 

@@ -1765,7 +1765,7 @@ export function AdminConfigApp() {
           );
       } catch {
         setRemoteBaseUrlError(
-          "Inserisci un indirizzo valido, ad esempio http://192.168.0.197:5173."
+          "Inserisci un indirizzo valido, ad esempio http://192.168.0.197:3001."
         );
         return;
       }
@@ -4531,7 +4531,7 @@ export function AdminConfigApp() {
                     type="url"
                     inputMode="url"
                     aria-label="Indirizzo per smartphone"
-                    placeholder="http://192.168.0.197:5173"
+                    placeholder="http://192.168.0.197:3001"
                     value={remoteBaseUrlDraft}
                     disabled={
                       remoteBaseUrlPending

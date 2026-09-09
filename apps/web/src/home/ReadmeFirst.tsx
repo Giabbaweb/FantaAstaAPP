@@ -132,28 +132,23 @@ export function ReadmeFirst() {
             <h2>Avvio applicazione</h2>
 
             <p>
-              Avvia server e frontend FantaAstaAPP
-              sul PC principale.
+              Sul PC principale avvia FantaAstaAPP
+              dal collegamento
+              <strong> AVVIA FantaAstaAPP</strong>.
             </p>
 
-            <div className="readme-command">
-              <code>
-                pnpm --filter @fantaastaapp/server dev
-              </code>
-            </div>
-
-            <div className="readme-command">
-              <code>
-                pnpm --filter @fantaastaapp/web dev
-              </code>
-            </div>
+            <p>
+              L'applicazione prepara il runtime
+              e apre automaticamente la Landing Page
+              nel browser.
+            </p>
 
             <p>
-              Apri poi sul PC:
+              Indirizzo locale:
             </p>
 
             <div className="readme-address">
-              http://localhost:5173/
+              http://localhost:3001/
             </div>
 
             <p>

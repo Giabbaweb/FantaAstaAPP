@@ -295,6 +295,8 @@ import {
 } from "./services/roster-assignment-removal.service.js";
 
 export type BuildAppOptions = {
+  enableDevelopmentSessionReset?:
+    boolean;
   backupRecoveryTechnicalLogger?:
     BackupRecoveryTechnicalLogger;
   auctionBackupRequester?:
@@ -439,7 +441,9 @@ export async function buildApp(
     );
 
   const developmentSessionResetService =
-    new DevelopmentSessionResetService();
+    options.enableDevelopmentSessionReset
+      ? new DevelopmentSessionResetService()
+      : null;
 
   const initialRosterResetService =
     new InitialRosterResetService(
@@ -869,11 +873,13 @@ export async function buildApp(
     )
   );
 
-  await app.register(
-    developmentSessionResetRoutes(
-      developmentSessionResetService
-    )
-  );
+  if (developmentSessionResetService) {
+    await app.register(
+      developmentSessionResetRoutes(
+        developmentSessionResetService
+      )
+    );
+  }
 
   const auctionSessionCompletionService =
     new AuctionSessionCompletionService(

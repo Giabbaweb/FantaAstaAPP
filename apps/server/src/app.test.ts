@@ -41,12 +41,34 @@ describe("application integration", () => {
   >;
 
   beforeAll(async () => {
-    app = await buildApp();
+    app = await buildApp({
+      enableDevelopmentSessionReset:
+        true
+    });
   });
 
   afterAll(async () => {
     await app.close();
   });
+
+  it(
+    "does not expose the development session reset by default",
+    async () => {
+      const defaultApp =
+        await buildApp();
+
+      const response =
+        await defaultApp.inject({
+          method: "POST",
+          url:
+            "/api/auction-sessions/any-session/reset-development-session"
+        });
+
+      expect(
+        response.statusCode
+      ).toBe(404);
+    }
+  );
 
   describe("GET /api/health", () => {
     it("returns the application health status", async () => {
@@ -6339,7 +6361,7 @@ describe("GET /api/auction-sessions", () => {
                 code:
                   "OPERATIONAL_DATA_EXISTS",
                 message:
-                  "Setup data cannot be reset because the auction session contains operational history. Use the complete development session reset instead."
+                  "Setup data cannot be reset because the auction session contains operational history."
               }
             });
 
