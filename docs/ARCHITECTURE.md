@@ -1063,7 +1063,7 @@ Le decisioni complete sono formalizzate in ADR-051.
 La versione corrente è:
 
 ```text
-v0.14.0
+v1.0.0
 ```
 
 Sono operative:
@@ -1283,9 +1283,8 @@ separato dall'audit di dominio.
 
 La v0.14.0 ha completato il collaudo operativo end-to-end.
 
-La v1.0.0 è ora in code freeze e preparazione della Release Candidate; il
-runtime production Windows/LAN e i gate tecnici pre-release risultano
-completati e verificati.
+La v1.0.0 è la release stabile corrente; il runtime production Windows/LAN
+e i gate tecnici pre-release risultano completati e verificati.
 
 Le decisioni architetturali significative continueranno a essere registrate in:
 

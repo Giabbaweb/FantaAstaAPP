@@ -10,6 +10,14 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ### Added
 
+* Nothing yet
+
+---
+
+## [1.0.0] - 2026-09-11
+
+### Added
+
 * Production frontend hosting directly from Fastify on port `3001`
 * Windows production supervisor/restart workflow for the single-host LAN runtime
 * Final UI hierarchy refinements for `/admin`, `/admin/config`, `/remote/all` and `/public`

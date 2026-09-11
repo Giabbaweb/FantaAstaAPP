@@ -4,9 +4,9 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** v1.0.0 in code freeze / preparazione Release Candidate
-- **Ultima release stabile:** v0.14.0
-- **Target corrente:** v1.0.0 – Release stabile
+- **Stato:** v1.0.0 — Release stabile
+- **Versione corrente:** v1.0.0
+- **Prossima manutenzione:** v1.0.1
 
 ## Regole immutabili
 
@@ -420,10 +420,10 @@ Il runtime Windows production utilizza un avvio controllato con supervisor,
 supporta restart/recovery coerenti con le regole di sicurezza della sessione
 e viene raggiunto dagli altri dispositivi tramite la LAN sulla porta `3001`.
 
-## Stato v1.0.0 — Release Candidate
+## Stato v1.0.0 — Release stabile
 
-La preparazione della Release Candidate v1.0.0 ha chiuso i gate tecnici e
-operativi necessari prima del rilascio stabile.
+La release stabile v1.0.0 ha chiuso i gate tecnici e operativi previsti
+per il rilascio.
 
 ### Gate tecnici finali
 
@@ -466,8 +466,8 @@ L'import operativo post-asta richiede, come già accertato, che FantaAstaAPP e
 FMS ReVo utilizzino l'archivio della stessa stagione; per SFL'92 l'operazione è
 post-asta e non costituisce un prerequisito del 16 settembre.
 
-Il 16 settembre 2026 è quindi field validation della release sul caso reale,
-non un gate necessario per costruire la Release Candidate.
+Il 16 settembre 2026 è quindi field validation della release stabile sul
+caso reale, non un prerequisito del rilascio v1.0.0.
 
 ## Backlog v1.0.1
 
@@ -524,15 +524,14 @@ Il manuale operativo della serata è:
 docs/VADEMECUM_OPERATIVO.md
 ```
 
-## Prossimo obiettivo
+## Stato post-release
 
-Versione 1.0 — Release stabile:
+La v1.0.0 costituisce la baseline stabile per il debutto operativo SFL'92 del
+16 settembre 2026.
 
-- hardening finale;
-- verifica del pacchetto/runtime locale per la serata reale;
-- ultimo controllo operativo pre-asta;
-- release candidate;
-- debutto operativo SFL'92 del 16 settembre 2026.
+La successiva manutenzione pianificata è v1.0.1, limitata agli interventi
+non bloccanti già elencati nel backlog. La Show Area del Public Display resta
+riservata alla v1.1.
 
 
 Fonte autoritativa completa:

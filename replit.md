@@ -6,7 +6,7 @@ FantaAstaAPP
 
 ## Current Version
 
-v1.0.0 release-candidate preparation
+v1.0.0
 
 ## Package Manager
 

@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.14.0-blue" alt="Version v0.14.0">
+  <img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="Version v1.0.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -147,7 +147,7 @@ FantaAstaAPP/
 
 ## Current Status
 
-Current Release Candidate
+Current Release
 
 **v1.0.0**
 
@@ -308,12 +308,11 @@ including caller rotation that skips completed rosters and prevention of
 invalid call preparation when the next caller has already completed the
 selected role.
 
-Release candidate
+Stable release
 
-🎯 **v1.0.0 — Stable Release**
+🏁 **v1.0.0 — Stable Release**
 
-The codebase is in release freeze for v1.0.0. Final pre-release validation has
-completed with:
+The v1.0.0 release has completed its final pre-release validation with:
 
 - 119 server test files — 764 tests passed;
 - 18 domain test files — 150 tests passed;
@@ -331,7 +330,7 @@ certification verified eight teams, coherent initial rosters/credits, the
 754-player seasonal archive, league/team branding and 754/754 player photos.
 
 The real auction on 16 September 2026 is field validation of the stable
-release, not a prerequisite for building the release candidate.
+release, not a prerequisite for the v1.0.0 release.
 
 ---
 

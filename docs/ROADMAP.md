@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.14.0
+v1.0.0
 ```
 
 Milestone completate:
@@ -144,7 +144,7 @@ v1.0.0 — Release stabile
 Stato:
 
 ```text
-IN_PROGRESS — RELEASE CANDIDATE
+COMPLETED
 ```
 
 ---
@@ -949,7 +949,7 @@ Sono stati verificati:
 
 # v1.0.0 — Release stabile
 
-**Stato:** `IN_PROGRESS — RELEASE CANDIDATE`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -989,15 +989,12 @@ Completato:
 - code freeze;
 - gate finale con 914 test, typecheck, build e `git diff --check` verdi.
 
-Residuo della milestone:
+La milestone è chiusa con documentazione allineata, Release Candidate
+approvata e baseline pronta per il tag/release stabile v1.0.0.
 
-1. allineamento finale della documentazione;
-2. approvazione della Release Candidate;
-3. commit/tag/release stabile v1.0.0.
-
-L'asta reale SFL'92 del 16 settembre 2026 è field validation della release e
-non è un prerequisito per il tag v1.0.0. L'import operativo in FMS ReVo è
-post-asta e resta soggetto all'allineamento dell'archivio stagionale.
+L'asta reale SFL'92 del 16 settembre 2026 è field validation della release
+stabile e non è un prerequisito del rilascio. L'import operativo in FMS ReVo
+è post-asta e resta soggetto all'allineamento dell'archivio stagionale.
 
 ## Criteri di rilascio
 
