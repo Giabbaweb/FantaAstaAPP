@@ -4,14 +4,14 @@
 
 - **Nome definitivo:** FantaAstaAPP
 - **Tipo:** applicazione locale per asta fantacalcio dal vivo
-- **Stato:** Milestone 14 completata
-- **Versione corrente:** v0.14.0
-- **Prossimo obiettivo:** Versione 1.0 – Release stabile
+- **Stato:** v1.0.0 in code freeze / preparazione Release Candidate
+- **Ultima release stabile:** v0.14.0
+- **Target corrente:** v1.0.0 – Release stabile
 
 ## Regole immutabili
 
 - 8 squadre tipiche.
-- Crediti configurabili; esempio 330 meno rinnovi.
+- Crediti configurabili; SFL'92 2026/2027: 300 crediti iniziali meno rinnovi.
 - Rosa: 2 P, 8 D, 8 C, 6 A, totale 24.
 - Portiere aggiuntivo FMS fuori rosa e fuori asta: costo export 0, anno contratto 1, selezione persistita separatamente e incluso solo nell’export FMS finale.
 - Giro di tavolo prestabilito.
@@ -411,7 +411,81 @@ Dopo restart completo del runtime con sessione riportata controllatamente a `REA
 → /admin e /public sincronizzati su Stato #1
 ```
 
-Per il deployment LAN definitivo della serata d'asta resta da chiudere il modello production: un solo avvio controllato dell'applicazione host, senza dipendenza dal Vite development server, con verifica del serving del frontend compilato e documentazione della procedura operativa.
+Il modello production/LAN è chiuso e collaudato: il frontend compilato viene
+servito direttamente da Fastify sullo stesso runtime applicativo, in ascolto
+su `0.0.0.0:3001`. Il Vite development server resta confinato allo sviluppo e
+non è richiesto durante l'asta.
+
+Il runtime Windows production utilizza un avvio controllato con supervisor,
+supporta restart/recovery coerenti con le regole di sicurezza della sessione
+e viene raggiunto dagli altri dispositivi tramite la LAN sulla porta `3001`.
+
+## Stato v1.0.0 — Release Candidate
+
+La preparazione della Release Candidate v1.0.0 ha chiuso i gate tecnici e
+operativi necessari prima del rilascio stabile.
+
+### Gate tecnici finali
+
+- 119 file di test server;
+- 764 test server verdi;
+- 18 file di test domain;
+- 150 test domain verdi;
+- 914 test automatici complessivi;
+- typecheck completo del monorepo superato;
+- build production completa superata;
+- `git diff --check` pulito.
+
+### Runtime production
+
+- frontend Vite compilato e servito direttamente da Fastify;
+- unico endpoint operativo LAN sulla porta `3001`;
+- binding server su `0.0.0.0`;
+- supervisor Windows e launcher AVVIA/ARRESTA;
+- nessuna dipendenza da Vite durante la serata d'asta;
+- accesso fisico LAN verificato da dispositivi esterni.
+
+### Certificazione dataset SFL'92 2026/2027
+
+Sessione 35 verificata senza modificare il database live:
+
+- stato `SETUP`, `stateVersion = 0`;
+- 8 squadre con `tableOrder` completo 1–8;
+- 300 crediti iniziali;
+- 79 roster entries iniziali tutte `INITIAL_ROSTER`;
+- quadratura crediti iniziali corretta per tutte le squadre;
+- 754 giocatori nell'archivio stagionale;
+- nessun duplicato `fms_code` o `normalized_name`;
+- coerenza completa `ROSTERED` ↔ roster entries;
+- logo lega presente;
+- 8/8 loghi squadra presenti;
+- 754/754 foto giocatore presenti, senza mancanti o eccedenze.
+
+La compatibilità tecnica dell'export FMS ReVo è già stata verificata end-to-end.
+L'import operativo post-asta richiede, come già accertato, che FantaAstaAPP e
+FMS ReVo utilizzino l'archivio della stessa stagione; per SFL'92 l'operazione è
+post-asta e non costituisce un prerequisito del 16 settembre.
+
+Il 16 settembre 2026 è quindi field validation della release sul caso reale,
+non un gate necessario per costruire la Release Candidate.
+
+## Backlog v1.0.1
+
+La prima manutenzione post-release raccoglie esclusivamente interventi
+non bloccanti rinviati volontariamente dalla v1.0.0:
+
+1. vera eliminazione di una sessione, distinta da `Reset dati sessione`, con
+   backup preventivo, conferma esplicita/doppia, cancellazione atomica/cascade
+   e primo collaudo distruttivo su clone;
+2. revisione estetica più ampia di `/admin/config`;
+3. refactoring dei "Monster CSS" accumulati, soprattutto Public Display e
+   admin/config, preservando esattamente comportamento e resa approvata;
+4. upload/sostituzione del PDF QR della sessione da `/admin/config`;
+5. razionalizzazione delle cartelle asset/documenti distinguendo sorgenti
+   versionate, asset runtime, artefatti di build e documenti operativi.
+
+La futura Show Area del Public Display con messaggi TOP/FLOP, media, jingles e
+effetti celebrativi rimane pianificata per v1.1 e non appartiene alla v1.0.1.
 
 ## Stato v0.14 — Collaudo operativo
 

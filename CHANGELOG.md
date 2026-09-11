@@ -10,7 +10,44 @@ The format is based on **Keep a Changelog** and this project adheres to **Semant
 
 ### Added
 
-* Nothing yet
+* Production frontend hosting directly from Fastify on port `3001`
+* Windows production supervisor/restart workflow for the single-host LAN runtime
+* Final UI hierarchy refinements for `/admin`, `/admin/config`, `/remote/all` and `/public`
+* Dark-compatible Arti John branding asset for the Public Display
+
+### Changed
+
+* Production/LAN operation no longer depends on the Vite development server
+* Production server binds to `0.0.0.0` and serves SPA/static frontend assets
+* Production reset behavior hardened to fail closed unless explicitly enabled
+* `/remote/all` team-state presentation strengthened for LEADER/ACTIVE/PASSED/EXCLUDED states
+* `/admin` next-auction actions made visually more prominent
+* `/admin/config` league/session/setup hierarchy refined without changing domain behavior
+* Public Display branding strengthened across STANDARD, OUTDOOR and DARK modes
+
+### Tested
+
+* Final release gate: 119 server test files — 764 tests passed
+* Final release gate: 18 domain test files — 150 tests passed
+* 914 automated tests passed in total
+* Full monorepo type checking
+* Full production build
+* `git diff --check`
+* Physical LAN access to Home, `/public`, `/admin` and `/remote` through the production runtime
+* SFL'92 2026/2027 session-35 database certification on a read-only snapshot
+* Eight-team table order and initial-credit/roster quadrature
+* 754-player seasonal archive integrity
+* League logo and 8/8 team-logo presence
+* 754/754 player-photo coverage with no missing or extra photos
+* Existing end-to-end FMS ReVo export compatibility reconfirmed as season-archive dependent
+
+### Deferred to v1.0.1
+
+* True session deletion distinct from operational session reset
+* Broader `/admin/config` visual reorganization
+* "Monster CSS" refactoring with no functional/visual regression
+* Session QR PDF upload/replacement from `/admin/config`
+* Asset/document folder rationalization
 
 ---
 

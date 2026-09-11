@@ -83,14 +83,14 @@ Il monitor pubblico deve essere configurato come schermo esteso, non duplicato.
 
 ```powershell
 Get-NetTCPConnection -State Listen |
-  Where-Object { $_.LocalPort -in 3001,5173 } |
+  Where-Object { $_.LocalPort -eq 3001 } |
   Select-Object LocalAddress, LocalPort, OwningProcess
 ```
 
-Nel collaudo Windows:
+Nel runtime production v1.0:
 
-- `3001` = server/API;
-- `5173` = web/Vite.
+- `3001` = unico endpoint Fastify per API, Socket.IO, asset e frontend compilato;
+- `5173` è una porta esclusivamente di sviluppo Vite e non è richiesta durante l'asta.
 
 ---
 
@@ -102,7 +102,7 @@ Per verificare che l'arresto sia stato completo:
 
 ```powershell
 Get-NetTCPConnection -State Listen |
-  Where-Object { $_.LocalPort -in 3001,5173 }
+  Where-Object { $_.LocalPort -eq 3001 }
 ```
 
 Il comando non deve restituire righe.
@@ -137,6 +137,29 @@ Ogni squadra può collegarsi tramite QR code generato/configurato, QR code stati
 `/remote/all` è destinato all'uso amministrativo/emergenza e permette di gestire rilanci e PASS anche senza utilizzare i singoli smartphone dei presidenti.
 
 ---
+
+### PDF QR della sessione
+
+Per v1.0.0 il PDF QR non viene caricato da `/admin/config`.
+
+Il file sorgente servito dall'applicazione deve essere sostituito in:
+
+```text
+apps/web/public/docs/QRcode.pdf
+```
+
+e successivamente deve essere eseguito:
+
+```powershell
+pnpm build
+```
+
+Vite copierà il documento in `apps/web/dist/docs/QRcode.pdf`. La cartella
+`dist` è output generato e non deve essere usata come sorgente master.
+
+È consigliato conservare fuori dal repository una copia chiaramente nominata
+del PDF di ciascuna lega/sessione e sostituire il master prima della relativa
+asta. L'upload amministrativo del PDF QR è rinviato alla v1.0.1.
 
 ## 7. Setup della sessione
 

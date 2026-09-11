@@ -1166,9 +1166,9 @@ Sono operative:
 - chiusura operativa `RUNNING -> COMPLETED -> CLOSED`;
 - selezione persistente degli otto portieri export-only e stato dell'export FMS;
 - launcher Windows AVVIA/ARRESTA per il runtime locale;
-- 118 file di test server e 762 test server verdi;
+- 119 file di test server e 764 test server verdi;
 - 18 file di test domain e 150 test domain verdi;
-- 912 test automatici complessivi;
+- 914 test automatici complessivi;
 - typecheck e build completi del monorepo superati;
 - collaudo end-to-end a otto squadre completato fino a `CLOSED`.
 
@@ -1283,11 +1283,9 @@ separato dall'audit di dominio.
 
 La v0.14.0 ha completato il collaudo operativo end-to-end.
 
-La prossima milestone funzionale è:
-
-```text
-v1.0.0 — Release stabile
-```
+La v1.0.0 è ora in code freeze e preparazione della Release Candidate; il
+runtime production Windows/LAN e i gate tecnici pre-release risultano
+completati e verificati.
 
 Le decisioni architetturali significative continueranno a essere registrate in:
 
@@ -1345,3 +1343,54 @@ In caso di conflitto sui requisiti funzionali, prevale:
 ```text
 docs/FANTA_ASTA_APP_SPEC.md
 ```
+
+---
+
+## 24. Runtime production v1.0
+
+Il runtime operativo v1.0 separa nettamente sviluppo e produzione.
+
+In sviluppo può essere utilizzata la topologia Vite + Fastify. In produzione
+LAN, invece, il frontend compilato è servito direttamente da Fastify:
+
+```text
+Dispositivi LAN
+      ↓
+Host Windows :3001
+├─ Fastify HTTP/API
+├─ Socket.IO
+├─ frontend compilato Vite
+├─ asset runtime
+└─ SQLite
+```
+
+Caratteristiche del modello production:
+
+- un solo endpoint operativo sulla porta `3001`;
+- binding su `0.0.0.0` per l'accesso LAN;
+- nessuna dipendenza dal Vite development server;
+- route SPA e asset statici serviti dal backend;
+- supervisor Windows per il processo server;
+- launcher AVVIA/ARRESTA come percorso operativo normale;
+- startup recovery invariato: una sessione persistita `RUNNING` non viene
+  ripresa automaticamente ma entra nel percorso di sicurezza previsto.
+
+I dati runtime (`data/`, recovery point, log tecnici e directory locali di
+trasferimento/collaudo) rimangono separati dai sorgenti versionati.
+
+## 25. Debito tecnico pianificato v1.0.1
+
+La v1.0.1 è una manutenzione post-release e non modifica i requisiti della
+v1.0.0. Sono pianificati:
+
+- eliminazione vera della sessione con backup, conferme, transazione/cascade e
+  collaudo distruttivo preventivo su clone;
+- revisione visuale più ampia di `/admin/config`;
+- refactoring dei fogli CSS cresciuti per stratificazione ("Monster CSS"),
+  preservando comportamento e visual approvati;
+- upload/sostituzione amministrativa del PDF QR della sessione;
+- razionalizzazione della struttura asset/documenti distinguendo static source,
+  runtime-managed assets, build artifacts e documentazione operativa.
+
+La Show Area multimediale del Public Display resta fuori da questo debito ed è
+riservata alla v1.1.
