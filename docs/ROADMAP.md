@@ -11,7 +11,7 @@ La roadmap nasce dalla specifica funzionale approvata e dalla roadmap di impleme
 Versione attuale:
 
 ```text
-v0.14.0
+v1.0.0
 ```
 
 Milestone completate:
@@ -127,11 +127,11 @@ Milestone completate:
 - selezione dei portieri export-only e export finale FMS ReVo;
 - launcher Windows AVVIA/ARRESTA;
 - Vademecum operativo;
-- 118 file di test server verdi;
-- 762 test server verdi;
+- 119 file di test server verdi;
+- 764 test server verdi;
 - 18 file di test domain verdi;
 - 150 test domain verdi;
-- 912 test automatici complessivi;
+- 914 test automatici complessivi;
 - typecheck e build completi del monorepo superati;
 - collaudo end-to-end a otto squadre completato fino a `CLOSED`.
 
@@ -144,7 +144,7 @@ v1.0.0 — Release stabile
 Stato:
 
 ```text
-NEXT
+COMPLETED
 ```
 
 ---
@@ -949,7 +949,7 @@ Sono stati verificati:
 
 # v1.0.0 — Release stabile
 
-**Stato:** `NEXT`
+**Stato:** `COMPLETED`
 
 ## Obiettivi
 
@@ -957,7 +957,7 @@ Sono stati verificati:
 - stabilizzare il sistema;
 - preparare il pacchetto locale;
 - produrre la documentazione operativa;
-- validare l’uso durante un’asta reale.
+- completare la validazione operativa pre-release.
 
 ## Deliverable
 
@@ -974,6 +974,28 @@ Sono stati verificati:
 - release GitHub;
 - changelog completo.
 
+## Stato della preparazione v1.0.0
+
+Completato:
+
+- runtime production Windows/LAN con frontend compilato servito da Fastify;
+- hardening production e supervisor;
+- backup/recovery e rehearsal end-to-end;
+- collaudo operativo completo fino a `CLOSED`;
+- certificazione del database reale SFL'92 su snapshot read-only;
+- certificazione asset SFL'92, inclusa copertura foto 754/754;
+- accesso LAN production verificato da dispositivi esterni;
+- compatibilità tecnica export FMS ReVo già verificata;
+- code freeze;
+- gate finale con 914 test, typecheck, build e `git diff --check` verdi.
+
+La milestone è chiusa con documentazione allineata, Release Candidate
+approvata e baseline pronta per il tag/release stabile v1.0.0.
+
+L'asta reale SFL'92 del 16 settembre 2026 è field validation della release
+stabile e non è un prerequisito del rilascio. L'import operativo in FMS ReVo
+è post-asta e resta soggetto all'allineamento dell'archivio stagionale.
+
 ## Criteri di rilascio
 
 - test automatici superati;
@@ -986,6 +1008,30 @@ Sono stati verificati:
 - release candidate approvata.
 
 ---
+
+# v1.0.1 — Manutenzione post-release
+
+**Stato:** `PLANNED`
+
+## Obiettivi
+
+- introdurre la vera eliminazione di una sessione, distinta dal reset dei dati
+  operativi, con backup preventivo, conferme esplicite, cancellazione
+  atomica/cascade e primo test distruttivo su clone;
+- riorganizzare visivamente `/admin/config` oltre le rifiniture conservative
+  concluse per v1.0.0;
+- rifattorizzare i "Monster CSS" accumulati, in particolare Public Display e
+  admin/config, senza cambi funzionali né regressioni visuali;
+- permettere upload/sostituzione del PDF QR della sessione da `/admin/config`;
+- razionalizzare le cartelle asset/documenti distinguendo sorgenti versionate,
+  asset runtime, output di build e documenti operativi.
+
+Questi interventi sono deliberatamente esclusi dalla v1.0.0 perché non
+bloccano l'asta e introdurli durante il freeze aumenterebbe inutilmente il
+rischio.
+
+La Show Area multimediale del Public Display non appartiene alla v1.0.1 ed è
+rinviata a v1.1.
 
 # v1.1.0 — Opzioni automatiche
 

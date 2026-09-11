@@ -4649,3 +4649,172 @@ button small,
   font-weight: 800;
   cursor: pointer;
 }
+
+/* B4.3 - session reset visual treatment */
+
+.admin-config-session__selector-actions
+  .admin-config-session__reset-data {
+  border-color: #c98484;
+  background: #fff4f4;
+  color: #922b2b;
+  font-weight: 700;
+}
+
+.admin-config-session__selector-actions
+  .admin-config-session__reset-data:hover:not(:disabled) {
+  border-color: #b75f5f;
+  background: #fde8e8;
+}
+
+.admin-config-session__success {
+  margin: 0;
+  color: #176b36;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+/* B4.4 - teams section interactive hierarchy */
+
+.admin-config__teams-section {
+  border-color: #a9ccec;
+  background: #f5faff;
+}
+
+.admin-config__teams-toggle {
+  background: #eaf4ff;
+  border-color: #a9ccec;
+}
+
+.admin-config__teams-toggle:hover {
+  background: #dfefff;
+}
+
+.admin-config__teams-toggle-title {
+  color: #245f99;
+}
+
+.admin-config__teams-toggle-hint {
+  color: #3978b4;
+  font-weight: 700;
+}
+
+.admin-config__teams-toggle-chevron {
+  color: #246ba8;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.admin-config__teams-section.is-expanded
+  .admin-config__teams-toggle {
+  background: #e2f1ff;
+  border-bottom-color: #a9ccec;
+}
+
+/* B4.4 - admin config visual hierarchy */
+
+/* League management stays intentionally secondary. */
+.admin-config__league-panel {
+  border-color: #dbe3eb;
+  background: #ffffff;
+}
+
+/* The current auction session is the primary configuration context. */
+.admin-config-session {
+  padding: 2px;
+  border: 1px solid #b9dfc7;
+  border-radius: 12px;
+  background: #f2fbf5;
+}
+
+.admin-config-session__summary {
+  gap: 8px;
+}
+
+.admin-config-session__selector-card {
+  border-color: #a9d8ba;
+  background: #f7fcf8;
+}
+
+.admin-config-session__selector-card
+  .admin-config__eyebrow {
+  color: #176b36 !important;
+}
+
+/* Teams, Presidents and remotes must clearly read as interactive. */
+.admin-config__teams-section {
+  border-color: #8fc0eb;
+  background: #f5faff;
+  box-shadow: 0 1px 3px rgb(36 107 168 / 8%);
+}
+
+.admin-config__teams-toggle {
+  background: #eaf4ff;
+  border-color: #8fc0eb;
+}
+
+.admin-config__teams-toggle:hover {
+  background: #dceeff;
+}
+
+.admin-config__teams-toggle-title {
+  color: #185f9d;
+}
+
+.admin-config__teams-toggle-hint {
+  color: #3978b4;
+  font-weight: 750;
+}
+
+.admin-config__teams-toggle-chevron {
+  color: #1976d2;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.admin-config__teams-section.is-expanded
+  .admin-config__teams-toggle {
+  background: #e2f1ff;
+  border-bottom-color: #8fc0eb;
+}
+
+/* Imports remain a work area, but gain a clearer visual shell. */
+.admin-config__uploads {
+  border-color: #cbdbea;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(16 42 67 / 5%);
+}
+
+.admin-config__uploads
+  .admin-config__section-heading span {
+  color: #526f8d;
+}
+
+.admin-config__uploads
+  .admin-config__section-heading strong {
+  color: #102a43;
+}
+
+/* Backup uses the same visual language as the other expandable tools. */
+.admin-config__backup {
+  border-color: #cbdbea;
+  background: #ffffff;
+}
+
+.admin-config__backup-toggle {
+  background: #f8fbfe;
+}
+
+.admin-config__backup-toggle:hover {
+  background: #eef6fc;
+}
+
+.admin-config__backup-chevron {
+  color: #47769f;
+  font-weight: 900;
+}
+
+.admin-config__backup.is-expanded
+  .admin-config__backup-toggle {
+  border-bottom-color: #cbdbea;
+  background: #f3f8fc;
+}

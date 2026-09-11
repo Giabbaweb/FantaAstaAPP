@@ -57,6 +57,9 @@ import {
   runtimeAssetRoutes
 } from "./routes/runtime-asset.routes.js";
 import {
+  webFrontendRoutes
+} from "./routes/web-frontend.routes.js";
+import {
   auctionCallRoutes
 } from "./routes/auction-call.routes.js";
 import {
@@ -292,6 +295,8 @@ import {
 } from "./services/roster-assignment-removal.service.js";
 
 export type BuildAppOptions = {
+  enableDevelopmentSessionReset?:
+    boolean;
   backupRecoveryTechnicalLogger?:
     BackupRecoveryTechnicalLogger;
   auctionBackupRequester?:
@@ -436,7 +441,9 @@ export async function buildApp(
     );
 
   const developmentSessionResetService =
-    new DevelopmentSessionResetService();
+    options.enableDevelopmentSessionReset
+      ? new DevelopmentSessionResetService()
+      : null;
 
   const initialRosterResetService =
     new InitialRosterResetService(
@@ -866,11 +873,13 @@ export async function buildApp(
     )
   );
 
-  await app.register(
-    developmentSessionResetRoutes(
-      developmentSessionResetService
-    )
-  );
+  if (developmentSessionResetService) {
+    await app.register(
+      developmentSessionResetRoutes(
+        developmentSessionResetService
+      )
+    );
+  }
 
   const auctionSessionCompletionService =
     new AuctionSessionCompletionService(
@@ -906,6 +915,7 @@ export async function buildApp(
   });
 
   await app.register(runtimeAssetRoutes);
+  await app.register(webFrontendRoutes);
   await app.register(leagueLogoRoutes);
   await app.register(systemRoutes);
   await app.register(teamAccessRoutes);

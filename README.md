@@ -10,7 +10,7 @@ Offline-first Fantasy Football Auction Manager
 
 <p align="center">
 
-  <img src="https://img.shields.io/badge/version-v0.14.0-blue" alt="Version v0.14.0">
+  <img src="https://img.shields.io/badge/version-v1.0.0-blue" alt="Version v1.0.0">
   <img src="https://img.shields.io/badge/Node.js-20.x-339933" alt="Node.js 20">
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/React-19-61DAFB" alt="React 19">
@@ -149,7 +149,7 @@ FantaAstaAPP/
 
 Current Release
 
-**v0.14.0**
+**v1.0.0**
 
 Completed milestones
 
@@ -254,13 +254,16 @@ Completed milestones
 - ✅ Persistent backup/recovery technical log
 - ✅ Emergency Recovery CLI independent from the live database
 - ✅ Preservation of damaged DB/WAL/SHM during Emergency Recovery
-- ✅ 82 backend test files
-- ✅ 511 backend tests passing
-- ✅ 15 domain test files
-- ✅ 135 domain tests passing
-- ✅ 646 automated tests passing
+- ✅ 119 backend test files
+- ✅ 764 backend tests passing
+- ✅ 18 domain test files
+- ✅ 150 domain tests passing
+- ✅ 914 automated tests passing
 - ✅ Full monorepo type checking
 - ✅ Full monorepo production build
+- ✅ Production frontend served directly by Fastify on port `3001`
+- ✅ Windows production supervisor/restart workflow
+- ✅ Physical LAN access verified from external devices
 
 Auction Session lifecycle
 
@@ -305,11 +308,50 @@ including caller rotation that skips completed rosters and prevention of
 invalid call preparation when the next caller has already completed the
 selected role.
 
-Next milestone
+Stable release
 
-➡ **v1.0.0 — Stable Release**
+🏁 **v1.0.0 — Stable Release**
+
+The v1.0.0 release has completed its final pre-release validation with:
+
+- 119 server test files — 764 tests passed;
+- 18 domain test files — 150 tests passed;
+- 914 automated tests passed in total;
+- full monorepo type checking passed;
+- full production build passed;
+- `git diff --check` clean.
+
+The production Windows/LAN runtime serves the compiled frontend directly from
+Fastify on port `3001`; Vite is development-only and is not required during the
+auction.
+
+For the SFL'92 2026/2027 operational dataset, the release-preparation
+certification verified eight teams, coherent initial rosters/credits, the
+754-player seasonal archive, league/team branding and 754/754 player photos.
+
+The real auction on 16 September 2026 is field validation of the stable
+release, not a prerequisite for the v1.0.0 release.
 
 ---
+
+## Post-release maintenance
+
+The first maintenance release, **v1.0.1**, is reserved for non-blocking
+improvements intentionally deferred from v1.0.0:
+
+- true auction-session deletion, distinct from session-data reset, with
+  pre-delete backup, explicit confirmation, atomic/cascade deletion and
+  destructive validation on a clone before use on real data;
+- broader visual reorganization of `/admin/config`;
+- refactoring of accumulated "Monster CSS" files, especially Public Display
+  and admin/config styles, without functional or approved-visual changes;
+- upload/replacement of the session QR PDF from `/admin/config`;
+- rationalization of asset/document folders, clearly separating versioned
+  static sources, runtime-managed assets, generated build artifacts and
+  operational documents.
+
+The planned Public Display "Show Area" (TOP/FLOP messages, media, jingles and
+celebratory effects) remains a **v1.1** feature and is not part of v1.0.1.
 
 ## Quick Start
 

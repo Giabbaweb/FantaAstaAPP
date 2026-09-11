@@ -6,7 +6,7 @@ FantaAstaAPP
 
 ## Current Version
 
-v0.14.0
+v1.0.0
 
 ## Package Manager
 
@@ -201,31 +201,39 @@ and the new state was propagated consistently to both `/admin` and `/public`.
 
 This incident established the mandatory backend-restart rule described above.
 
-## Production / LAN Runtime Requirement
+## Production / LAN Runtime
 
-The Replit development topology is not the target runtime for the auction evening.
+The Replit development topology is not the auction-evening runtime.
 
-The production/LAN target must avoid dependence on the Vite development server and should require one controlled application startup on the host PC.
-
-The intended operational model is:
+For v1.0.0 the production/LAN model is implemented and verified:
 
 ```text
-Host PC
-├─ compiled FantaAstaAPP backend
-├─ Fastify
+Host PC :3001
+├─ Fastify HTTP/API
 ├─ Socket.IO
 ├─ SQLite
-└─ compiled frontend
+├─ runtime assets
+└─ compiled Vite frontend
 ```
 
-with the other devices connecting over the auction LAN:
+Fastify binds to `0.0.0.0:3001` and serves the compiled SPA/static assets
+directly. Vite on port `5173` is development-only and is not required in
+production.
+
+Other devices connect to the host PC over the auction LAN:
 
 ```text
-/admin   → auctioneer/admin tablet or PC
-/remote  → team smartphones
-/public  → public monitor/projector
+/admin      → administrator/auctioneer device
+/remote     → team smartphones
+/remote/all → emergency/universal remote
+/public     → public monitor/projector
 ```
 
-For the v0.14 operational release, the Windows host workflow is provided by the local AVVIA/ARRESTA launchers and the related PowerShell scripts. The operational rehearsal confirmed controlled startup and complete shutdown of the local application processes.
+The normal Windows workflow is the local AVVIA/ARRESTA launcher pair and the
+production supervisor. Production startup/restart keeps the existing startup
+recovery semantics: a persisted `RUNNING` session is never silently resumed.
 
-Replit remains a development and verification environment. The auction evening uses the Windows host workflow documented in `docs/VADEMECUM_OPERATIVO.md`; the auction operator must not manually start separate Vite and Fastify processes.
+Physical LAN access to the production runtime has been verified from external
+devices. Replit remains a development and verification environment; the
+auction operator must not manually start separate Vite and Fastify processes
+for the live auction.

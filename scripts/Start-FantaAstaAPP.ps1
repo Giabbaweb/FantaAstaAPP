@@ -20,7 +20,7 @@ function Write-LauncherMessage {
 function Test-WebReady {
     try {
         $response = Invoke-WebRequest `
-            -Uri "http://127.0.0.1:5173/" `
+            -Uri "http://127.0.0.1:3001/" `
             -UseBasicParsing `
             -TimeoutSec 2
 
@@ -76,7 +76,7 @@ if (Test-Path $PidFile) {
                 Write-LauncherMessage `
                     "Landing raggiungibile. Apro il browser."
 
-                Start-Process "http://localhost:5173/"
+                Start-Process "http://localhost:3001/"
                 exit 0
             }
 
@@ -107,13 +107,13 @@ if (-not $pnpmCommand) {
 }
 
 Write-LauncherMessage `
-    "Avvio pnpm dev..."
+    "Preparazione e avvio runtime production..."
 
 $process = Start-Process `
     -FilePath "cmd.exe" `
     -ArgumentList `
         "/k",
-        "cd /d `"$ProjectRoot`" && pnpm dev" `
+        "cd /d `"$ProjectRoot`" && pnpm build && pnpm --filter @fantaastaapp/server start:supervised" `
     -WorkingDirectory $ProjectRoot `
     -PassThru
 
@@ -152,7 +152,7 @@ if (-not $ready) {
 Write-LauncherMessage `
     "FantaAstaAPP pronta."
 
-Start-Process "http://localhost:5173/"
+Start-Process "http://localhost:3001/"
 
 Write-LauncherMessage `
     "Landing aperta nel browser."
