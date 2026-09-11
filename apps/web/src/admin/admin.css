@@ -739,7 +739,7 @@ input {
 }
 
 
-/* Foglione — print / export */
+/* Foglione â€” print / export */
 
 .admin-public-display-export {
   display: grid;
@@ -1358,7 +1358,7 @@ input {
 }
 
 
-/* Cockpit 1B.1 — compact public-display controls in header */
+/* Cockpit 1B.1 â€” compact public-display controls in header */
 
 .admin-cockpit__header {
   grid-template-columns:
@@ -1436,7 +1436,7 @@ input {
 }
 
 
-/* Cockpit 1B.1c — hide roster export controls on iPad / compact widths */
+/* Cockpit 1B.1c â€” hide roster export controls on iPad / compact widths */
 
 @media (max-width: 1100px) {
   .admin-cockpit__header
@@ -1453,7 +1453,7 @@ input {
   }
 }
 
-/* Cockpit 1B.1d — resilient two-line league identity */
+/* Cockpit 1B.1d â€” resilient two-line league identity */
 
 .admin-cockpit__session {
   display: grid;
@@ -1479,7 +1479,7 @@ input {
 }
 
 .admin-cockpit__session > span:last-child::before {
-  content: "·";
+  content: "Â·";
   margin-right: 7px;
   color: #94a3b8;
 }
@@ -1555,7 +1555,7 @@ input {
 }
 
 
-/* Cockpit 1B.1e — ordered responsive header */
+/* Cockpit 1B.1e â€” ordered responsive header */
 
 .admin-cockpit__header {
   grid-template-columns:
@@ -1623,7 +1623,7 @@ input {
 }
 
 .admin-cockpit__session > span:last-child::before {
-  content: "·";
+  content: "Â·";
   margin-right: 6px;
   color: #94a3b8;
 }
@@ -1851,7 +1851,7 @@ input {
 }
 
 
-/* Cockpit 1B.2 — keep operational top grid horizontal on iPad */
+/* Cockpit 1B.2 â€” keep operational top grid horizontal on iPad */
 
 @media (min-width: 760px) and (max-width: 1100px) {
   .admin-cockpit__top-grid {
@@ -1894,7 +1894,7 @@ input {
   }
 }
 
-/* Cockpit 1B.3 — eight participant cards on one iPad row */
+/* Cockpit 1B.3 â€” eight participant cards on one iPad row */
 
 @media (min-width: 760px) and (max-width: 1100px) {
   .admin-panel--teams {
@@ -1949,7 +1949,7 @@ input {
 }
 
 
-/* Cockpit 1B.4 — compact current call and participant cards */
+/* Cockpit 1B.4 â€” compact current call and participant cards */
 
 /* The participant cards no longer need an artificial minimum
    height now that the useless total-slots row is gone. */
@@ -2067,7 +2067,7 @@ input {
 }
 
 
-/* Cockpit 1B.5 — inline next-player controls */
+/* Cockpit 1B.5 â€” inline next-player controls */
 
 .admin-current-call__new-call {
   margin-top: 10px;
@@ -2179,7 +2179,7 @@ input {
 }
 
 
-/* Cockpit 1B.6 — touch-friendly player autocomplete */
+/* Cockpit 1B.6 â€” touch-friendly player autocomplete */
 
 .admin-player-search {
   position: relative;
@@ -2298,7 +2298,7 @@ input {
 }
 
 
-/* Cockpit 1B.6b — wider complete autocomplete results */
+/* Cockpit 1B.6b â€” wider complete autocomplete results */
 
 .admin-player-search__results {
   right: auto;
@@ -2321,7 +2321,7 @@ input {
   }
 }
 
-/* Cockpit controls — desktop breathing room */
+/* Cockpit controls â€” desktop breathing room */
 @media (min-width: 1101px) {
   .admin-recent-awards__list {
     gap: 3px;
@@ -2355,7 +2355,7 @@ input {
   }
 }
 
-/* Cockpit — draft call opening controls */
+/* Cockpit â€” draft call opening controls */
 
 .admin-open-call {
   display: flex;
@@ -2696,7 +2696,7 @@ input {
 
 /*
  * PREPARA CHIAMATA
- * Azione primaria blu, senza glow né doppio bordo.
+ * Azione primaria blu, senza glow nÃ© doppio bordo.
  */
 .admin-new-call .admin-prepare-call:not(:disabled) {
   border: 1px solid #1565c0;
@@ -2725,7 +2725,7 @@ input {
 
 /*
  * CONFERMA AGGIUDICAZIONE
- * Quando è abilitato diventa chiaramente la prossima
+ * Quando Ã¨ abilitato diventa chiaramente la prossima
  * azione del banditore.
  */
 .admin-confirm-award:not(:disabled) {
@@ -2803,7 +2803,7 @@ input {
 
 .admin-cockpit__session-trigger
   > span:nth-of-type(2)::before {
-  content: "·";
+  content: "Â·";
   margin-right: 6px;
   color: #94a3b8;
 }
@@ -3071,4 +3071,63 @@ input {
   .admin-extraordinary-control__actions {
     grid-template-columns: 1fr;
   }
+}
+
+/* B4.2 — auctioneer visual action guidance */
+
+/* Search is the primary invitation while no player has been selected. */
+.admin-player-search > input[type="search"]:not(:disabled) {
+  border: 2px solid #4d91d9;
+  background: #f5faff;
+  box-shadow: 0 0 0 3px rgb(77 145 217 / 12%);
+}
+
+/* Once a player is selected, Prepare call becomes the primary action. */
+.admin-new-call .admin-prepare-call:not(:disabled) {
+  border-color: #1565c0;
+  background: #1565c0;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgb(21 101 192 / 22%);
+}
+
+.admin-new-call .admin-prepare-call:hover:not(:disabled) {
+  border-color: #0d55a8;
+  background: #0d55a8;
+}
+
+/* A prepared draft moves the visual focus to Open call. */
+.admin-open-call {
+  padding: 7px 9px;
+  border: 1px solid #a9ccec;
+  border-radius: 9px;
+  background: #f5faff;
+}
+
+.admin-open-call button:not(:disabled) {
+  border-color: #1565c0;
+  background: #1565c0;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgb(21 101 192 / 22%);
+}
+
+.admin-open-call button:not(:disabled):hover {
+  border-color: #0d55a8;
+  background: #0d55a8;
+}
+
+/* Session interruption/recovery actions must remain immediately visible. */
+.admin-session-control button[data-action="suspend"]:not(:disabled) {
+  border: 2px solid #d49b00;
+  background: #fff0bd;
+  color: #704d00;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgb(212 155 0 / 18%);
+}
+
+.admin-session-control button[data-action="resume"]:not(:disabled) {
+  border: 2px solid #218838;
+  background: #218838;
+  color: #ffffff;
+  font-weight: 900;
+  box-shadow: 0 3px 8px rgb(33 136 56 / 22%);
 }
