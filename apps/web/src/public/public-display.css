@@ -1360,7 +1360,7 @@ body {
   color: #c82020;
 }
 
-/* HIGH_CONTRAST_OUTDOOR — B1.3B stronger daylight contrast */
+/* HIGH_CONTRAST_OUTDOOR Ã¢â‚¬â€ B1.3B stronger daylight contrast */
 
 /* Separate the white information surfaces from the page */
 .public-display--high_contrast_outdoor {
@@ -1486,7 +1486,7 @@ body {
   color: #07111f;
 }
 
-/* Maximum bid — deliberately much more visible */
+/* Maximum bid Ã¢â‚¬â€ deliberately much more visible */
 .public-display--high_contrast_outdoor .public-display__team-summary > div:last-child {
   background: #ffd58f;
 }
@@ -1632,7 +1632,7 @@ body {
   display: none;
 }
 
-/* COMPACT v2 — content-height team section */
+/* COMPACT v2 Ã¢â‚¬â€ content-height team section */
 
 /* Do not force the teams section to consume the remaining viewport height */
 .public-display--compact {
@@ -1682,7 +1682,7 @@ body {
   min-height: clamp(52px, 4vw, 64px);
 }
 
-/* COMPACT v3 — whole-interface compression */
+/* COMPACT v3 Ã¢â‚¬â€ whole-interface compression */
 
 /* Page */
 .public-display--compact {
@@ -1780,7 +1780,7 @@ body {
   font-size: clamp(14px, 1.05vw, 18px);
 }
 
-/* METRICS — one compact operational strip */
+/* METRICS Ã¢â‚¬â€ one compact operational strip */
 .public-display--compact .public-display__auction-metrics {
   margin-top: 5px;
   gap: clamp(6px, 0.55vw, 9px);
@@ -1809,7 +1809,7 @@ body {
   font-size: clamp(24px, 2vw, 32px);
 }
 
-/* RECENT AWARDS — three immediately visible, older ones scroll */
+/* RECENT AWARDS Ã¢â‚¬â€ three immediately visible, older ones scroll */
 .public-display--compact .public-display__recent-awards .public-display__section-label {
   margin-bottom: 2px;
   font-size: clamp(10px, 0.72vw, 12px);
@@ -2199,7 +2199,7 @@ body {
   height: 64px;
 }
 
-/* ROSTER_OVERVIEW — electronic roster sheet */
+/* ROSTER_OVERVIEW Ã¢â‚¬â€ electronic roster sheet */
 
 .public-display--view-roster_overview {
   grid-template-rows:
@@ -3351,7 +3351,7 @@ body {
 }
 
 /* ==========================================================
-   M14 — Public display branding alignment
+   M14 Ã¢â‚¬â€ Public display branding alignment
    Horizontal FantaAstaAPP faded banner
    ========================================================== */
 
@@ -3365,7 +3365,7 @@ body {
 }
 
 
-/* Public role colors — cockpit parity */
+/* Public role colors Ã¢â‚¬â€ cockpit parity */
 
 /* Current called-player role: full Italian label */
 .public-display__player-role {
@@ -3440,7 +3440,7 @@ body {
 }
 
 
-/* Public final polish — mode label, completed slots, signature */
+/* Public final polish Ã¢â‚¬â€ mode label, completed slots, signature */
 
 /* Header: only the compact display-mode label remains */
 .public-display__app-brand {
@@ -3542,4 +3542,188 @@ body {
 .public-display--high_contrast_outdoor
   .public-display__signature {
   color: #59636f;
+}
+
+/* B4.5 - SFL92 / Arti John signature */
+
+/* Shared structure */
+.public-display__signature-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 0.7vw, 12px);
+}
+
+.public-display__signature-motto {
+  display: none;
+  margin: 0;
+}
+
+/* Presentation modes: make the authorship intentionally visible. */
+.public-display--standard
+  .public-display__signature,
+.public-display--high_contrast_outdoor
+  .public-display__signature,
+.public-display--dark
+  .public-display__signature {
+  min-height: clamp(104px, 11vh, 148px);
+  margin-top: clamp(8px, 1vh, 14px);
+  padding:
+    clamp(11px, 1.3vh, 17px)
+    clamp(18px, 2vw, 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 0.8vh, 10px);
+}
+
+/* STANDARD */
+.public-display--standard
+  .public-display__signature {
+  border-top: 1px solid #d4dde7;
+  background:
+    linear-gradient(
+      180deg,
+      #f3f5f7 0%,
+      #dfe4e9 100%
+    );
+}
+
+/* OUT - primary projection mode */
+.public-display--high_contrast_outdoor
+  .public-display__signature {
+  border-top: 2px solid #b6c2cf;
+  background:
+    linear-gradient(
+      180deg,
+      #f1f3f5 0%,
+      #d7dde3 100%
+    );
+}
+
+/* DARK */
+.public-display--dark
+  .public-display__signature {
+  border-top: 1px solid #465466;
+  background:
+    linear-gradient(
+      180deg,
+      #222b36 0%,
+      #151b23 100%
+    );
+}
+
+/* Original Arti John logo: larger, never redrawn or altered. */
+.public-display--standard
+  .public-display__signature-brand img,
+.public-display--high_contrast_outdoor
+  .public-display__signature-brand img,
+.public-display--dark
+  .public-display__signature-brand img {
+  display: block;
+  width: auto;
+  height: clamp(54px, 4.8vw, 82px);
+  max-width: clamp(245px, 21vw, 370px);
+  object-fit: contain;
+}
+
+/* Powered by */
+.public-display--standard
+  .public-display__signature-brand,
+.public-display--high_contrast_outdoor
+  .public-display__signature-brand {
+  color: #66758a;
+  font-size: clamp(10px, 0.78vw, 14px);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.public-display--dark
+  .public-display__signature-brand {
+  color: #a7b3c2;
+  font-size: clamp(10px, 0.78vw, 14px);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+/* SFL'92 signature */
+.public-display--standard
+  .public-display__signature-motto,
+.public-display--high_contrast_outdoor
+  .public-display__signature-motto,
+.public-display--dark
+  .public-display__signature-motto {
+  display: block;
+  font-size: clamp(13px, 1.18vw, 21px);
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.public-display--standard
+  .public-display__signature-motto {
+  color: #1f3d73;
+  text-shadow: 0 1px 0 #ffffff;
+}
+
+.public-display--high_contrast_outdoor
+  .public-display__signature-motto {
+  color: #102f5c;
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 1px 2px rgb(15 35 60 / 8%);
+}
+
+.public-display--dark
+  .public-display__signature-motto {
+  color: #d8e5f5;
+  text-shadow: 0 1px 2px #000000;
+}
+
+.public-display--standard
+  .public-display__signature-motto span,
+.public-display--high_contrast_outdoor
+  .public-display__signature-motto span,
+.public-display--dark
+  .public-display__signature-motto span {
+  margin: 0 clamp(5px, 0.55vw, 10px);
+  color: #e5a300;
+}
+
+/* B4.5.1 - Arti John dark logo */
+
+.public-display__signature-logo--dark {
+  display: none;
+}
+
+.public-display--dark
+  .public-display__signature-logo--light {
+  display: none;
+}
+
+.public-display--dark
+  .public-display__signature-logo--dark {
+  display: block;
+}
+
+/* B4.5.2 - enforce mutually exclusive Arti John logos */
+
+.public-display__signature-brand
+  img.public-display__signature-logo--dark {
+  display: none;
+}
+
+.public-display--dark
+  .public-display__signature-brand
+  img.public-display__signature-logo--light {
+  display: none;
+}
+
+.public-display--dark
+  .public-display__signature-brand
+  img.public-display__signature-logo--dark {
+  display: block;
 }

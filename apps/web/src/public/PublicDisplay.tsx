@@ -1187,12 +1187,27 @@ export function PublicDisplay():
       </section>
 
       <footer className="public-display__signature">
-        <span>Powered by</span>
+        <div className="public-display__signature-brand">
+          <span>Powered by</span>
 
-        <img
-          src="/branding/arti-john-logo.png"
-          alt="Arti John"
-        />
+          <img
+            className="public-display__signature-logo public-display__signature-logo--light"
+            src="/branding/arti-john-logo.png"
+            alt="Arti John"
+          />
+
+          <img
+            className="public-display__signature-logo public-display__signature-logo--dark"
+            src="/branding/arti-john-logo-dark.png"
+            alt="Arti John"
+          />
+        </div>
+
+        <p className="public-display__signature-motto">
+          <span aria-hidden="true">★</span>
+          PASSIONE, AMICIZIA E COMPETIZIONE. INSIEME DAL 1992
+          <span aria-hidden="true">★</span>
+        </p>
       </footer>
     </main>
   );
