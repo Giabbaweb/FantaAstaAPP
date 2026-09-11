@@ -237,9 +237,9 @@ body {
 }
 
 .remote-all-team__state {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 950;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-align: center;
 }
 
@@ -254,23 +254,24 @@ body {
 }
 
 .remote-all-team--leader {
-  background: #edf8f0;
-  border-color: #a7d7b4;
+  background: #d8f3df;
+  border-color: #67b87a;
 }
 
 .remote-all-team--leader
 .remote-all-team__state {
-  color: #176b36;
+  color: #12662f;
 }
 
 .remote-all-team--inactive {
-  opacity: 0.65;
-  background: #f2f4f6;
+  opacity: 1;
+  background: #f5dddd;
+  border-color: #d8a0a0;
 }
 
 .remote-all-team--inactive
 .remote-all-team__state {
-  color: #9b2c2c;
+  color: #8f2525;
 }
 
 .remote-all-team__controls {
